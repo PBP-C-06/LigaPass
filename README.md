@@ -5,11 +5,11 @@
 ---
 
 ## 👥 Anggota Kelompok
-- [Jaysen Lestari](https://github.com/Jaysenlestari) — 2406395335  
-- [Nadia Aisyah Fazila](https://github.com/applepiesss) — 2406495584  
-- [Muhammad Aldo Fahrezy](https://github.com/aldofahrezy) — 2406423055  
-- [Refki Septian](https://github.com/RefkiSeptian) — 2406397196  
-- [Mei Ching](https://github.com/https://github.com/Mei2462) — 2406361662  
+- [Jaysen Lestari](https://github.com/Jaysenlestari) - 2406395335  
+- [Nadia Aisyah Fazila](https://github.com/applepiesss) - 2406495584  
+- [Muhammad Aldo Fahrezy](https://github.com/aldofahrezy) - 2406423055  
+- [Refki Septian](https://github.com/RefkiSeptian) - 2406397196  
+- [Mei Ching](https://github.com/https://github.com/Mei2462) - 2406361662  
 
 ---
 
