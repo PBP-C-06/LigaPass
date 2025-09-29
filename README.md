@@ -1,10 +1,10 @@
-# Draf Project UTS - LigaPass
+# ⚽ LigaPass
 
 > Platform pemesanan tiket pertandingan sepak bola dan berita terbaru sepak bola berbasis web.
 
 ---
 
-## 👥 Anggota Kelompok
+## 👷 Anggota Kelompok
 - [Jaysen Lestari](https://github.com/Jaysenlestari) - 2406395335  
 - [Nadia Aisyah Fazila](https://github.com/applepiesss) - 2406495584  
 - [Muhammad Aldo Fahrezy](https://github.com/aldofahrezy) - 2406423055  
@@ -14,11 +14,9 @@
 ---
 
 ## 📝 Deskripsi Singkat
-LigaPass adalah **platform berbasis web** yang berfungsi sebagai aplikasi pemesanan tiket pertandingan sepak bola sekaligus membaca berita bola terbaru. 
+LigaPass adalah platform berbasis web yang memudahkan penggemar sepak bola untuk memesan tiket pertandingan secara praktis sekaligus mengikuti berita terkini seputar dunia bola. Dengan antarmuka yang sederhana dan informatif, pengguna bisa menemukan jadwal pertandingan, memilih kategori tempat duduk sesuai kebutuhan, serta melakukan pembayaran dengan aman dan cepat.
 
-Fokus utama: kemudahan pemesanan, informasi pertandingan yang jelas, dan konten berita yang relevan.
-
-> Platform pemesanan tiket pertandingan sepak bola berbasis web
+Selain fitur pemesanan, LigaPass juga menghadirkan berita bola terbaru, analisis pertandingan, dan update transfer pemain yang dikurasi agar tetap relevan dengan minat pengguna. Kombinasi layanan pemesanan tiket dan portal berita ini membuat LigaPass menjadi solusi all-in-one bagi para pecinta sepak bola yang ingin mendapatkan pengalaman menonton lebih seru dan informatif.
 
 ---
 
@@ -38,11 +36,25 @@ Registrasi, login, logout, dan manage cookie untuk mendapatkan role yang sesuai.
 4. **Product Management**  
 *Dikerjakan oleh Jaysen Lestari*  
    Aplikasi ini memungkinkan user memilih pertandingan dari halaman utama, lalu memilih kategori tiket (VVIP/VIP/Reguler), memvalidasi ketersediaan kursi, menentukan jumlah (opsional bundle/promo), dan membuat pesanan. Untuk pembayaran akan dipilih salah satu dari opsi berikut: Opsi A (Dummy QR)—user menekan “Sudah membayar” sehingga status menjadi “menunggu verifikasi”, lalu admin memverifikasi; Opsi B (Payment Gateway)—proses pembayaran terintegrasi hingga terverifikasi otomatis. Setelah pembayaran terverifikasi, sistem mengeluarkan voucher/tiket. Admin memiliki dashboard pesanan yang menampilkan metrik seperti total pesanan, tiket terjual, penerimaan, sisa tiket, serta dapat mengatur sisa tiket; tiap pesanan memiliki halaman detail. Untuk Opsi A, admin juga mendapat halaman verifikasi pembayaran manual.
-5. **Review & Analytics**  
+5. **Review & Comment**  
 *Dikerjakan oleh Refki Septian*  
-   Setelah pertandingan yang ditonton selesai, pengguna dapat meninggalkan komentar terkait pertandingan dan memberi rating. Di bagian berita juga pengguna dapat meninggalkan comment. Kemudian akan ditampilkan statistik terkait pertandingan apa yang paling banyak dibeli tiketnya.
-
+   Pada bagian modul ini, admin memiliki sistem menyediakan fitur analitik yang menampilkan ringkasan tiket terjual, pendapatan, tren penjualan, serta visualisasi seat occupancy yang bisa difilter berdasarkan kategori tiket; selain itu, admin juga dapat memantau agregasi review penonton berupa rating rata-rata, komentar. Untuk User, tersedia ringkasan riwayat pembelian tiket, statistik kehadiran, grafik pengeluaran bulanan maupun tahunan, serta informasi loyalty points jika sistem poin diaktifkan; pengguna juga dapat memberikan rating pertandingan dan menuliskan komentar pengalaman menonton.
+   
 ---
 
 ## 📊 Dataset
-- **Match**: https://www.kaggle.com/datasets/mertbayraktar/english-premier-league-2526-season/data
+- **Match** (Inggris): https://www.kaggle.com/datasets/mertbayraktar/english-premier-league-2526-season/data
+- **Match** (Indonesia) : https://www.transfermarkt.co.in/liga-1-indonesia/restprogramm/wettbewerb/IN1L (scrapping)
+
+---
+
+## 👤Role
+- **User** : User dapat melakukan registrasi, login, serta mengelola profil pribadi mereka. Mereka bisa membeli tiket pertandingan dengan memilih kategori kursi (VVIP, VIP, Reguler), melakukan pembayaran, dan mendapatkan tiket digital. User juga memiliki riwayat pembelian, statistik kehadiran, grafik pengeluaran, serta dapat memberikan review dan komentar pada pertandingan maupun berita.
+- **Admin** : Admin memiliki kendali penuh terhadap sistem, mulai dari manajemen data klub dan pertandingan (CRUD), verifikasi pembayaran, hingga monitoring penjualan tiket melalui dashboard analitik. Admin juga dapat meninjau profil pengguna, mengelola status akun, serta memantau ulasan penonton lengkap dengan rating, komentar, dan visualisasi tren. Dengan akses ini, Admin berperan penting dalam menjaga kelancaran operasional aplikasi.
+- **Journalist** : journalist berfokus pada pengelolaan konten berita. Mereka memiliki akses untuk membuat, mengedit, dan menghapus berita, serta melihat ringkasan kinerja konten berupa total tayang dan jumlah artikel yang dipublikasikan. Pada halaman berita, Journalist mendapat tombol khusus untuk membuat berita baru dan mengelola konten yang sudah ada. Dengan demikian, Journalist menjadi sumber utama informasi terbaru bagi pengguna aplikasi.
+
+--- 
+
+## 🔗 URL
+**Deployment** : https://jaysen-lestari-ligapass.pbp.cs.ui.ac.id/
+**Figma** : (soon)
