@@ -57,4 +57,4 @@ Registrasi, login, logout, dan manage cookie untuk mendapatkan role yang sesuai.
 
 ## 🔗 URL
 **Deployment** : https://jaysen-lestari-ligapass.pbp.cs.ui.ac.id/
-**Figma** : (soon)
+**Figma** :  https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/TK-UTS?page-id=0%3A1&node-id=1-1935&p=f&viewport=-1269%2C-173%2C0.41&t=KgYTQaoFAjTJ0iZZ-1&scaling=min-zoom&content-scaling=fixed
