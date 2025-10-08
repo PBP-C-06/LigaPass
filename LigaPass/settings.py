@@ -24,12 +24,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+# API KEY untuk data Footbal dari api-football
+API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY") 
+
 # SECURITY WARNING: don't run with debug turned on in production!
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1","jaysen-lestari-ligapass.pbp.cs.ui.ac.id"]
-
 
 # Application definition
 
