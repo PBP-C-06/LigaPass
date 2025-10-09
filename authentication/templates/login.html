@@ -1,25 +1,129 @@
-<title>Login</title>
-<div class="login">
-  <h1>Login</h1>
+{% extends 'base.html' %}
 
-  <form method="POST" action="">
-    {% csrf_token %}
-    <table>
-      {{ form.as_table }}
-      <tr>
-        <td></td>
-        <td><input class="btn login_btn" type="submit" value="Login" /></td>
-      </tr>
-    </table>
-  </form>
+{% block content %}
+  <div class="max-w-md mx-auto mt-10">
+    <h2 class="text-2xl font-bold text-center mb-6">Login to LigaPass</h2>
 
-  {% if messages %}
-  <ul>
-    {% for message in messages %}
-    <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %} Don't have an account yet?
-  <a href="{% url 'authentication:register' %}">Register Now</a>
-  <a href="{% url 'password_reset' %}">Forgot Password?</a>
-</div>
+    <!-- Login biasa (AJAX) -->
+    <form id="login-form" method="POST">
+      {% csrf_token %}
+      <div class="mb-4">
+        <label for="id_username" class="block text-gray-200 text-sm font-bold mb-2">Username</label>
+        <input id="id_username" name="username" type="text"
+               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-900 leading-tight focus:outline-none focus:shadow-outline"
+               required>
+      </div>
+
+      <div class="mb-4">
+        <label for="id_password" class="block text-gray-200 text-sm font-bold mb-2">Password</label>
+        <input id="id_password" name="password" type="password"
+               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-900 leading-tight focus:outline-none focus:shadow-outline"
+               required>
+      </div>
+
+      <div class="mb-4 text-right">
+        <a href="{% url 'password_reset' %}" class="text-sm text-blue-400 hover:underline">Forgot password?</a>
+      </div>
+
+      <button id="login-submit" type="submit"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        Login
+      </button>
+    </form>
+
+    <div class="my-6 flex items-center justify-center">
+      <span class="border-b border-slate-700 w-1/5 lg:w-1/4"></span>
+      <span class="text-xs text-center text-gray-400 uppercase mx-4">Or sign in with</span>
+      <span class="border-b border-slate-700 w-1/5 lg:w-1/4"></span>
+    </div>
+
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Tombol Google -->
+    <div class="flex justify-center mt-2">
+      <div id="googleBtn"></div>
+    </div>
+
+    <!-- Hidden form: kirim credential ke backend via same-origin POST -->
+    <form id="google-post-form" method="POST" action="{% url 'authentication:google_login' %}" style="display:none;">
+      {% csrf_token %}
+      <input type="hidden" name="credential" id="google-credential-input">
+    </form>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  /* ===== Login biasa (AJAX) ===== */
+  function getCookie(name) {
+    let v = null;
+    if (document.cookie && document.cookie !== '') {
+      for (const c of document.cookie.split(';')) {
+        const s = c.trim();
+        if (s.substring(0, name.length + 1) === (name + '=')) {
+          v = decodeURIComponent(s.substring(name.length + 1)); break;
+        }
+      }
+    }
+    return v;
+  }
+
+  document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-submit');
+    btn.disabled = true;
+    try {
+      const res = await fetch("{% url 'authentication:login' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Accept': 'application/json' },
+        body: new URLSearchParams(new FormData(this)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.status === 'success' && data.redirect_url) {
+        window.location.href = data.redirect_url;
+      } else {
+        alert(data.message || JSON.stringify(data.errors || 'Login failed'));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error while logging in.');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  /* ===== Google Sign-In (POPUP) ===== */
+  function onGoogleCredential(resp) {
+    if (!resp || !resp.credential) {
+      console.error('No credential from Google');
+      return;
+    }
+    // taruh JWT ke input tersembunyi lalu submit (same-origin → aman CSRF)
+    document.getElementById('google-credential-input').value = resp.credential;
+    document.getElementById('google-post-form').submit();
+  }
+  // WAJIB: callback harus global (biar dipanggil GIS)
+  window.onGoogleCredential = onGoogleCredential;
+
+  window.addEventListener('load', function () {
+    if (!window.google || !google.accounts?.id) {
+      console.error('GIS SDK not loaded');
+      return;
+    }
+    // POPUP mode → TIDAK pakai login_uri
+    google.accounts.id.initialize({
+      client_id: "{{ GOOGLE_CLIENT_ID }}",   // pastikan terisi dari context processor
+      ux_mode: "popup",
+      callback: onGoogleCredential,
+      auto_select: false,
+    });
+    google.accounts.id.renderButton(
+      document.getElementById("googleBtn"),
+      { theme: "outline", size: "large", width: 280, text: "signin_with" }
+    );
+    // optional: one-tap
+    // google.accounts.id.prompt();
+  });
+</script>
+{% endblock %}
