@@ -4,10 +4,9 @@ from profiles.views import *
 app_name = 'profile'
 
 urlpatterns = [
-    path("json/", show_json, name="json_view"),
-    path("user/", user_view, name="user_view"),
+    path("user/<uuid:id>/", user_view, name="user_view"),
     path("admin/", admin_view, name="admin_view"),
     path("journalist/", journalist_view, name="journalist_view"),
-    # path('<int:id>/edit/', edit_product, name='edit_product'), # draft untuk edit user
-    # path('admin/<int:id>/', edit_product, name='edit_product'), #draft untuk admin to user
+    path('admin/<uuid:id>/', admin_user_edit, name='admin_user_edit'),
+    # path('user/<uuid:id>/edit/', user_edit, name='user_edit'), # Draft untuk edit user profile
 ]

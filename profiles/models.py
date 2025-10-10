@@ -1,15 +1,22 @@
 from django.db import models
 from django.conf import settings
-from match.models import Match
+from matches.models import Match
 from phonenumber_field.modelfields import PhoneNumberField
 import uuid
 
 User = settings.AUTH_USER_MODEL 
 
 class Profile(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('suspended', 'Suspended'),
+        ('banned', 'Banned'),
+    ]
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='active')
 
     def __str__(self):
         return self.user.username
