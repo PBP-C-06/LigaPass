@@ -1,0 +1,39 @@
+<h1>Kalender Pertandingan Liga 1 Indonesia</h1>
+
+{% if grouped_matches.Upcoming %}
+    <h2>Pertandingan Mendatang (Upcoming)</h2>
+    {% for match in grouped_matches.Upcoming %}
+        <div>
+            <img src="{{ match.home_logo }}" alt="{{ match.home_team }} Logo">
+            <strong>{{ match.home_team }}</strong> vs <strong>{{ match.away_team }}</strong>
+            <img src="{{ match.away_logo }}" alt="{{ match.away_team }} Logo">
+            <p>Tanggal: {{ match.date }}</p>
+            <p>Stadion: {{ match.venue }}</p>
+            <a href="{% url 'bookings:book' match.id %}">Beli Tiket</a>
+        </div>
+        <hr>
+    {% endfor %}
+{% else %}
+    <p>Tidak ada pertandingan mendatang yang ditemukan.</p>
+{% endif %}
+
+{% if grouped_matches.Ongoing %}
+    <h2>Sedang Berlangsung (Ongoing)</h2>
+    <!-- {# Tampilkan pertandingan yang sedang berlangsung di sini #} -->
+{% endif %}
+
+{% if grouped_matches.Past %}
+    <h2>Pertandingan Selesai (Past)</h2>
+    
+    {% for match in grouped_matches.Past %}
+        <div>
+            <img src="{{ match.home_logo }}" alt="{{ match.home_team }} Logo" width="20">
+            <strong>{{ match.home_team }}</strong> vs <strong>{{ match.away_team }}</strong>
+            <img src="{{ match.away_logo }}" alt="{{ match.away_team }} Logo" width="20">
+            <p>Tanggal: {{ match.date|date:"d M Y, H:i" }}</p>
+            <p>Stadion: {{ match.venue }}</p>
+        </div>
+        <hr>
+    {% endfor %}
+
+{% endif %}
