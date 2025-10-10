@@ -56,5 +56,6 @@ urlpatterns = [
         ),
         name="password_reset_complete",
     ),
-    path('bookings/', include('bookings.urls'))
+    path('bookings/', include('bookings.urls')),
+    path('matches/', include('matches.urls')),
 ]
