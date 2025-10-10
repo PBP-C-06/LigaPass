@@ -16,6 +16,13 @@ class User(AbstractUser):
     phone = PhoneNumberField(blank=True, null=True)
     royalty_poin = models.IntegerField(default=0)
 
+    # Google Auth
+    is_google_account = models.BooleanField(default=False)
+    google_sub = models.CharField(max_length=255, blank=True, null=True, unique=True)
+
+    # Status profil
+    profile_completed = models.BooleanField(default=False)
+
     def __str__(self):
         return self.username
 

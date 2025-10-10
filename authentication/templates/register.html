@@ -1,24 +1,48 @@
-<title>Register</title>
+{% extends 'base.html' %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-slate-950">
+  <div class="bg-slate-900 p-8 rounded-xl shadow-lg w-full max-w-md">
+    <h1 class="text-2xl text-white font-bold mb-6 text-center">Register</h1>
 
-<div>
-  <h1>Register</h1>
-
-  <form method="POST">
-    {% csrf_token %}
-    <table>
-      {{ form.as_table }}
-      <tr>
-        <td></td>
-        <td><input type="submit" name="submit" value="Daftar" /></td>
-      </tr>
-    </table>
-  </form>
-
-  {% if messages %}
-  <ul>
-    {% for message in messages %}
-    <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
+    <form id="registerForm" method="POST">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg w-full mb-4">
+        Register
+      </button>
+    </form>
+  </div>
 </div>
+
+<script>
+document.getElementById("registerForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+  const formData = new FormData(form);
+
+  try {
+    const res = await fetch("{% url 'authentication:register' %}", {
+      method: "POST",
+      headers: { 
+        "X-CSRFToken": csrfToken, 
+        "X-Requested-With": "XMLHttpRequest" 
+      },
+      body: formData
+    });
+
+    const data = await res.json();
+    console.log("Register response:", data);
+
+    if (data.status === "success") {
+      window.location.href = data.redirect_url;
+    } else {
+      alert("❌ Register gagal:\n" + JSON.stringify(data.errors || data.message || "Unknown error", null, 2));
+    }
+  } catch (err) {
+    console.error("Register error:", err);
+    alert("Terjadi kesalahan saat register.");
+  }
+});
+</script>
+{% endblock %}
