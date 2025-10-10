@@ -17,6 +17,9 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+SECURE_REFERRER_POLICY = 'no-referrer-when-downgrade'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -30,9 +33,20 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1","jaysen-lestari-ligapass.pbp.cs.ui.ac.id"]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://accounts.google.com",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "https://jaysen-lestari-ligapass.pbp.cs.ui.ac.id",
+]
+
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "Lax"
+
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -65,13 +79,14 @@ ROOT_URLCONF = 'LigaPass.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'authentication.context_processors.google_client_context',
             ],
         },
     },
