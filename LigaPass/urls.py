@@ -28,3 +28,4 @@ urlpatterns = [
     path("auth/reset-password/complete/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
     path('matches/', include('matches.urls')),
 ]
+
