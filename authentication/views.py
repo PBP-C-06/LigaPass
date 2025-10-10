@@ -1,25 +1,9 @@
 from django.shortcuts import render, redirect
-from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from authentication.forms import RegisterForm
-import datetime, json
-from django.http import HttpResponseRedirect, JsonResponse
-from django.urls import reverse
-from django.utils.html import strip_tags
-from django.conf import settings
-from google.oauth2 import id_token
-from google.auth.transport import requests
-from authentication.models import User
-from django.views.decorators.csrf import csrf_exempt
-
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import AuthenticationForm
-from authentication.forms import RegisterForm
-import datetime, json
-from django.http import HttpResponseRedirect, JsonResponse
+import datetime
+from django.http import JsonResponse
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.conf import settings
