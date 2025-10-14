@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold">Manajemen Tim</h1>
+<a href="{% url 'matches:add_team' %}" class="bg-green-500 text-white p-2 rounded my-4 inline-block">Tambah Tim Baru</a>
+<table class="w-full text-left">
+    <thead>
+    <tr class="bg-slate-700">
+        <th class="p-2">Nama Tim</th>
+        <th class="p-2">Aksi</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for team in teams %}
+        <tr class="border-b border-slate-600">
+        <td class="p-2">{{ team.name }}</td>
+        <td class="p-2">
+            <a href="{% url 'matches:edit_team' team.pk %}" class="text-yellow-400">Edit</a> |
+            <a href="{% url 'matches:delete_team' team.pk %}" class="text-red-400">Hapus</a>
+        </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

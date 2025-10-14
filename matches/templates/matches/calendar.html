@@ -32,6 +32,7 @@
             <img src="{{ match.away_logo }}" alt="{{ match.away_team }} Logo" width="20">
             <p>Tanggal: {{ match.date|date:"d M Y, H:i" }}</p>
             <p>Stadion: {{ match.venue }}</p>
+            <a href="{% url 'matches:detail' match.id %}">Lihat Detail & Tiket</a>
         </div>
         <hr>
     {% endfor %}
