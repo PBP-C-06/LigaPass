@@ -1,7 +1,7 @@
 import uuid
 from django.db import models
 from django.conf import settings
-from matches.models import Match, TicketPrice
+from matches.models import TicketPrice
 
 class Booking(models.Model):
     booking_status = [
@@ -22,7 +22,6 @@ class Booking(models.Model):
         return f"Booking {self.booking_id} by {self.user.username}"
 
 class Ticket(models.Model):
-
     ticket_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='tickets')
     ticket_type = models.ForeignKey(TicketPrice, on_delete=models.PROTECT)

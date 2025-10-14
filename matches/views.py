@@ -42,6 +42,7 @@ def match_calendar_view(request):
             # Asumsi format API adalah ISO 8601
             match_datetime_str = match_data['fixture']['date']
             match_datetime = datetime.fromisoformat(match_datetime_str.replace('Z', '+00:00'))
+            match_datetime = match_datetime.replace(year=match_datetime.year + 2)
             
             status = get_match_status(match_datetime)
             
@@ -79,6 +80,7 @@ def match_detail_view(request, match_api_id):
         return render(request, 'matches/not_found.html', {'match_id': match_api_id})
 
     match_datetime = datetime.fromisoformat(match_data['fixture']['date'].replace('Z', '+00:00'))
+    match_datetime = match_datetime.replace(year=match_datetime.year + 2)
     status = get_match_status(match_datetime)
 
     # --- BAGIAN KRITIS ADA DI SINI ---

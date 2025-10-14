@@ -1,8 +1,9 @@
 from django.urls import path
-from authentication.views import *
+from bookings.views import *
 
 app_name = 'bookings'
 
 urlpatterns = [
-
+    path("<int:match_id>/", create_booking, name="create_booking"),
+    path("payment/<uuid:booking_id>/", payment, name="payment"),
 ]

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Pembayaran{% endblock %}
+{% block content %}
+<div class="payment-container" style="text-align:center; margin-top:50px;">
+    <h2>Pembayaran Booking {{ booking.booking_id }}</h2>
+    <p><strong>Total:</strong> Rp {{ booking.total_price }}</p>
+    <p><strong>Status:</strong> {{ booking.get_status_display }}</p>
+
+    <button id="pay-button" style="padding:10px 20px; font-size:16px; background:#00b14f; color:white; border:none; border-radius:8px;">
+        Bayar Sekarang
+    </button>
+</div>
+
+<script type="text/javascript"
+    src="https://app.sandbox.midtrans.com/snap/snap.js"
+    data-client-key="{{ MIDTRANS_CLIENT_KEY }}">
+</script>
+
+<script type="text/javascript">
+document.getElementById('pay-button').addEventListener('click', function () {
+    snap.pay('{{ SNAP_TOKEN }}', {
+        onSuccess: function(result){
+            alert("Pembayaran sukses!");
+            console.log(result);
+        },
+        onPending: function(result){
+            alert("Pembayaran pending!");
+            console.log(result);
+        },
+        onError: function(result){
+            alert("Pembayaran gagal!");
+            console.log(result);
+        },
+        onClose: function(){
+            alert('Popup ditutup tanpa menyelesaikan pembayaran');
+        }
+    });
+});
+</script>
+{% endblock %}

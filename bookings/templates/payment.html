@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}Pembayaran{% endblock %}
+
+{% block content %}
+<style>
+body {
+  background-color: #f9fafb;
+  font-family: 'Inter', sans-serif;
+}
+.payment-container {
+  max-width: 900px;
+  margin: 50px auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  display: flex;
+  overflow: hidden;
+}
+.method-list {
+  width: 35%;
+  background: #f3f4f6;
+  padding: 24px;
+  border-right: 1px solid #e5e7eb;
+}
+.method-list h3 {
+  color: #1f2937;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+.method-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.method-item:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+.method-item.active {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+.method-item img {
+  width: 32px;
+  height: 32px;
+}
+.payment-detail {
+  width: 65%;
+  padding: 32px;
+}
+.payment-detail h2 {
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+.payment-detail p {
+  color: #6b7280;
+  font-size: 15px;
+}
+.form-section {
+  margin-top: 24px;
+}
+label {
+  display: block;
+  font-weight: 600;
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+button {
+  width: 100%;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 0;
+  margin-top: 20px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+button:hover {
+  background: #1e40af;
+}
+.info-box {
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+.info-box code {
+  background: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.hidden { display: none; }
+
+@media (max-width: 768px) {
+  .payment-container {
+    flex-direction: column;
+  }
+  .method-list, .payment-detail {
+    width: 100%;
+    border: none;
+  }
+}
+</style>
+
+<div class="payment-container">
+  <!-- Pilihan Metode -->
+  <div class="method-list">
+    <h3>Pilih Metode Pembayaran</h3>
+    <div class="method-item active" data-method="card">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Visa.svg" alt="Card">
+      <span>Kartu Kredit/Debit</span>
+    </div>
+    <div class="method-item" data-method="qris">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/QRIS_logo.svg" alt="QRIS">
+      <span>QRIS / e-Wallet</span>
+    </div>
+    <div class="method-item" data-method="bank">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/4/49/Bank_icon.svg" alt="Bank">
+      <span>Virtual Account Bank</span>
+    </div>
+  </div>
+
+  <!-- Detail Form -->
+  <div class="payment-detail">
+    <h2>Pembayaran Booking {{ booking.booking_id }}</h2>
+    <p><strong>Total:</strong> Rp {{ booking.total_price }}</p>
+    <p>Status: {{ booking.get_status_display }}</p>
+
+    <div class="info-box">
+      <strong>Mode Sandbox</strong> — transaksi ini simulasi.
+    </div>
+
+    <!-- Form: Card -->
+    <div id="form-card" class="form-section">
+      <label>No Kartu</label>
+      <input type="text" id="card_number" placeholder="4811 1111 1111 1114">
+
+      <label>Bulan Exp</label>
+      <input type="number" id="card_exp_month" placeholder="2">
+
+      <label>Tahun Exp</label>
+      <input type="number" id="card_exp_year" placeholder="2025">
+
+      <label>CVV</label>
+      <input type="number" id="card_cvv" placeholder="123">
+
+      <button id="pay-card">Bayar dengan Kartu</button>
+    </div>
+
+    <!-- Form: QRIS -->
+    <div id="form-qris" class="form-section hidden">
+      <p>Pindai QR berikut untuk membayar:</p>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Midtrans-QRIS-Test" alt="QRIS" style="margin:20px 0;">
+      <button id="confirm-qris">Saya sudah membayar</button>
+    </div>
+
+    <!-- Form: Bank -->
+    <div id="form-bank" class="form-section hidden">
+      <label>Pilih Bank</label>
+      <select id="bank_code">
+        <option value="bca">BCA</option>
+        <option value="bni">BNI</option>
+        <option value="bri">BRI</option>
+      </select>
+      <p style="margin-top:10px; color:#6b7280;">Nomor VA akan dibuat setelah menekan tombol di bawah.</p>
+      <button id="create-va">Buat Virtual Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Midtrans 3DS SDK -->
+<script src="https://api.midtrans.com/v2/assets/js/midtrans-new-3ds.min.js"
+        data-environment="sandbox"
+        data-client-key="{{ MIDTRANS_CLIENT_KEY }}">
+</script>
+
+<script>
+// === Helper CSRF ===
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+const csrftoken = getCookie('csrftoken');
+
+// === Tab switching logic ===
+const methods = document.querySelectorAll('.method-item');
+methods.forEach(el => el.addEventListener('click', () => {
+  methods.forEach(m => m.classList.remove('active'));
+  el.classList.add('active');
+
+  const method = el.dataset.method;
+  document.querySelectorAll('.form-section').forEach(f => f.classList.add('hidden'));
+  document.getElementById(`form-${method}`).classList.remove('hidden');
+}));
+
+// === CARD payment ===
+document.getElementById("pay-card").addEventListener("click", function() {
+  const cardData = {
+    card_number: document.getElementById("card_number").value,
+    card_exp_month: document.getElementById("card_exp_month").value,
+    card_exp_year: document.getElementById("card_exp_year").value,
+    card_cvv: document.getElementById("card_cvv").value,
+  };
+
+  if (!cardData.card_number || !cardData.card_exp_month || !cardData.card_exp_year || !cardData.card_cvv) {
+    alert("Lengkapi semua data kartu.");
+    return;
+  }
+
+  MidtransNew3ds.getCardToken(cardData, {
+    onSuccess: function(response) {
+      console.log("Token didapat:", response.token_id);
+      fetch(window.location.pathname, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrftoken
+        },
+        body: JSON.stringify({ token_id: response.token_id })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.redirect_url) {
+          alert("Redirect ke halaman verifikasi 3DS...");
+          window.location.href = data.redirect_url;
+        } else {
+          alert("Pembayaran gagal. Cek console untuk detail.");
+          console.log(data);
+        }
+      });
+    },
+    onFailure: function(err) {
+      console.error("Gagal tokenisasi:", err);
+      alert("Gagal mendapatkan token kartu.");
+    }
+  });
+});
+
+// === QRIS payment simulation ===
+document.getElementById("confirm-qris").addEventListener("click", function() {
+  alert("Terima kasih, pembayaran QRIS terdeteksi!");
+});
+
+// === Virtual Account simulation ===
+document.getElementById("create-va").addEventListener("click", function() {
+  const bank = document.getElementById("bank_code").value;
+  alert(`VA ${bank.toUpperCase()} telah dibuat: 1234567890123456`);
+});
+</script>
+{% endblock %}
