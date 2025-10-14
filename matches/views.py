@@ -89,12 +89,12 @@ def match_detail_view(request, match_api_id):
             'date': match_datetime,
             'home_team': match_data['teams']['home']['name'],
             'home_logo': match_data['teams']['home']['logo'],
-            'away_team': match_data['teams']['away']['name'],      # <-- Pastikan key ini ada
-            'away_logo': match_data['teams']['away']['logo'],      # <-- Pastikan key ini ada
+            'away_team': match_data['teams']['away']['name'],
+            'away_logo': match_data['teams']['away']['logo'],
             'venue': match_data['fixture']['venue']['name'],
             'city': match_data['fixture']['venue']['city'],
             'status_long': match_data['fixture']['status']['long'],
-            'home_goals': match_data['goals']['home'],             # <-- Pastikan key ini ada
+            'home_goals': match_data['goals']['home'],
             'away_goals': match_data['goals']['away'],
             'status_key': status,
         }
