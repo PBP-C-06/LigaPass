@@ -1,0 +1,61 @@
+<!-- Menampilkan user profile -->
+
+{% block content %}
+    <div id="profile-container">
+        <!-- Profile picture -->
+        <p>
+            <img id="profile-picture" src="" alt="Profile Picture" width="150">
+        </p>
+        <!-- Username -->
+        <h2>
+            <b><span id="username"></span></b>
+        </h2>
+        <!-- Full name -->
+        <p>
+            <b>Name:</b> <span id="full-name"></span>
+        </p>
+        <!-- Email -->
+        <p>
+            <b>Email:</b> <span id="email"></span>
+        </p>
+        <!-- Phone number -->
+        <p>
+            <b>Phone number:</b> <span id="phone"></span>
+        </p>
+        <!-- Date of Birth -->
+        <p>
+            <b>Date of Birth:</b> <span id="date_of_birth"></span>
+        </p>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            try {
+                const userId = "{{ id }}";
+                const url = `/profiles/json/${userId}/`;;
+    
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch profile data from server");
+                }
+    
+                const data = await response.json();
+    
+                document.getElementById("full-name").textContent = data.full_name;
+                document.getElementById("username").textContent = data.username;
+                document.getElementById("email").textContent = data.email;
+                document.getElementById("phone").textContent = data.phone || " ";
+                document.getElementById("date_of_birth").textContent = data.date_of_birth || " ";
+
+                if (data.profile_picture) {
+                    document.getElementById("profile-picture").src = data.profile_picture;
+                    document.getElementById("profile-picture").alt = "Profile Picture";
+                } else {
+                    document.getElementById("profile-picture").alt = " ";
+                }
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        });
+    </script> 
+{% endblock %}

@@ -129,7 +129,6 @@ else:
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -177,3 +176,11 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "984c29001@smtp-brevo.com"
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = "l1gapass@outlook.com"
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Password admin dan journalist
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+JOURNALIST_PASSWORD = os.getenv("JOURNALIST_PASSWORD")
