@@ -53,100 +53,87 @@ def create_booking(request, match_id):
 
 def payment(request, booking_id):
     booking = get_object_or_404(Booking, booking_id=booking_id)
+
     if request.method == "GET":
         return render(request, "payment.html", {
             "booking": booking,
             "MIDTRANS_CLIENT_KEY": settings.MIDTRANS_CLIENT_KEY
         })
+
     elif request.method == "POST":
+        import uuid, json, base64, requests
         data = json.loads(request.body)
+        method = data.get("method")
         token_id = data.get("token_id")
+        bank = data.get("bank")
 
-        if not token_id:
-            return JsonResponse({"error": "Missing token_id"}, status=400)
-
-        # Basic Auth Midtrans pakai Server Key
+        # --- AUTH ---
         server_key = settings.MIDTRANS_SERVER_KEY
         auth_str = base64.b64encode(f"{server_key}:".encode()).decode()
-
         headers = {
             "Authorization": f"Basic {auth_str}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
 
+        # --- ORDER ID ---
+        order_id = f"booking-{method}-{uuid.uuid4().hex[:10]}"
+
+        # --- PAYLOAD ---
         payload = {
-            "payment_type": "credit_card",
             "transaction_details": {
-                "order_id": f"booking-{booking.booking_id}",
+                "order_id": order_id,
                 "gross_amount": float(booking.total_price),
-            },
-            "credit_card": {
-                "token_id": token_id,
-                "authentication": True,
             },
             "customer_details": {
                 "first_name": booking.user.username,
-                "email": booking.user.email or "noemail@example.com",
+                "email": booking.user.email,
             },
         }
 
+        # Payment type
+        if method == "card":
+            payload["payment_type"] = "credit_card"
+            payload["credit_card"] = {
+                "token_id": token_id,
+                "authentication": True
+            }
+        elif method == "bank":
+            payload["payment_type"] = "bank_transfer"
+            payload["bank_transfer"] = {"bank": bank}
+        elif method == "gopay":
+            payload["payment_type"] = "gopay"
+            payload["gopay"] = {
+                "enable_callback": True,
+                "callback_url": request.build_absolute_uri('/payment/finish/')
+            }
+        else:
+            return JsonResponse({"error": "Invalid method"}, status=400)
+
+        # --- SEND TO MIDTRANS ---
         response = requests.post(
             "https://api.sandbox.midtrans.com/v2/charge",
             headers=headers,
-            json=payload,
+            json=payload
         )
 
-        result = response.json()
-        print("[MIDTRANS RESPONSE]", result)
+        # Simpan order_id di booking
+        booking.midtrans_order_id = order_id
+        booking.save(update_fields=["midtrans_order_id"])
 
-        if response.status_code == 201 and "redirect_url" in result:
-            booking.midtrans_order_id = result.get("order_id")
-            booking.save(update_fields=["midtrans_order_id"])
-            return JsonResponse({"redirect_url": result["redirect_url"]}, status=200)
+        # --- Return langsung semua respons Midtrans ke FE ---
+        return JsonResponse(response.json(), status=response.status_code)
 
-        return JsonResponse(result, status=400)
-    return JsonResponse({"error": "Invalid request method"}, status=405)
-# def payment(request, booking_id):
-#     booking = get_object_or_404(Booking, booking_id=booking_id)
-#     if request.method == "GET":
-#         # Buat Snap token
-#         server_key = settings.MIDTRANS_SERVER_KEY
-#         auth_str = base64.b64encode(f"{server_key}:".encode()).decode()
 
-#         headers = {
-#             "Authorization": f"Basic {auth_str}",
-#             "Content-Type": "application/json",
-#         }
+def cancel_booking(request, booking_id):
+    booking = get_object_or_404(Booking, booking_id=booking_id)
 
-#         payload = {
-#             "transaction_details": {
-#                 "order_id": f"booking-{booking.booking_id}",
-#                 "gross_amount": float(booking.total_price),
-#             },
-#             "credit_card": {
-#                 "secure": True
-#             },
-#             "customer_details": {
-#                 "first_name": booking.user.username,
-#                 "email": booking.user.email or "noemail@example.com",
-#             },
-#         }
+    if booking.status == "PENDING":  # hanya cancel jika belum dibayar
+        booking.status = "CANCELLED"
+        booking.save(update_fields=["status"])
+        return JsonResponse({"message": "Booking cancelled due to timeout"})
 
-#         response = requests.post(
-#             "https://app.sandbox.midtrans.com/snap/v1/transactions",
-#             headers=headers,
-#             json=payload,
-#         )
-
-#         snap_data = response.json()
-#         snap_token = snap_data.get("token")
-
-#         return render(request, "payment_snap.html", {
-#             "booking": booking,
-#             "SNAP_TOKEN": snap_token,
-#             "MIDTRANS_CLIENT_KEY": settings.MIDTRANS_CLIENT_KEY
-#         })
+    return JsonResponse({"message": "Booking already processed"}, status=400)
 
 def ticket(request):
     return None
