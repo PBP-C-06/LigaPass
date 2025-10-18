@@ -8,3 +8,4 @@ python-dotenv
 django-phonenumber-field[phonenumberslite]
 Babel
 google-auth
+Pillow
