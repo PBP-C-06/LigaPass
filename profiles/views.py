@@ -68,7 +68,7 @@ def show_json_admin_journalist(request):
             profile = getattr(user, 'adminjournalistprofile', None)
             data = {
                 "username": user.username,
-                "profile_picture": profile.profile_picture.url if profile and profile.profile_picture else None
+                "profile_picture": profile.profile_picture if profile and profile.profile_picture else None
             }
             return JsonResponse(data)
         else:

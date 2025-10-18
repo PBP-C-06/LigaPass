@@ -14,7 +14,7 @@ def hardcode_admin():
             user.save()
             AdminJournalistProfile.objects.create(
                 user=user,
-                profile_picture="static/image/Admin.png"
+                profile_picture="image/Admin.png"
             )
     except Exception:
         pass
@@ -31,7 +31,7 @@ def hardcode_journalist():
                 user.save()
                 AdminJournalistProfile.objects.create(
                     user=user,
-                    profile_picture="static/image/Journalist.png"
+                    profile_picture="image/Journalist.png"
                 )
     except Exception:
         pass
