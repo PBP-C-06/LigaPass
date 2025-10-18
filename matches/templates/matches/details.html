@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Pertandingan{% endblock %}
+
+{% block content %}
+<div class="bg-slate-800 max-w-4xl mx-auto p-6 rounded-lg shadow-lg">
+    <div class="text-center mb-6">
+        <p class="text-slate-400">{{ match.date|date:"l, d F Y - H:i" }} WIB</p>
+        <p class="text-lg text-slate-300">{{ match.venue.name }}, {{ match.venue.city }}</p>
+    </div>
+
+    <div class="flex justify-around items-center">
+        <div class="text-center w-1/3">
+            <img src="{{ match.home_team.logo_url }}" alt="{{ match.home_team.name }} logo" class="w-24 h-24 mx-auto mb-2">
+            <h2 class="text-2xl font-bold">{{ match.home_team.name }}</h2>
+        </div>
+        
+        <div class="text-center">
+            <p class="text-5xl font-bold">{{ match.home_goals|default_if_none:"-" }} - {{ match.away_goals|default_if_none:"-" }}</p>
+            {% if match.status_key == 'Past' %}
+                <span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Finished</span>
+            {% elif match.status_key == 'Ongoing' %}
+                <span class="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded animate-pulse">LIVE</span>
+            {% else %}
+                <span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Upcoming</span>
+            {% endif %}
+        </div>
+
+        <div class="text-center w-1/3">
+            <img src="{{ match.away_team.logo_url }}" alt="{{ match.away_team.name }} logo" class="w-24 h-24 mx-auto mb-2">
+            <h2 class="text-2xl font-bold">{{ match.away_team.name }}</h2>
+        </div>
+    </div>
+
+    {% if match.status_key == 'Upcoming' %}
+        {% if ticket_prices %}
+        <div class="mt-8 border-t border-slate-600 pt-6">
+            <h3 class="text-xl font-bold text-center mb-4">Kategori & Harga Tiket</h3>
+            <ul class="max-w-md mx-auto">
+                {% for ticket in ticket_prices %}
+                <li class="flex justify-between items-center bg-slate-700 p-3 rounded-lg mb-2">
+                    <span class="font-semibold">{{ ticket.get_seat_category_display }}</span>
+                    <span class="text-green-400">Rp {{ ticket.price|floatformat:0 }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    {% endif %}
+
+    <div class="mt-8 text-center">
+        {% if match.status_key == 'Upcoming' %}
+            {% if user.is_authenticated %}
+                <a href="#" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors">Beli Tiket</a>
+            {% else %}
+                <a href="{% url 'authentication:login' %}" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors">Login untuk Membeli Tiket</a>
+            {% endif %}
+        {% elif match.status_key == 'Ongoing' %}
+            <button disabled class="bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg text-lg cursor-not-allowed">Match is underway</button>
+        {% else %}
+            <button disabled class="bg-slate-600 text-slate-400 font-bold py-3 px-8 rounded-lg text-lg cursor-not-allowed">Match has finished</button>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

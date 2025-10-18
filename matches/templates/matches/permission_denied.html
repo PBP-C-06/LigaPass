@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Akses Ditolak{% endblock %}
+
+{% block content %}
+<div class="bg-red-900 border border-red-700 max-w-2xl mx-auto p-8 rounded-lg shadow-lg text-center">
+    <h1 class="text-3xl font-bold text-white mb-4">Akses Ditolak (403 Forbidden)</h1>
+    <p class="text-red-200 text-lg">
+        Mohon maaf, Anda harus menjadi **Admin** untuk mengakses halaman ini.
+    </p>
+    <div class="mt-8">
+        <a href="{% url 'matches:calendar' %}" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg">
+            Kembali ke Kalender
+        </a>
+    </div>
+</div>
+{% endblock %}

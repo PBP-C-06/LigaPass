@@ -27,8 +27,9 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-# API KEY untuk data Footbal dari api-football
+# API KEYS untuk data Footbal dari api-football dan rapid-api
 API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY") 
+RAPID_API_KEY = os.getenv("RAPID_API_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
@@ -167,6 +168,8 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'authentication.User'
+
+LOGIN_URL = 'authentication:login'
 
 # https://docs.djangoproject.com/en/5.2/topics/email/
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
