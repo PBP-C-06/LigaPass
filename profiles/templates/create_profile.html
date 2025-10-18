@@ -66,7 +66,7 @@
             if (response.ok) {
                 alert("Profile saved!");
                 setTimeout(() => {
-                    window.location.href = "{% url 'main:show_main' %}";
+                    window.location.href = "{% url 'matches:calendar' %}";
                 }, 1500);
             } else {
                 const errorText = await response.text();

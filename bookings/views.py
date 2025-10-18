@@ -7,7 +7,7 @@ import requests, base64, json
 # Create your views here.
 
 def create_booking(request, match_id):
-    match = get_object_or_404(Match, api_id=match_id)
+    match = get_object_or_404(Match, id=match_id)
     if request.method == "GET":
         ticket_prices = TicketPrice.objects.filter(match=match)
         return render(request, "create_booking.html", {
