@@ -191,4 +191,3 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Password admin dan journalist
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 JOURNALIST_PASSWORD = os.getenv("JOURNALIST_PASSWORD")
-

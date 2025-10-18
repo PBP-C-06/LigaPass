@@ -1,6 +1,5 @@
 <!-- Menampilkan admin profile -->
 
-<!-- TODO: Fixkan yang dibawah setelah hardcode jadi -->
 {% comment %} {% block content %}
     <div id="profile-container">
         <!-- Profile picture -->
@@ -16,8 +15,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", async function () {
             try {
-                const userId = "{{ id }}";
-                const url = `/profiles/admin/`;;
+                const url = `/profiles/adminJournalistJson/`;;
     
                 const response = await fetch(url);
                 if (!response.ok) {
