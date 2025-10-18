@@ -16,13 +16,14 @@ def register_user(request):
     form = RegisterForm()
     if request.method == "POST":
         form = RegisterForm(request.POST)
+
         if form.is_valid():
             user = form.save()
             login(request, user)
             response = JsonResponse({
                 "status": "success",
                 "message": "Registration successful",
-                "redirect_url": reverse("main:show_main")
+                "redirect_url": reverse("profiles:create_profile")
             })
             response.set_cookie('last_login', str(datetime.datetime.now()))
             return response
@@ -40,11 +41,15 @@ def login_user(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            
+            # Cek profile sudah ada atau belum
+            if hasattr(user, 'profile'):
+                redirect_url = reverse("main:show_main")
+            else:
+                redirect_url = reverse("profiles:create_profile")
             response = JsonResponse({
                 "status": "success",
                 "message": "Login successful",
-                "redirect_url": reverse("main:show_main")
+                "redirect_url": redirect_url
             })
             response.set_cookie('last_login', str(datetime.datetime.now()))
             return response
@@ -104,7 +109,18 @@ def google_login(request):
             )
 
             login(request, user)
-            response = redirect("main:show_main")
+
+            if hasattr(user, 'profile'):
+                redirect_url = reverse("main:show_main")
+            else:
+                redirect_url = reverse("profiles:create_profile")
+                
+            response = JsonResponse({
+                "status": "success",
+                "message": "Login successful",
+                "redirect_url": redirect_url
+            })
+            
             response.set_cookie("last_login", str(datetime.datetime.now()))
             return response
 

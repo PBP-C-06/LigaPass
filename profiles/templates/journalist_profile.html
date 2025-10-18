@@ -1,0 +1,43 @@
+<!-- Menampilkan journalist profile -->
+
+<!-- TODO: Fix kan yang dibawah setelah hardcode jadi-->
+{% comment %} 
+{% block content %}
+    <div id="profile-container">
+        <!-- Profile picture -->
+        <p>
+            <img id="profile-picture" src="" alt="Profile Picture" width="150">
+        </p>
+        <!-- Username -->
+        <h2>
+            <b><span id="username"></span></b>
+        </h2>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            try {
+                const userId = "{{ id }}";
+                const url = `/profiles/journalist/`;;
+    
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch profile data from server");
+                }
+    
+                const data = await response.json();
+    
+                document.getElementById("username").textContent = data.username;
+
+                if (data.profile_picture) {
+                    document.getElementById("profile-picture").src = data.profile_picture;
+                    document.getElementById("profile-picture").alt = "Profile Picture";
+                } else {
+                    document.getElementById("profile-picture").alt = " ";
+                }
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        });
+    </script> 
+{% endblock %} {% endcomment %}
