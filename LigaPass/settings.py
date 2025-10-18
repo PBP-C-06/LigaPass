@@ -180,6 +180,10 @@ EMAIL_HOST_USER = "984c29001@smtp-brevo.com"
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = "l1gapass@outlook.com"
 
+MIDTRANS_CLIENT_KEY = os.getenv("MIDTRANS_CLIENT_KEY")
+MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY")
+MIDTRANS_MERCHANT_ID = os.getenv("MIDTRANS_MERCHANT_ID")
+
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -187,3 +191,4 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Password admin dan journalist
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 JOURNALIST_PASSWORD = os.getenv("JOURNALIST_PASSWORD")
+

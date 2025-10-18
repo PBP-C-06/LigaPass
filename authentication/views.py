@@ -111,16 +111,11 @@ def google_login(request):
             login(request, user)
 
             if hasattr(user, 'profile'):
-                redirect_url = reverse("main:show_main")
+                redirect_url = reverse("matches:calendar")
             else:
                 redirect_url = reverse("profiles:create_profile")
                 
-            response = JsonResponse({
-                "status": "success",
-                "message": "Login successful",
-                "redirect_url": redirect_url
-            })
-            
+            response = redirect(redirect_url)
             response.set_cookie("last_login", str(datetime.datetime.now()))
             return response
 
