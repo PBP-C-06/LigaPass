@@ -1,40 +1,66 @@
-<h1>Kalender Pertandingan Liga 1 Indonesia</h1>
+{% extends 'base.html' %}
 
-{% if grouped_matches.Upcoming %}
-    <h2>Pertandingan Mendatang (Upcoming)</h2>
-    {% for match in grouped_matches.Upcoming %}
-        <div>
-            <img src="{{ match.home_logo }}" alt="{{ match.home_team }} Logo">
-            <strong>{{ match.home_team }}</strong> vs <strong>{{ match.away_team }}</strong>
-            <img src="{{ match.away_logo }}" alt="{{ match.away_team }} Logo">
-            <p>Tanggal: {{ match.date }}</p>
-            <p>Stadion: {{ match.venue }}</p>
-            <a href="{% url 'bookings:book' match.id %}">Beli Tiket</a>
+{% block title %}Kalender Pertandingan{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-center mb-6">Kalender Pertandingan</h1>
+
+    <form method="GET" action="{% url 'matches:calendar' %}" class="mb-8">
+        <div class="flex">
+            <input type="text" name="q" placeholder="Cari nama tim..." value="{{ request.GET.q }}"
+                   class="w-full p-3 rounded-l-lg bg-slate-700 text-white border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-r-lg">
+                Cari
+            </button>
         </div>
-        <hr>
-    {% endfor %}
-{% else %}
-    <p>Tidak ada pertandingan mendatang yang ditemukan.</p>
-{% endif %}
-
-{% if grouped_matches.Ongoing %}
-    <h2>Sedang Berlangsung (Ongoing)</h2>
-    <!-- {# Tampilkan pertandingan yang sedang berlangsung di sini #} -->
-{% endif %}
-
-{% if grouped_matches.Past %}
-    <h2>Pertandingan Selesai (Past)</h2>
+    </form>
     
-    {% for match in grouped_matches.Past %}
-        <div>
-            <img src="{{ match.home_logo }}" alt="{{ match.home_team }} Logo" width="20">
-            <strong>{{ match.home_team }}</strong> vs <strong>{{ match.away_team }}</strong>
-            <img src="{{ match.away_logo }}" alt="{{ match.away_team }} Logo" width="20">
-            <p>Tanggal: {{ match.date|date:"d M Y, H:i" }}</p>
-            <p>Stadion: {{ match.venue }}</p>
-            <a href="{% url 'matches:detail' match.id %}">Lihat Detail & Tiket</a>
-        </div>
-        <hr>
-    {% endfor %}
+    {% if user.is_authenticated and user.role == 'admin' %}
+    <div class="text-center mb-4">
+        <a href="{% url 'matches:update_from_api' %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+            Update Data dari API
+        </a>
+    </div>
+    {% endif %}
 
-{% endif %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="bg-green-700 text-white p-3 rounded-lg mb-4 text-center">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if not grouped_matches.Upcoming and not grouped_matches.Ongoing and not grouped_matches.Past %}
+        <div class="bg-slate-800 p-6 rounded-lg text-center">
+            <p class="text-slate-400">Tidak ada pertandingan yang ditemukan.</p>
+        </div>
+    {% endif %}
+
+    {% if grouped_matches.Upcoming %}
+        <h2 class="text-2xl font-semibold border-b-2 border-slate-700 pb-2 mb-4">Upcoming</h2>
+        <div class="space-y-4">
+        {% for match in grouped_matches.Upcoming %}
+            {% include 'matches/match_card.html' with match=match %}
+        {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if grouped_matches.Ongoing %}
+        <h2 class="text-2xl font-semibold border-b-2 border-slate-700 pb-2 mb-4 mt-8">Ongoing</h2>
+        <div class="space-y-4">
+        {% for match in grouped_matches.Ongoing %}
+            {% include 'matches/match_card.html' with match=match %}
+        {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if grouped_matches.Past %}
+        <h2 class="text-2xl font-semibold border-b-2 border-slate-700 pb-2 mb-4 mt-8">Past</h2>
+        <div class="space-y-4">
+        {% for match in grouped_matches.Past %}
+            {% include 'matches/match_card.html' with match=match %}
+        {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

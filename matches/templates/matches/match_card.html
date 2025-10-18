@@ -1,0 +1,25 @@
+<a href="{% url 'matches:detail' match.api_id %}" class="relative block bg-slate-800 p-4 rounded-lg hover:bg-slate-700 transition-colors">
+    <div class="flex items-center justify-center">
+        <div class="flex-1 text-right">
+             <span class="font-bold text-lg mr-4">{{ match.home_team.name }}</span>
+        </div>
+        <img src="{{ match.home_team.logo_url }}" alt="{{ match.home_team.name }} logo" class="w-8 h-8 flex-shrink-0">
+        <div class="w-20 text-center flex-shrink-0">
+            <span class="text-xl font-bold whitespace-nowrap">
+                {% if match.status_key == 'Past' %}
+                    {{ match.home_goals|default_if_none:"-" }} - {{ match.away_goals|default_if_none:"-" }}
+                {% else %}
+                    VS
+                {% endif %}
+            </span>
+        </div>
+        <img src="{{ match.away_team.logo_url }}" alt="{{ match.away_team.name }} logo" class="w-8 h-8 flex-shrink-0">
+        <div class="flex-1 text-left">
+            <span class="font-bold text-lg ml-4">{{ match.away_team.name }}</span>
+        </div>
+    </div>
+    <div class="absolute top-3 right-4 text-right text-sm text-slate-400">
+        <p>{{ match.date|date:"d M Y" }}</p>
+        <p>{{ match.date|date:"H:i" }} WIB</p>
+    </div>
+</a>
