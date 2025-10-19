@@ -62,43 +62,39 @@
 {% if match.status_key == 'Ongoing' %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const matchId = "{{ match.api_id }}";
     const scoreDisplay = document.getElementById('score-display');
     const statusContainer = document.getElementById('status-container');
-    const matchId = "{{ match.api_id }}";
-    let pollingInterval;
 
-    async function updateScore() {
-        try {
-            const response = await fetch(`/matches/api/live-score/${matchId}/`);
-            if (!response.ok) return; // Abaikan jika server error
-            
-            const data = await response.json();
-            if (data.error) return;
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/match/' + matchId + '/'
+    );
 
-            // Update skor
-            scoreDisplay.textContent = `${data.home_goals ?? '-'} - ${data.away_goals ?? '-'}`;
-            
-            // Update status badge
-            let statusBadgeHTML = '';
-            if (data.status_long === "Match Finished" || data.status_short === "FT") {
-                statusBadgeHTML = `<span id="status-badge" class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Finished</span>`;
-                clearInterval(pollingInterval); // Hentikan polling jika match selesai
-                location.reload(); // Refresh halaman agar tombol berubah
-            } else {
-                statusBadgeHTML = `<span id="status-badge" class="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded animate-pulse">${data.elapsed ?? 'LIVE'}'</span>`;
-            }
-            statusContainer.innerHTML = statusBadgeHTML;
-
-        } catch (error) {
-            console.error('Gagal mengambil live score:', error);
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        // Update skor
+        scoreDisplay.textContent = `${data.home_goals ?? '-'} - ${data.away_goals ?? '-'}`;
+        
+        // Update status badge
+        let statusBadgeHTML = '';
+        if (data.status_short === "FT") {
+            statusBadgeHTML = `<span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Finished</span>`;
+            chatSocket.close(); // Tutup koneksi jika match selesai
+            location.reload(); // Refresh halaman agar tombol berubah
+        } else {
+            statusBadgeHTML = `<span class="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded animate-pulse">${data.elapsed ?? 'LIVE'}'</span>`;
         }
-    }
-    
-    // Panggil sekali di awal
-    updateScore();
-    
-    // Panggil lagi setiap 60 detik
-    pollingInterval = setInterval(updateScore, 60000);
+        statusContainer.innerHTML = statusBadgeHTML;
+    };
+
+    chatSocket.onopen = function(e) {
+        console.log('WebSocket terhubung untuk live score.');
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('WebSocket terputus.');
+    };
 });
 </script>
 {% endif %}
