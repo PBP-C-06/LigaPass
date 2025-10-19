@@ -67,15 +67,10 @@ def match_detail_view(request, match_api_id):
         'ticket_prices': ticket_prices,
     }
     
-    return render(request, 'matches/details.html', context)
+    return render(request, 'matches/detail.html', context)
 
+@user_passes_test(is_admin)
 def update_matches_view(request):
-    # --- PERBAIKAN: Pengecekan izin manual ---
-    if not (request.user.is_authenticated and request.user.role == 'admin'):
-        # Jika bukan admin, tampilkan halaman error "Akses Ditolak"
-        return render(request, 'matches/permission_denied.html', status=403)
-    
-    # Kode di bawah ini hanya akan berjalan jika pengguna adalah admin
     print("Memicu pembaruan database dari API...")
     sync_database_with_apis()
     messages.success(request, 'Database pertandingan berhasil diperbarui dari API.')
