@@ -38,7 +38,8 @@ def create_booking(request, match_id):
             booking_items.append((ticket_type, quantity))
         
         booking = Booking.objects.create(
-            user=request.user
+            user=request.user,
+            total_price=total_price
         )
         
         for ticket_type, qty in booking_items:
@@ -80,6 +81,20 @@ def payment(request, booking_id):
             "Accept": "application/json",
         }
 
+        if booking.midtrans_order_id:
+            check_url = f"https://api.sandbox.midtrans.com/v2/{booking.midtrans_order_id}/status"
+            check_res = requests.get(check_url, auth=(settings.MIDTRANS_SERVER_KEY, ''))
+            check_data = check_res.json()
+            current_status = check_data.get("transaction_status")
+
+            if current_status in ["pending", "settlement", "capture"]:
+                return JsonResponse({
+                    "message": "Booking already has an active transaction",
+                    "order_id": booking.midtrans_order_id,
+                    "status": current_status,
+                    "midtrans_data": check_data,
+                }, status=200)
+            
         # --- ORDER ID ---
         order_id = f"booking-{method}-{uuid.uuid4().hex[:10]}"
 
@@ -127,6 +142,20 @@ def payment(request, booking_id):
 
         # --- Return langsung semua respons Midtrans ke FE ---
         return JsonResponse(response.json(), status=response.status_code)
+
+
+def cancel_booking(request, booking_id):
+    booking = get_object_or_404(Booking, booking_id=booking_id)
+
+    if booking.status == "PENDING":  # hanya cancel jika belum dibayar
+        booking.status = "EXPIRED"
+        booking.save(update_fields=["status"])
+        for item in booking.items.all():
+            item.ticket_type.quantity_available += item.quantity
+            item.ticket_type.save(update_fields=["quantity_available"])
+        return JsonResponse({"message": "Booking cancelled due to timeout"})
+
+    return JsonResponse({"message": "Booking already processed"}, status=400)
 
 @csrf_exempt
 def midtrans_notification(request):
