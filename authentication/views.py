@@ -124,7 +124,11 @@ def google_login(request):
             else:
                 redirect_url = reverse("matches:calendar")
 
-            response = redirect(redirect_url)
+            response = JsonResponse({
+                "status": "success",
+                "message": "Google login successful",
+                "redirect_url": redirect_url,
+            })
             response.set_cookie("last_login", str(datetime.datetime.now()))
             return response
 
