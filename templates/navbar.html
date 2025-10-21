@@ -6,7 +6,25 @@
 
     <div class="flex items-center space-x-6">
       {% if user.is_authenticated %}
-        <span class="text-slate-300">Hi, {{ user.username }}</span>
+      <!-- DEBUG PROFILE -->
+        {% if user.role == 'user' %}
+          <a href="{% url 'profiles:user_view' user.id %}"> 
+            <span class="text-slate-300">Hi, {{ user.username }}</span>
+          </a>
+        {% elif user.role == 'admin' %}
+          <a href="{% url 'profiles:admin_view' %}"> 
+            <span class="text-slate-300">Hi, {{ user.username }}</span>
+          </a>
+        {% elif user.role == 'journalist' %}
+          <a href="{% url 'profiles:journalist_view' %}"> 
+            <span class="text-slate-300">Hi, {{ user.username }}</span>
+          </a>
+        {% endif %}
+      <!--DEBUG EDIT PROFILE -->
+      <a href="{% url 'profiles:edit_profile_for_user' user.id %}"> 
+        <span class="text-slate-300">Edit User Profile</span>
+      </a>
+
 
         <form id="logoutForm" method="POST" action="{% url 'authentication:logout' %}">
           {% csrf_token %}

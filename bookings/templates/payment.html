@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Pembayaran{% endblock %}
+
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/payment.css' %}">
+<div class="payment-container">
+  <!-- Pilihan Metode -->
+  <div class="method-list">
+  <h3>Pilih Metode Pembayaran</h3>
+
+  <div class="method-item" data-method="card">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1158px-Mastercard-logo.svg.png?20210817144358" alt="Card">
+    <span>Kartu Kredit/Debit</span>
+  </div>
+
+  <div class="method-item" data-method="gopay">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/QRIS_logo.svg/576px-QRIS_logo.svg.png" alt="GoPay">
+    <span></span>
+  </div>
+
+  <h4 style="margin-top:16px; font-size:14px; color:#6b7280;">Virtual Account Bank</h4>
+
+  <div class="bank-grid">
+    <div class="method-item bank-item" data-method="bank" data-bank="bca">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia.svg/1199px-Bank_Central_Asia.svg.png" alt="BCA">
+    </div>
+    <div class="method-item bank-item" data-method="bank" data-bank="bni">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Bank_Negara_Indonesia_logo_%282004%29.svg/300px-Bank_Negara_Indonesia_logo_%282004%29.svg.png" alt="BNI">
+    </div>
+    <div class="method-item bank-item" data-method="bank" data-bank="bri">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/BANK_BRI_logo.svg/189px-BANK_BRI_logo.svg.png" alt="BRI">
+    </div>
+    <div class="method-item bank-item" data-method="bank" data-bank="mandiri">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Bank_Mandiri_logo_2016.svg/320px-Bank_Mandiri_logo_2016.svg.png" alt="Mandiri">
+    </div>
+  </div>
+</div>
+
+
+  <!-- Detail Form -->
+  <div class="payment-detail">
+    <h2>Pembayaran Booking {{ booking.booking_id }}</h2>
+    <p><strong>Total:</strong> Rp {{ booking.total_price }}</p>
+    <p>Status: {{ booking.get_status_display }}</p>
+
+    <!-- Form: Card -->
+    <div id="form-card" class="form-section">
+      <label>No Kartu</label>
+      <input type="text" id="card_number" placeholder="4811 1111 1111 1114">
+
+      <label>Bulan Exp</label>
+      <input type="number" id="card_exp_month" placeholder="2">
+
+      <label>Tahun Exp</label>
+      <input type="number" id="card_exp_year" placeholder="2025">
+
+      <label>CVV</label>
+      <input type="number" id="card_cvv" placeholder="123">
+
+      <button id="pay-card">Bayar dengan Kartu</button>
+    </div>
+
+    <!-- Form: QRIS / GoPay -->
+    <div id="form-gopay" class="form-section hidden">
+      <div id="gopay-box"></div>
+    </div>
+
+    <!-- Form: Bank -->
+    <div id="form-bank" class="form-section hidden">
+      <label>Pilih Bank</label>
+      <select id="bank_code">
+        <option value="bca">BCA</option>
+        <option value="bni">BNI</option>
+        <option value="bri">BRI</option>
+      </select>
+      <p style="margin-top:10px; color:#6b7280;">Nomor VA akan dibuat setelah menekan tombol di bawah.</p>
+      <button id="create-va">Buat Virtual Account</button>
+    </div>
+    <div id="result-box" style="margin-top:20px;"></div>
+  </div>
+</div>
+
+<!-- Midtrans 3DS SDK -->
+<script src="https://api.midtrans.com/v2/assets/js/midtrans-new-3ds.min.js"
+        data-environment="sandbox"
+        data-client-key="{{ MIDTRANS_CLIENT_KEY }}">
+</script>
+
+<script>
+const bookingId = "{{ booking.booking_id }}";
+const csrftoken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
+
+// === EVENT LISTENER UNTUK METODE ===
+document.querySelectorAll(".method-item").forEach(item => {
+  item.addEventListener("click", () => {
+    const method = item.dataset.method;
+    const bank = item.dataset.bank || null;
+
+    // Bersihin tampilan
+    const box = document.getElementById("result-box");
+    box.innerHTML = "";
+
+    // Highlight metode aktif
+    document.querySelectorAll(".method-item").forEach(m => m.classList.remove("active"));
+    item.classList.add("active");
+
+    if (method === "card") {
+      document.getElementById("form-card").classList.remove("hidden");
+      document.getElementById("form-gopay").classList.add("hidden");
+      return;
+    }
+
+    // GoPay
+    if (method === "gopay") {
+      document.getElementById("form-card").classList.add("hidden");
+      document.getElementById("form-gopay").classList.remove("hidden");
+      payWith("gopay");
+      return;
+    }
+
+    // Bank
+    if (method === "bank" && bank) {
+      document.getElementById("form-card").classList.add("hidden");
+      document.getElementById("form-gopay").classList.add("hidden");
+      payWith("bank", bank);
+      return;
+    }
+  });
+});
+
+// Global Flag
+let paymentInProgress = false;
+
+// Main function
+function payWith(method, bank = null) {
+  const box = document.getElementById("result-box");
+  box.innerHTML = `<p>Menghubungi Midtrans...</p>`;
+
+  // Cegah multiple payment
+  if (paymentInProgress) {
+    box.innerHTML = `<p style="color:red;">Transaksi sedang diproses... mohon tunggu.</p>`;
+    return;
+  }
+
+  paymentInProgress = true;
+  fetch(`/bookings/payment/${bookingId}/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrftoken
+    },
+    body: JSON.stringify({ method, bank })
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("[MIDTRANS RAW]", data);
+
+    if (data.error) {
+      box.innerHTML = `<p style="color:red;">${data.error}</p>`;
+      return;
+    }
+
+    // --- GOPAY / QRIS ---
+    if (method === "gopay" && data.actions) {
+      const qr = data.actions.find(a => a.name === "generate-qr-code-v2") ||
+                 data.actions.find(a => a.name === "generate-qr-code");
+      const deeplink = data.actions.find(a => a.name === "deeplink-redirect");
+
+      if (qr) {
+        box.innerHTML = `
+          <p>Pindai QR di bawah ini menggunakan GoPay / aplikasi e-wallet lain:</p>
+          <img src="${qr.url}" alt="QRIS" style="width:200px;height:200px;margin:15px 0;border:1px solid #ddd;border-radius:8px;">
+          ${deeplink ? `<p><a href="${deeplink.url}" target="_blank" class="btn">Buka di Aplikasi</a></p>` : ""}
+        `;
+      } else {
+        box.innerHTML = `<p style="color:red;">Gagal menemukan QR Code (${JSON.stringify(data)})</p>`;
+      }
+      return;
+    }
+
+    // --- BANK TRANSFER ---
+    if (method === "bank" && (data.va_numbers || data.permata_va_number)) {
+      const va = data.va_numbers ? data.va_numbers[0] : { bank: "permata", va_number: data.permata_va_number };
+      box.innerHTML = `
+        <h3>Virtual Account ${va.bank.toUpperCase()}</h3>
+        <p>No. VA: <strong>${va.va_number}</strong></p>
+        <p>Status: ${data.transaction_status}</p>
+        <p><em>Lakukan pembayaran ke nomor VA di atas (sandbox).</em></p>
+      `;
+      return;
+    }
+
+    // --- fallback ---
+    box.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+  })
+  .catch(err => {
+    console.error("Payment Error:", err);
+    box.innerHTML = `<p style="color:red;">Gagal memproses: ${err}</p>`;
+  });
+}
+</script>
+
+{% endblock %}

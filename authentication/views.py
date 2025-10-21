@@ -1,25 +1,9 @@
 from django.shortcuts import render, redirect
-from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from authentication.forms import RegisterForm
-import datetime, json
-from django.http import HttpResponseRedirect, JsonResponse
-from django.urls import reverse
-from django.utils.html import strip_tags
-from django.conf import settings
-from google.oauth2 import id_token
-from google.auth.transport import requests
-from authentication.models import User
-from django.views.decorators.csrf import csrf_exempt
-
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import AuthenticationForm
-from authentication.forms import RegisterForm
-import datetime, json
-from django.http import HttpResponseRedirect, JsonResponse
+import datetime
+from django.http import JsonResponse
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.conf import settings
@@ -32,13 +16,14 @@ def register_user(request):
     form = RegisterForm()
     if request.method == "POST":
         form = RegisterForm(request.POST)
+
         if form.is_valid():
             user = form.save()
             login(request, user)
             response = JsonResponse({
                 "status": "success",
                 "message": "Registration successful",
-                "redirect_url": reverse("main:show_main")
+                "redirect_url": reverse("profiles:create_profile")
             })
             response.set_cookie('last_login', str(datetime.datetime.now()))
             return response
@@ -56,11 +41,19 @@ def login_user(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            
+            # Cek profile user, journalist, atau admin
+            if user.role == "user":
+                # Cek profile sudah ada atau belum
+                if hasattr(user, 'profile'):
+                    redirect_url = reverse("matches:calendar")
+                else:
+                    redirect_url = reverse("profiles:create_profile")
+            else:
+                redirect_url = reverse("matches:calendar")
             response = JsonResponse({
                 "status": "success",
                 "message": "Login successful",
-                "redirect_url": reverse("main:show_main")
+                "redirect_url": redirect_url
             })
             response.set_cookie('last_login', str(datetime.datetime.now()))
             return response
@@ -120,7 +113,22 @@ def google_login(request):
             )
 
             login(request, user)
-            response = redirect("main:show_main")
+
+            # Cek profile user, journalist, atau admin
+            if user.role == "user":
+                # Cek profile sudah ada atau belum
+                if hasattr(user, 'profile'):
+                    redirect_url = reverse("matches:calendar")
+                else:
+                    redirect_url = reverse("profiles:create_profile")
+            else:
+                redirect_url = reverse("matches:calendar")
+
+            response = JsonResponse({
+                "status": "success",
+                "message": "Google login successful",
+                "redirect_url": redirect_url,
+            })
             response.set_cookie("last_login", str(datetime.datetime.now()))
             return response
 

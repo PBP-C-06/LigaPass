@@ -9,4 +9,3 @@ urlpatterns = [
     path("logout/", logout_user, name="logout"),
     path("google-login/", google_login, name="google_login"),
 ]
- 

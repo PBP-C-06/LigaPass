@@ -1,0 +1,113 @@
+<!-- Edit user profile -->
+
+{% block content %}
+
+<h1>Edit Profile</h1>
+
+<form id="profileForm" method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Profile Picture -->
+    <div>
+        <label for="profile_picture">Profile Picture</label><br>
+        {% if profile.profile_picture %} 
+            <img src="{{ profile.profile_picture.url }}" alt="Current Profile Picture" width="150">
+            <br>
+        {% endif %}
+        <input type="file" id="profile_picture" name="profile_picture" accept="image/*">
+    </div>
+
+    <!-- First name -->
+    <div>
+        <label for="first_name">First Name</label><br>
+        <input type="text" id="first_name" name="first_name" value="{{ person.first_name|title }}" required>
+    </div>
+
+    <!-- Last name -->
+    <div>
+        <label for="last_name">Last Name</label><br>
+        <input type="text" id="last_name" name="last_name" value="{{ person.last_name|title }}" required>
+    </div>
+
+    <!-- Username -->
+    <div>
+        <label for="username">Username</label><br>
+        <input type="text" id="username" name="username" value="{{ person.username }}" required>
+    </div>
+
+    <!-- Email -->
+    <div>
+        <label for="email">Email</label><br>
+        <input type="email" id="email" name="email" value="{{ person.email }}" required>
+    </div>
+
+    <!-- Phone -->
+    <div>
+        <label for="phone">Phone Number</label><br>
+        <input type="tel" id="phone" name="phone" value="{{ person.phone }}" required>
+    </div>
+
+    <!-- Date of Birth -->
+    <div>
+        <label for="date_of_birth">Date of Birth</label><br>
+        <input type="date" id="date_of_birth" name="date_of_birth" value="{{ profile.date_of_birth|date:'Y-m-d' }}" required>
+    </div>
+
+    <!-- Buttons -->
+    <div style="margin-top: 20px;">
+        <button type="button" id="resetBtn">Reset</button>
+        <button type="submit">Save</button>
+    </div>
+</form>
+
+<script>
+    const initialValues = {};
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const fields = ['first_name', 'last_name', 'username', 'email', 'phone', 'date_of_birth'];
+        fields.forEach(field => {
+            initialValues[field] = document.getElementById(field).value;
+        });
+    });
+
+    // Reset button
+    document.getElementById('resetBtn').addEventListener('click', function () {
+        for (const [key, value] of Object.entries(initialValues)) {
+            document.getElementById(key).value = value;
+        }
+
+        document.getElementById('profile_picture').value = ''; // Reset input
+    });
+
+    // Save button
+    document.getElementById('profileForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const form = e.target;
+        const formData = new FormData(form);
+
+        try {
+            const response = await fetch("{% url 'profiles:edit_profile_for_user' person.id %}", {
+                method: "POST",
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                },
+                body: formData,
+            });
+
+            if (response.ok) {
+                alert("Profile saved!");
+                setTimeout(() => {
+                    window.location.href = "{% url 'profiles:edit_profile_for_user' person.id %}";
+                }, 1000);
+            } else {
+                const errorText = await response.text();
+                alert("Failed to save profile: " + errorText);
+            }
+        } catch (error) {
+            alert("Error saving profile.");
+        }
+    });
+</script>
+
+{% endblock %}
