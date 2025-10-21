@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Pemesanan Tiket{% endblock %}
+
+{% block content %}
+<h1>Pemesanan Tiket</h1>
+
+<h2>{{ match.home_team.name }} vs {{ match.away_team.name }}</h2>
+<p><strong>Tanggal:</strong> {{ match.date|date:"d M Y, H:i" }}</p>
+<p><strong>Stadion:</strong> {{ match.venue.name }}</p>
+<hr>
+
+<form id="booking-form">
+  <h3>Pilih Kategori Kursi</h3>
+
+  {% for price in ticket_prices %}
+    <div style="margin-bottom: 15px;">
+      <h4>{{ price.get_seat_category_display }}</h4>
+      <p>Harga: Rp {{ price.price }} <br> Tersedia: {{ price.quantity_available }}</p>
+      <input type="number" 
+             id="{{ price.seat_category }}" 
+             min="0" 
+             max="{{ price.quantity_available }}" 
+             value="0">
+    </div>
+  {% empty %}
+    <p>Tidak ada kategori tiket yang tersedia.</p>
+  {% endfor %}
+
+  <button type="button" id="submit-booking">Pesan Sekarang</button>
+</form>
+
+<div id="booking-result" style="margin-top:20px;"></div>
+
+<script>
+document.getElementById("submit-booking").addEventListener("click", function() {
+    const types = {};
+
+    document.querySelectorAll("input[type='number']").forEach(input => {
+        const quantity = parseInt(input.value);
+        if (quantity > 0) {
+            types[input.id] = quantity;
+        }
+    });
+
+    if (Object.keys(types).length === 0) {
+        alert("Pilih minimal satu kategori tiket!");
+        return;
+    }
+
+    fetch(window.location.pathname, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({ types: types })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            document.getElementById("booking-result").innerHTML = 
+              `<p style='color:red;'>${data.error}</p>`;
+        } else {
+            document.getElementById("booking-result").innerHTML = `
+                <h3>Booking Berhasil!</h3>
+                <p>ID Booking: ${data.booking_id}</p>
+                <p>Total Harga: Rp ${data.total_price}</p>
+                <a href="/bookings/payment/${data.booking_id}/" class="btn btn-primary">
+                  Lanjut ke Pembayaran
+                </a>
+            `;
+        }
+    })
+    .catch(err => {
+        console.error("Booking gagal:", err);
+        document.getElementById("booking-result").innerHTML =
+          "<p style='color:red;'>Terjadi kesalahan. Silakan coba lagi.</p>";
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+<nav class="bg-slate-900 shadow-md py-3 sticky top-0 z-50">
+  <div class="container mx-auto px-6 flex justify-between items-center">
+    <a href="/" class="font-bold text-xl text-white hover:text-blue-400 transition-colors">
+      LigaPass
+    </a>
+
+    <div class="flex items-center space-x-6">
+      {% if user.is_authenticated %}
+      <!-- DEBUG PROFILE -->
+        {% if user.role == 'user' %}
+          <a href="{% url 'profiles:user_view' user.id %}"> 
+            <span class="text-slate-300">Hi, {{ user.username }}</span>
+          </a>
+        {% elif user.role == 'admin' %}
+          <a href="{% url 'profiles:admin_view' %}"> 
+            <span class="text-slate-300">Hi, {{ user.username }}</span>
+          </a>
+        {% elif user.role == 'journalist' %}
+          <a href="{% url 'profiles:journalist_view' %}"> 
+            <span class="text-slate-300">Hi, {{ user.username }}</span>
+          </a>
+        {% endif %}
+
+        <form id="logoutForm" method="POST" action="{% url 'authentication:logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="text-red-400 hover:text-red-300 font-medium transition-colors">
+            Logout
+          </button>
+        </form>
+      {% else %}
+        <a href="{% url 'authentication:login' %}" class="text-blue-400 hover:text-blue-300 font-medium transition-colors">
+          Login
+        </a>
+        <a href="{% url 'authentication:register' %}" class="text-green-400 hover:text-green-300 font-medium transition-colors">
+          Register
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</nav>

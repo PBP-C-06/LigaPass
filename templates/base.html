@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}LigaPass{% endblock %}</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #0f172a; /* slate-950 */
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Toast Notification Styles */
+    #toast-container {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      color: white;
+      font-size: 0.875rem;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.5s ease-in-out;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast.success { background-color: #16a34a; } /* green-600 */
+    .toast.error { background-color: #dc2626; }   /* red-600 */
+    .toast.info { background-color: #2563eb; }    /* blue-600 */
+    .toast.warning { background-color: #f59e0b; } /* amber-500 */
+    .toast.debug { background-color: #64748b; }   /* slate-500 */
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  <div id="toast-container"></div>
+
+  {% include 'navbar.html' %}
+
+  <main class="flex-grow container mx-auto px-6 py-8">
+    {% block content %}
+    <div class="text-center text-slate-400">
+      <h2 class="text-2xl font-semibold mb-4">Welcome to LigaPass ⚽</h2>
+      <p>Where football passion meets technology.</p>
+    </div>
+    {% endblock %}
+  </main>
+
+  <footer class="bg-slate-900 text-center py-4 text-slate-400 mt-auto">
+    <p>© {% now "Y" %} LigaPass. All rights reserved.</p>
+  </footer>
+
+  {% block scripts %}
+    <script src="{% static 'js/toast.js' %}"></script>
+    
+    {% if messages_json %}
+      {{ messages_json|json_script:"json-messages" }}
+    {% endif %}
+
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // --- Logika untuk menampilkan Toast dari Django Messages ---
+      const messagesElement = document.getElementById('json-messages');
+      if (messagesElement) {
+        const messages = JSON.parse(messagesElement.textContent);
+        messages.forEach(message => {
+          showToast(message.message, message.tags);
+        });
+      }
+
+      // --- Logika untuk form Logout ---
+      const logoutForm = document.getElementById("logoutForm");
+      if (logoutForm) {
+        logoutForm.addEventListener("submit", async (e) => {
+          e.preventDefault(); 
+          const csrfToken = logoutForm.querySelector("[name=csrfmiddlewaretoken]").value;
+
+          try {
+            const response = await fetch(logoutForm.action, {
+              method: "POST",
+              headers: { "X-CSRFToken": csrfToken, "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" },
+            });
+
+            const data = await response.json();
+            if (data.status === "success" && data.redirect_url) {
+              window.location.href = data.redirect_url;
+            } else {
+              showToast(data.message || "An error occurred.", "error");
+            }
+          } catch (error) {
+            console.error("An error occurred during logout:", error);
+            showToast("An error occurred during logout.", "error");
+          }
+        });
+      }
+
+      document.getElementById('testSuccess')?.addEventListener('click', () => {
+          showToast('Yeay! Tes sukses. Toast berhasil ditampilkan!', 'success');
+      });
+
+      document.getElementById('testError')?.addEventListener('click', () => {
+          showToast('Oops. Ada yang error saat testing.', 'error');
+      });
+
+      document.getElementById('testInfo')?.addEventListener('click', () => {
+          showToast('Ini adalah pesan informasi biasa.', 'info');
+      });
+    });
+    </script>
+  {% endblock %}
+</body>
+</html>
