@@ -77,8 +77,8 @@
   {% block scripts %}
     <script src="{% static 'js/toast.js' %}"></script>
     
-    {% if messages %}
-      {{ messages|json_script:"json-messages" }}
+    {% if messages_json %}
+      {{ messages_json|json_script:"json-messages" }}
     {% endif %}
 
     <script>
