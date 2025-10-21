@@ -151,7 +151,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Jakarta'
 
 USE_I18N = True
 
@@ -196,3 +196,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Password admin dan journalist
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 JOURNALIST_PASSWORD = os.getenv("JOURNALIST_PASSWORD")
+
+# Caching Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}

@@ -1,7 +1,8 @@
-from pathlib import Path
 import requests
 from django.conf import settings
 from datetime import datetime
+import json
+from pathlib import Path
 from .models import Team, Venue, Match, TicketPrice
 
 # --- Caching Configuration ---
@@ -93,12 +94,11 @@ def sync_database_with_apis():
     PLACEHOLDER_LOGO_URL = "https://www.fotmob.com/img/league_logos/default_crests/leagues_150x150/default.png"
     
     for match_data in all_matches:
-        if not all([match_data.get('home_team'), match_data.get('away_team'), match_data.get('id')]):
+        if not all([match_data.get('home_team_api_id'), match_data.get('away_team_api_id'), match_data.get('id')]):
             continue
 
         venue, _ = Venue.objects.get_or_create(name=match_data.get('venue', 'N/A'), defaults={'city': match_data.get('city')})
         
-        # --- LOGIKA PENYIMPANAN TIM YANG DIPERBAIKI ---
         home_team, created_home = Team.objects.update_or_create(
             name=match_data.get('home_team'),
             defaults={
@@ -106,7 +106,6 @@ def sync_database_with_apis():
                 'logo_url': match_data.get('home_logo') or PLACEHOLDER_LOGO_URL
             }
         )
-        # Jika tim sudah ada, tapi logonya placeholder, coba update dengan logo baru jika ada
         if not created_home and match_data.get('home_logo') and home_team.logo_url == PLACEHOLDER_LOGO_URL:
             home_team.logo_url = match_data.get('home_logo')
             home_team.save()
