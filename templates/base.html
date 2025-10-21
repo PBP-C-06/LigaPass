@@ -117,6 +117,18 @@
           }
         });
       }
+
+      document.getElementById('testSuccess')?.addEventListener('click', () => {
+          showToast('Yeay! Tes sukses. Toast berhasil ditampilkan!', 'success');
+      });
+
+      document.getElementById('testError')?.addEventListener('click', () => {
+          showToast('Oops. Ada yang error saat testing.', 'error');
+      });
+
+      document.getElementById('testInfo')?.addEventListener('click', () => {
+          showToast('Ini adalah pesan informasi biasa.', 'info');
+      });
     });
     </script>
   {% endblock %}
