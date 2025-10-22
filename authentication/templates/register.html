@@ -122,12 +122,12 @@
   document.addEventListener('DOMContentLoaded', function() {
     const formInputs = document.querySelectorAll('#registerForm input');
     const placeholders = {
-        'id_first_name': 'Nama depan',
-        'id_last_name': 'Nama belakang',
+        'id_first_name': 'Nama Depan',
+        'id_last_name': 'Nama Belakang',
         'id_username': 'Username',
-        'id_email': 'Alamat email aktif',
-        'id_password1': 'Buat password',
-        'id_password2': 'Ulangi password'
+        'id_email': 'Alamat Email Aktif',
+        'id_password1': 'Buat Password',
+        'id_password2': 'Ulangi Password'
     };
     const commonClasses = 'w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150 ease-in-out placeholder-slate-400';
     const passwordClasses = 'pr-10';
@@ -141,6 +141,7 @@
     });
   });
 
+  // --- Fungsi Toggle Password ---
   function togglePasswordVisibility(inputId, button) {
     const input = document.getElementById(inputId);
     const iconOpen = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`;
@@ -154,5 +155,83 @@
       button.innerHTML = iconOpen;
     }
   }
+
+  const registerForm = document.getElementById('registerForm');
+  registerForm.addEventListener('submit', async function(event) {
+    event.preventDefault();
+
+    const submitButton = registerForm.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.textContent;
+    submitButton.disabled = true;
+    submitButton.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Processing...`;
+
+    // Hapus pesan error lama
+    registerForm.querySelectorAll('.text-red-600').forEach(el => el.textContent = '');
+    const nonFieldErrorDiv = registerForm.querySelector('.bg-red-100');
+    if (nonFieldErrorDiv) nonFieldErrorDiv.classList.add('hidden');
+
+    const formData = new FormData(registerForm);
+    const csrfToken = formData.get('csrfmiddlewaretoken');
+
+    try {
+      const response = await fetch(registerForm.action, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+      });
+
+      const data = await response.json()
+
+      if (response.ok && data.status === 'success') {
+        showToast(data.message || 'Registrasi berhasil!', 'success');
+        setTimeout(() => {
+          window.location.href = data.redirect_url;
+        }, 1000);
+
+      } else {
+  
+        if (data.errors) {
+          for (const fieldName in data.errors) {
+            const errorDiv = registerForm.querySelector(`#id_${fieldName}`)?.closest('div')?.querySelector('.text-red-600');
+            if (errorDiv) {
+              errorDiv.textContent = data.errors[fieldName].join(' ');
+            }
+            if (fieldName === '__all__' && nonFieldErrorDiv) {
+              nonFieldErrorDiv.innerHTML = data.errors[fieldName].map(err => `<span>${err}</span>`).join('<br>');
+              nonFieldErrorDiv.classList.remove('hidden');
+            }
+          }
+           if(data.errors.__all__){
+               showToast(data.errors.__all__.join(' '), 'error');
+           } else {
+               showToast('Periksa kembali isian form Anda.', 'warning');
+           }
+        } else {
+          showToast(data.message || 'Registrasi gagal.', 'error');
+          if (nonFieldErrorDiv) {
+              nonFieldErrorDiv.innerHTML = `<span>${data.message || 'Registrasi gagal.'}</span>`;
+              nonFieldErrorDiv.classList.remove('hidden');
+          }
+        }
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+      }
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      showToast('Terjadi kesalahan. Coba lagi nanti.', 'error');
+      submitButton.disabled = false;
+      submitButton.innerHTML = originalButtonText;
+    }
+  });
 </script>
 {% endblock %}
