@@ -61,6 +61,8 @@ urlpatterns = [
     path('bookings/', include('bookings.urls')),
     path('matches/', include('matches.urls')),
     path('profiles/', include('profiles.urls')),
+    path("reviews/", include("reviews.urls")),
+    
 ]
 
 # Supaya media dapat di akses di lokal 
