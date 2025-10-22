@@ -2,6 +2,10 @@ from django.conf import settings
 from authentication.models import User
 from profiles.models import AdminJournalistProfile
 
+def create_default_users(sender, **kwargs):
+    hardcode_admin()
+    hardcode_journalist()
+    
 def hardcode_admin():
     try:
         if not (User.objects.filter(username="admin").exists()):
