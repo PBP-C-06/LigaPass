@@ -18,12 +18,18 @@ class Command(BaseCommand):
 
         while True:
             try:
-                # Cari pertandingan yang sedang berlangsung di database
                 now = timezone.now()
-                two_hours_ago = now - timedelta(hours=2.5)
-                ongoing_matches = Match.objects.filter(date__gte=two_hours_ago, date__lte=now).exclude(status_short='FT')
-
-                if ongoing_matches:
+                # Menggunakan margin aman 4 jam untuk mencakup pertandingan yang:
+                # 1. Sedang berlangsung (Ongoing) sesuai definisi 2.5 jam di views.
+                # 2. Baru saja selesai tetapi API belum mengirim status FT atau status FT belum terkirim ke DB.
+                safe_past_time = now - timedelta(hours=4) 
+                
+                ongoing_matches = Match.objects.filter(
+                    date__lte=now,                   # Match harus sudah dimulai
+                    date__gte=safe_past_time         # Dimulai dalam 4 jam terakhir
+                ).exclude(status_short='FT').order_by('date')
+                
+                if ongoing_matches.exists():
                     self.stdout.write(f"Menemukan {ongoing_matches.count()} pertandingan berlangsung. Mengambil data live...")
                     
                     for match in ongoing_matches:
@@ -47,7 +53,7 @@ class Command(BaseCommand):
                                 'elapsed': api_data['fixture']['status']['elapsed'],
                             }
 
-                            # Update database lokal
+                            # Update database lokal (menggunakan data yang benar dari API, termasuk status FT)
                             match.home_goals = live_data['home_goals']
                             match.away_goals = live_data['away_goals']
                             match.status_short = live_data['status_short']
