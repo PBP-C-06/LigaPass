@@ -1,13 +1,43 @@
 # matches/models.py
 
-from django.db import models
 import uuid
+from django.db import models
+from django.templatetags.static import static
 
 class Team(models.Model):
-    # Menyimpan ID unik dari API untuk menghindari duplikasi saat update
-    api_id = models.IntegerField(unique=True)
-    name = models.CharField(max_length=100)
-    logo_url = models.URLField(max_length=255)
+    LIGA_CHOICES = [
+        ('liga_1', 'Liga 1'),
+        ('liga_2', 'Liga 2'),
+        ('n/a', 'Tidak Diketahui'), # Untuk default/tim yang belum jelas
+    ]
+
+    # Primary key: name
+    api_id = models.IntegerField(null=True, blank=True)
+    name = models.CharField(max_length=100, unique=True)
+    logo_url = models.URLField(max_length=500, blank=True, null=True)
+    league = models.CharField(max_length=10, choices=LIGA_CHOICES, default='n/a')
+
+    @property
+    def static_logo_filename(self):
+        """Menghasilkan nama file yang diharapkan (misal: 'bali_united.png')."""
+        if not self.name:
+            return "default.png"
+        return self.name.lower().replace(' ', '_') + '.png'
+
+    @property
+    def display_logo_url(self):
+        """Memilih antara Logo API/DB (P1) dan Static Fallback Liga-spesifik (P2)."""
+        
+        # Prioritas 1: Logo API/URL (jika logo_url di DB tidak None/kosong)
+        if self.logo_url:
+            return self.logo_url
+        
+        # Prioritas 2: Logo Statis (Menggunakan atribut 'liga' untuk menentukan sub-folder)
+        file_name = self.static_logo_filename
+        
+        path = f"matches/images/team_logos/{self.league}/{file_name}"
+        
+        return static(path)
 
     def __str__(self):
         return self.name
@@ -59,7 +89,7 @@ class TicketPrice(models.Model):
     # Gunakan DecimalField untuk uang agar tidak ada error pembulatan
     price = models.DecimalField(max_digits=10, decimal_places=2) # Contoh: 99999999.99
     
-    # (Opsional tapi sangat direkomendasikan) Tambahkan kuota tiket
+    # Tambahkan kuota tiket
     quantity_available = models.PositiveIntegerField(default=0, help_text="Jumlah tiket yang tersedia untuk kategori ini")
 
     class Meta:
