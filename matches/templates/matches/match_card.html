@@ -3,7 +3,7 @@
         <div class="flex-1 text-right">
              <span class="font-bold text-lg mr-4">{{ match.home_team.name }}</span>
         </div>
-        <img src="{{ match.home_team.logo_url }}" alt="{{ match.home_team.name }} logo" class="w-8 h-8 flex-shrink-0">
+        <img src="{{ match.home_team.display_logo_url }}" alt="{{ match.home_team.name }}" class="w-8 h-8 flex-shrink-0">
         <div class="w-20 text-center flex-shrink-0">
             <span class="text-xl font-bold whitespace-nowrap">
                 {% if match.status_key == 'Past' %}
@@ -13,7 +13,7 @@
                 {% endif %}
             </span>
         </div>
-        <img src="{{ match.away_team.logo_url }}" alt="{{ match.away_team.name }} logo" class="w-8 h-8 flex-shrink-0">
+        <img src="{{ match.away_team.display_logo_url }}" alt="{{ match.away_team.name }}" class="w-8 h-8 flex-shrink-0">
         <div class="flex-1 text-left">
             <span class="font-bold text-lg ml-4">{{ match.away_team.name }}</span>
         </div>
