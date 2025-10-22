@@ -129,11 +129,21 @@ document.querySelectorAll(".method-item").forEach(item => {
   });
 });
 
+// Global Flag
+let paymentInProgress = false;
+
 // Main function
 function payWith(method, bank = null) {
   const box = document.getElementById("result-box");
   box.innerHTML = `<p>Menghubungi Midtrans...</p>`;
 
+  // Cegah multiple payment
+  if (paymentInProgress) {
+    box.innerHTML = `<p style="color:red;">Transaksi sedang diproses... mohon tunggu.</p>`;
+    return;
+  }
+
+  paymentInProgress = true;
   fetch(`/bookings/payment/${bookingId}/`, {
     method: "POST",
     headers: {

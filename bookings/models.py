@@ -7,7 +7,6 @@ class Booking(models.Model):
     booking_status = [
         ('PENDING', 'Menunggu Pembayaran'),
         ('CONFIRMED', 'Terkonfirmasi'),
-        ('CANCELLED', 'Dibatalkan'),
         ('EXPIRED', 'Kadaluarsa')
     ]
     
@@ -21,6 +20,19 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"Booking {self.booking_id} by {self.user.username}"
+
+class BookingItem(models.Model):
+    ticket_type = [
+        ('Regular', 'Regular'),
+        ('VIP', 'VIP'),
+        ('VVIP', 'VVIP'),
+    ]
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='items')
+    ticket_type = models.ForeignKey(TicketPrice, choices=ticket_type, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.quantity}x {self.ticket_type.seat_category} for {self.booking}"
 
 class Ticket(models.Model):
     ticket_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
