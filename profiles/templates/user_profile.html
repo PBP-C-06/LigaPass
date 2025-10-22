@@ -1,61 +1,108 @@
 <!-- Menampilkan user profile -->
 
 {% block content %}
-    <div id="profile-container">
-        <!-- Profile picture -->
-        <p>
-            <img id="profile-picture" src="" alt="Profile Picture" width="150">
-        </p>
-        <!-- Username -->
-        <h2>
-            <b><span id="username"></span></b>
-        </h2>
-        <!-- Full name -->
-        <p>
-            <b>Name:</b> <span id="full-name"></span>
-        </p>
-        <!-- Email -->
-        <p>
-            <b>Email:</b> <span id="email"></span>
-        </p>
-        <!-- Phone number -->
-        <p>
-            <b>Phone number:</b> <span id="phone"></span>
-        </p>
-        <!-- Date of Birth -->
-        <p>
-            <b>Date of Birth:</b> <span id="date_of_birth"></span>
-        </p>
-    </div>
+<div id="profile-container">
+    <!-- Profile picture -->
+    <p>
+        <img id="profile-picture" src="" alt="Profile Picture" width="150">
+    </p>
+    <!-- Username -->
+    <h2>
+        <b><span id="username"></span></b>
+    </h2>
+    <!-- Full name -->
+    <p>
+        <b>Name:</b> <span id="full-name"></span>
+    </p>
+    <!-- Email -->
+    <p>
+        <b>Email:</b> <span id="email"></span>
+    </p>
+    <!-- Phone number -->
+    <p>
+        <b>Phone number:</b> <span id="phone"></span>
+    </p>
+    <!-- Date of Birth -->
+    <p>
+        <b>Date of Birth:</b> <span id="date_of_birth"></span>
+    </p>
+</div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", async function () {
-            try {
-                const userId = "{{ id }}";
-                const url = `/profiles/json/${userId}/`;;
-    
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error("Failed to fetch profile data from server");
-                }
-    
-                const data = await response.json();
-    
-                document.getElementById("full-name").textContent = data.full_name;
-                document.getElementById("username").textContent = data.username;
-                document.getElementById("email").textContent = data.email;
-                document.getElementById("phone").textContent = data.phone || " ";
-                document.getElementById("date_of_birth").textContent = data.date_of_birth || " ";
+<!-- Container untuk admin action -->
+<div id="admin-actions" style="margin-top:20px;"></div>
 
-                if (data.profile_picture) {
-                    document.getElementById("profile-picture").src = data.profile_picture;
-                    document.getElementById("profile-picture").alt = "Profile Picture";
-                } else {
-                    document.getElementById("profile-picture").alt = " ";
+<script>
+document.addEventListener("DOMContentLoaded", async function () {
+    try {
+        const userId = "{{ id }}";
+        const url = `/profiles/json/${userId}/`;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Failed to fetch profile data from server");
+
+        const data = await response.json();
+
+        document.getElementById("full-name").textContent = data.full_name;
+        document.getElementById("username").textContent = data.username;
+        document.getElementById("email").textContent = data.email;
+        document.getElementById("phone").textContent = data.phone || " ";
+        document.getElementById("date_of_birth").textContent = data.date_of_birth || " ";
+
+        if (data.profile_picture) {
+            document.getElementById("profile-picture").src = data.profile_picture;
+            document.getElementById("profile-picture").alt = "Profile Picture";
+        } else {
+            document.getElementById("profile-picture").alt = " ";
+        }
+
+        // Untuk admin
+        if (data.role === "admin") {
+            const adminActions = document.getElementById("admin-actions");
+        
+            const select = document.createElement("select");
+            select.id = "status-select";
+            const statuses = ["active", "suspended", "banned"];
+            statuses.forEach(s => {
+                const option = document.createElement("option");
+                option.value = s;
+                option.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+                select.appendChild(option);
+            });
+        
+            const btn = document.createElement("button");
+            btn.textContent = "Change Status";
+        
+            btn.addEventListener("click", async () => {
+                const newStatus = select.value;
+                const confirmChange = confirm(`Are you sure to change the status to "${newStatus}"?`);
+                if (!confirmChange) return;
+        
+                try {
+                    const res = await fetch(`/profiles/admin/edit/${userId}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": "{{ csrf_token }}",
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({status: newStatus})
+                    });
+                    if (!res.ok) throw new Error("Failed to update status");
+                    const resData = await res.json();
+                    alert(`Status updated: ${resData.status}`);
+                } catch (err) {
+                    console.error(err);
+                    alert("Error updating status");
                 }
-            } catch (error) {
-                alert("Error: " + error.message);
-            }
-        });
-    </script> 
+            });
+        
+            adminActions.appendChild(select);
+            adminActions.appendChild(btn);
+        }
+        
+
+    } catch (error) {
+        alert("Error: " + error.message);
+    }
+});
+</script>
 {% endblock %}

@@ -1,38 +1,94 @@
 <!-- Menampilkan admin profile -->
 
+{% extends "base.html" %}
 {% load static %}
 
 {% block content %}
-    <div id="profile-container">
-        <!-- Profile picture -->
-        <p>
-            <img id="profile-picture" src="" alt="Profile Picture" width="150">
-        </p>
-        <!-- Username -->
-        <h2>
-            <b><span id="username"></span></b>
-        </h2>
+
+<!-- Admin profile -->
+<div id="profile-container">
+    <p><img id="profile-picture" src="" alt="Profile Picture" width="150"></p>
+    <h2><b><span id="username"></span></b></h2>
+</div>
+
+<!-- Search user -->
+<div>
+    <h2>Manage User Profiles</h2>
+
+    <div>
+        <input id="searchInput" type="text" placeholder="Search username...">
+        <select id="filterSelect">
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+        </select>
     </div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", async function () {
-            try {
-                const url = `/profiles/adminJournalistJson/`;
-                const STATIC_URL = "{% static '' %}";
-    
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error("Failed to fetch profile data from server");
-                }
-    
-                const data = await response.json();
-    
-                document.getElementById("username").textContent = data.username;
-                document.getElementById("profile-picture").src = STATIC_URL + data.profile_picture;
-                document.getElementById("profile-picture").alt = "Admin Picture";
-            } catch (error) {
-                alert("Error: " + error.message);
-            }
-        });
-    </script> 
+    <div id="profilesContainer"></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async function () {
+    // Fetch admin profile
+    try {
+        const url = `/profiles/adminJournalistJson/`;
+        const STATIC_URL = "{% static '' %}";
+        const response = await fetch(url);
+
+        if (!response.ok) throw new Error("Failed to fetch admin profile data");
+
+        const data = await response.json();
+
+        document.getElementById("username").textContent = data.username;
+        document.getElementById("profile-picture").src = STATIC_URL + data.profile_picture;
+        document.getElementById("profile-picture").alt = "Admin Picture";
+    } catch (error) {
+        console.error("Error loading admin profile:", error);
+    }
+
+    // Fetch user profiles
+    const searchInput = document.getElementById('searchInput');
+    const filterSelect = document.getElementById('filterSelect');
+    const profilesContainer = document.getElementById('profilesContainer');
+
+    async function fetchProfiles() {
+        const search = searchInput.value;
+        const filter = filterSelect.value;
+
+        const response = await fetch(`{% url 'profiles:admin_view_json' %}?search=${search}&filter=${filter}`);
+        const profiles = await response.json();
+
+        if (profiles.length > 0) {
+            profilesContainer.innerHTML = "";
+            profiles.forEach(p => {
+                const div = document.createElement("div");
+                div.innerHTML = `
+                    <hr>
+                    <p><b>Username:</b> ${p.username}</p>
+                    <button class="details-btn" data-id="${p.id}">Details</button>
+                `;
+                profilesContainer.appendChild(div);
+            });
+
+            // Tambahin event listener untuk button details
+            document.querySelectorAll(".details-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const userId = btn.dataset.id;
+                    window.location.href = `/profiles/user/${userId}/`;
+                });
+            });
+
+        } else {
+            profilesContainer.innerHTML = "<p>No profiles found.</p>";
+        }
+    }
+
+    // Panggil pertama kali
+    fetchProfiles();
+
+    // Update realtime
+    searchInput.addEventListener('input', fetchProfiles);
+    filterSelect.addEventListener('change', fetchProfiles);
+});
+</script>
 {% endblock %}

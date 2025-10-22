@@ -34,28 +34,50 @@ def create_profile(request):
 
         return HttpResponse(b"PROFILE CREATED", status=201)
 
+# Menampilkan JSON 
+def show_json(request):
+    profiles = Profile.objects.select_related('user').all()
+    data = [
+        {
+            "id": str(p.user.id),
+            "username": p.user.username,
+            "email": p.user.email,
+            "full_name": p.full_name,
+            "phone": str(p.user.phone) if p.user.phone else None,
+            "profile_picture": p.profile_picture.url if p.profile_picture else None,
+            "date_of_birth": p.date_of_birth.isoformat() if p.date_of_birth else None,
+            "status": p.status if hasattr(p, "status") else None,  
+        }
+        for p in profiles
+    ]
+    return JsonResponse(data, safe=False)
+
 # Menampilkan JSON by id
 @login_required
 def show_json_by_id(request, id):
     try:
         user = User.objects.get(pk=id)
+        data = {
+            "role": request.user.role,  # <-- role dari user yang login
+        }
+
         if user.role == 'admin' or user.role == 'journalist':
             profile = getattr(user, 'adminjournalistprofile', None)
-            data = {
+            data.update ({
                 "username": user.username,
-                "profile_picture" : profile.profile_picture if profile and profile.profile_picture else None
-            }
+                "profile_picture" : profile.profile_picture if profile and profile.profile_picture else None,
+            })
             return JsonResponse(data)
         else:
             profile = getattr(user, 'profile', None)
-            data = {
+            data.update({
                 "full_name": profile.full_name,
                 "username": user.username,
                 "email": user.email,
                 "phone": str(user.phone) if user.phone else None,
                 "date_of_birth": profile.date_of_birth.strftime('%Y-%m-%d') if profile and profile.date_of_birth else None,
                 "profile_picture": profile.profile_picture.url if profile and profile.profile_picture else None,
-            }
+            })
             return JsonResponse(data)
     except User.DoesNotExist:
         return JsonResponse({'error':'User Not Found'}, status=404)
@@ -76,6 +98,37 @@ def show_json_admin_journalist(request):
             return JsonResponse({'error' : 'Forbidden'}, status=403)
     except Exception:
         return JsonResponse({'error': 'Internal Server Error'}, status=500)
+
+# JSON untuk search dan filter pada admin view
+def admin_view_json(request):
+    search = request.GET.get("search", "")
+    filter_type = request.GET.get("filter", "all")
+
+    # Ambil semua profile
+    profiles = Profile.objects.select_related("user").all()
+    
+    # Search by username
+    if search:
+        profiles = profiles.filter(user__username__icontains=search)
+
+    # Filtering by status 
+    if filter_type != "all":
+        profiles = profiles.filter(status=filter_type)
+
+    data = [
+        {   
+            "id": str(p.user.id),
+            "username": p.user.username,
+            "email": p.user.email,
+            "full_name": p.full_name,
+            "phone": str(p.user.phone) if p.user.phone else None,
+            "profile_picture": p.profile_picture.url if p.profile_picture else None,
+            "date_of_birth": p.date_of_birth.isoformat() if p.date_of_birth else None,
+            "status": p.status if hasattr(p, "status") else None,  
+        }
+        for p in profiles
+    ]
+    return JsonResponse(data, safe=False)
 
 # Untuk menampilkan user_profile.html
 @login_required
@@ -134,6 +187,32 @@ def edit_profile_for_user(request, id):
 
         return HttpResponse(b"PROFILE UPDATED", status=200)
 
-# Untuk menampilkan admin to user profile page 
-# def admin_to_user_view(request, id):
+@login_required
+def admin_change_status(request, id):
+    import json
+    
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    if request.user.role != "admin":
+        return JsonResponse({"error": "Permission denied"}, status=403)
+    
+    data = json.loads(request.body)
+    new_status = data.get("status")
+    
+    STATUS_CHOICES = ['active', 'suspended', 'banned']
 
+    if new_status not in STATUS_CHOICES:
+        return JsonResponse({"error": "Invalid status"}, status=400)
+    
+    try:
+        user = User.objects.get(pk=id)
+        profile = getattr(user, 'profile', None)
+        if not profile:
+            return JsonResponse({"error": "Profile not found"}, status=404)
+        
+        profile.status = new_status
+        profile.save()
+        return JsonResponse({"status": profile.status})
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
