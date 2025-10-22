@@ -1,6 +1,6 @@
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from authentication.models import User
 from profiles.models import AdminJournalistProfile, Profile
 
@@ -14,6 +14,7 @@ def create_profile(request):
         if (hasattr(request.user, 'profile')):
             return HttpResponse("PROFILE ALREADY EXISTS", status=400)
         
+        # Mengambil data dari form
         profile_picture = request.FILES.get("profile_picture")
         date_of_birth = request.POST.get("date_of_birth")
         phone_number = request.POST.get("phone")
@@ -81,8 +82,6 @@ def show_json_admin_journalist(request):
 def user_view(request, id):
     return render(request, "user_profile.html", {"id":id})
 
-# TODO: hardcode admin dan journalist
-# TODO: fix kan yang dibawah setelah hardcode
 # Untuk menampilkan admin_profile.html
 @login_required
 def admin_view(request):
@@ -92,3 +91,45 @@ def admin_view(request):
 @login_required
 def journalist_view(request):
     return render(request, "journalist_profile.html")
+
+# Edit user profile untuk user
+@login_required
+def edit_profile_for_user(request, id):
+    user = get_object_or_404(User, pk=id)
+
+    # Sebagai prevention supaya user tidak bisa mengedit profile user yang lain
+    if request.user != user:
+        return HttpResponseForbidden("Kamu tidak memiliki izin untuk mengedit.")
+    
+    if request.method == "GET":
+        context = {
+            "person":user,
+            "profile": getattr(user, "profile", None)
+        }
+        return render(request, "user_edit.html", context)
+    elif request.method == "POST":
+        # Mengambil data dari form 
+        profile_picture = request.FILES.get("profile_picture")
+        date_of_birth = request.POST.get("date_of_birth")
+        first_name = request.POST.get("first_name")
+        last_name = request.POST.get("last_name")
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        phone_number = request.POST.get("phone")
+
+        # Simpan perubahan user
+        user.first_name = first_name
+        user.last_name = last_name
+        user.username = username
+        user.email = email
+        user.phone = phone_number
+        user.save()
+
+        # Simpan perubahan profile
+        profile = getattr(user, "profile", None)
+        if (profile_picture):
+            profile.profile_picture = profile_picture
+        profile.date_of_birth = date_of_birth
+        profile.save()
+
+        return HttpResponse(b"PROFILE UPDATED", status=200)
