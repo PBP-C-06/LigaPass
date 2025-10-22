@@ -1,6 +1,7 @@
 # matches/models.py
 
 from django.db import models
+import uuid
 
 class Team(models.Model):
     # Menyimpan ID unik dari API untuk menghindari duplikasi saat update
@@ -21,6 +22,8 @@ class Venue(models.Model):
         return f"{self.name}, {self.city}"
 
 class Match(models.Model):
+    # Menggunakan UUID sebagai primary key
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     # Menyimpan ID unik dari API
     api_id = models.IntegerField(unique=True)
     

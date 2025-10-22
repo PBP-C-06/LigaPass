@@ -41,11 +41,15 @@ def login_user(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            # Cek profile sudah ada atau belum
-            if hasattr(user, 'profile'):
-                redirect_url = reverse("main:show_main")
+            # Cek profile user, journalist, atau admin
+            if user.role == "user":
+                # Cek profile sudah ada atau belum
+                if hasattr(user, 'profile'):
+                    redirect_url = reverse("matches:calendar")
+                else:
+                    redirect_url = reverse("profiles:create_profile")
             else:
-                redirect_url = reverse("profiles:create_profile")
+                redirect_url = reverse("matches:calendar")
             response = JsonResponse({
                 "status": "success",
                 "message": "Login successful",
@@ -110,17 +114,17 @@ def google_login(request):
 
             login(request, user)
 
-            if hasattr(user, 'profile'):
-                redirect_url = reverse("main:show_main")
+            # Cek profile user, journalist, atau admin
+            if user.role == "user":
+                # Cek profile sudah ada atau belum
+                if hasattr(user, 'profile'):
+                    redirect_url = reverse("matches:calendar")
+                else:
+                    redirect_url = reverse("profiles:create_profile")
             else:
-                redirect_url = reverse("profiles:create_profile")
-                
-            response = JsonResponse({
-                "status": "success",
-                "message": "Login successful",
-                "redirect_url": redirect_url
-            })
-            
+                redirect_url = reverse("matches:calendar")
+
+            response = redirect(redirect_url)
             response.set_cookie("last_login", str(datetime.datetime.now()))
             return response
 

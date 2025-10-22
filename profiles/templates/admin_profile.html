@@ -1,7 +1,8 @@
 <!-- Menampilkan admin profile -->
 
-<!-- TODO: Fixkan yang dibawah setelah hardcode jadi -->
-{% comment %} {% block content %}
+{% load static %}
+
+{% block content %}
     <div id="profile-container">
         <!-- Profile picture -->
         <p>
@@ -16,8 +17,8 @@
     <script>
         document.addEventListener("DOMContentLoaded", async function () {
             try {
-                const userId = "{{ id }}";
-                const url = `/profiles/admin/`;;
+                const url = `/profiles/adminJournalistJson/`;
+                const STATIC_URL = "{% static '' %}";
     
                 const response = await fetch(url);
                 if (!response.ok) {
@@ -27,16 +28,11 @@
                 const data = await response.json();
     
                 document.getElementById("username").textContent = data.username;
-
-                if (data.profile_picture) {
-                    document.getElementById("profile-picture").src = data.profile_picture;
-                    document.getElementById("profile-picture").alt = "Profile Picture";
-                } else {
-                    document.getElementById("profile-picture").alt = " ";
-                }
+                document.getElementById("profile-picture").src = STATIC_URL + data.profile_picture;
+                document.getElementById("profile-picture").alt = "Admin Picture";
             } catch (error) {
                 alert("Error: " + error.message);
             }
         });
     </script> 
-{% endblock %} {% endcomment %}
+{% endblock %}

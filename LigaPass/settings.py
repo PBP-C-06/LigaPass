@@ -59,7 +59,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'authentication',
-    'profiles',
+    'profiles.apps.ProfilesConfig',
     'main',
     'bookings',
     'matches',
@@ -151,7 +151,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Jakarta'
 
 USE_I18N = True
 
@@ -160,8 +160,13 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+if DEBUG:
+    STATICFILES_DIRS = [
+        BASE_DIR / 'static' # merujuk ke /static root project pada mode development
+    ]
+else:
+    STATIC_ROOT = BASE_DIR / 'static' # merujuk ke /static root project pada mode production
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -180,6 +185,10 @@ EMAIL_HOST_USER = "984c29001@smtp-brevo.com"
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = "l1gapass@outlook.com"
 
+MIDTRANS_CLIENT_KEY = os.getenv("MIDTRANS_CLIENT_KEY")
+MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY")
+MIDTRANS_MERCHANT_ID = os.getenv("MIDTRANS_MERCHANT_ID")
+
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -187,3 +196,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Password admin dan journalist
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 JOURNALIST_PASSWORD = os.getenv("JOURNALIST_PASSWORD")
+
+# Caching Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}

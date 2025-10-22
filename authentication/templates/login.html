@@ -94,16 +94,34 @@
   });
 
   /* ===== Google Sign-In (POPUP) ===== */
-  function onGoogleCredential(resp) {
+  async function onGoogleCredential(resp) {
     if (!resp || !resp.credential) {
       console.error('No credential from Google');
       return;
     }
-    // taruh JWT ke input tersembunyi lalu submit (same-origin → aman CSRF)
-    document.getElementById('google-credential-input').value = resp.credential;
-    document.getElementById('google-post-form').submit();
+
+    const formData = new FormData();
+    formData.append('credential', resp.credential);
+
+    try {
+      const res = await fetch("{% url 'authentication:google_login' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Accept': 'application/json' },
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success' && data.redirect_url) {
+        window.location.href = data.redirect_url;
+      } else {
+        alert(data.message || 'Google login failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error while logging in with Google.');
+    }
   }
-  // WAJIB: callback harus global (biar dipanggil GIS)
+
+  // callback harus global (biar dipanggil GIS)
   window.onGoogleCredential = onGoogleCredential;
 
   window.addEventListener('load', function () {
@@ -113,7 +131,7 @@
     }
     // POPUP mode → TIDAK pakai login_uri
     google.accounts.id.initialize({
-      client_id: "{{ GOOGLE_CLIENT_ID }}",   // pastikan terisi dari context processor
+      client_id: "{{ GOOGLE_CLIENT_ID }}",
       ux_mode: "popup",
       callback: onGoogleCredential,
       auto_select: false,
@@ -122,8 +140,6 @@
       document.getElementById("googleBtn"),
       { theme: "outline", size: "large", width: 280, text: "signin_with" }
     );
-    // optional: one-tap
-    // google.accounts.id.prompt();
   });
 </script>
 {% endblock %}
