@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-8">
+  <h1 class="text-3xl font-bold text-gray-800 mb-6">Admin Analytics</h1>
+
+  <!-- Filter Section -->
+  <div class="flex flex-wrap gap-4 mb-8">
+    <div>
+      <label class="block font-semibold mb-2">Pilih Pertandingan</label>
+      <select id="matchFilter" class="border rounded px-3 py-2">
+        <option value="">Semua Pertandingan</option>
+        {% for m in matches %}
+          <option value="{{ m.id }}">{{ m.home_team.name }} vs {{ m.away_team.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block font-semibold mb-2">Kategori Kursi</label>
+      <select id="seatFilter" class="border rounded px-3 py-2">
+        {% for seat in seat_categories %}
+          <option value="{{ seat }}">{{ seat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <h2 class="font-semibold text-gray-700 mb-3">Total Pendapatan per Pertandingan</h2>
+      <canvas id="revenueChart"></canvas>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <h2 class="font-semibold text-gray-700 mb-3">Seat Occupancy (%)</h2>
+      <canvas id="occupancyChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/analytics.js' %}"></script>
+<script>
+  initAdminAnalytics();
+</script>
+{% endblock %}

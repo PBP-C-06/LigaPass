@@ -1,0 +1,30 @@
+<!-- news/templates/news/news_detail.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+  <h1>{{ news.title }}</h1>
+
+  {% if news.edited_at %}
+    <p><strong>Tanggal disunting:</strong> {{ news.edited_at }}</p>
+  {% else %}
+    <p><strong>Tanggal ditulis:</strong> {{ news.created_at }}</p>
+  {% endif %}
+
+  <p><strong>Kategori:</strong> {{ news.category }}</p>
+  <p><strong>Jumlah Views:</strong> {{ news.news_views }}</p>
+
+  {% if news.thumbnail %}
+    <img src="{{ news.thumbnail.url }}" width="300" />
+  {% endif %}
+
+  <p>{{ news.content|linebreaks }}</p>
+
+  {% if request.user.is_authenticated and request.user == news.author %}
+    <a href="{% url 'news:news_edit' news.pk %}">✏️ Edit News</a>
+    |
+    <a href="{% url 'news:news_delete' news.pk %}">🗑️ Delete News</a>
+  {% endif %}
+
+  <p><a href="{% url 'news:news_list' %}">← Back to News List</a></p>
+{% endblock %}

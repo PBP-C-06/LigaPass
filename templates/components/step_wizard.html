@@ -1,0 +1,39 @@
+<div class="flex items-center justify-center space-x-8 mb-12 mt-6">
+  <!-- Step 1 -->
+  <div class="flex items-center space-x-2 {% if step == 1 %}text-blue-600{% elif step > 1 %}text-green-500{% else %}text-gray-400{% endif %}">
+    <div class="w-7 h-7 rounded-full flex items-center justify-center font-semibold
+      {% if step == 1 %}bg-blue-600 text-white
+      {% elif step > 1 %}bg-green-500 text-white
+      {% else %}border border-gray-400 text-gray-500{% endif %}">
+      1
+    </div>
+    <span class="text-sm font-medium">Select Match</span>
+  </div>
+
+  <!-- Connector -->
+  <div class="w-12 border-t border-gray-300"></div>
+
+  <!-- Step 2 -->
+  <div class="flex items-center space-x-2 {% if step == 2 %}text-blue-600{% elif step > 2 %}text-green-500{% else %}text-gray-400{% endif %}">
+    <div class="w-7 h-7 rounded-full flex items-center justify-center font-semibold
+      {% if step == 2 %}bg-blue-600 text-white
+      {% elif step > 2 %}bg-green-500 text-white
+      {% else %}border border-gray-400 text-gray-500{% endif %}">
+      2
+    </div>
+    <span class="text-sm font-medium">Choose Seats</span>
+  </div>
+
+  <!-- Connector -->
+  <div class="w-12 border-t border-gray-300"></div>
+
+  <!-- Step 3 -->
+  <div class="flex items-center space-x-2 {% if step == 3 %}text-blue-600{% else %}text-gray-400{% endif %}">
+    <div class="w-7 h-7 rounded-full flex items-center justify-center font-semibold
+      {% if step == 3 %}bg-blue-600 text-white
+      {% else %}border border-gray-400 text-gray-500{% endif %}">
+      3
+    </div>
+    <span class="text-sm font-medium">Payment</span>
+  </div>
+</div>
