@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-8 px-4">
+    <h1 class="text-2xl font-bold mb-6">Manajemen Review Pengguna</h1>
+
+    <!-- Filter -->
+    <form method="get" class="flex flex-wrap gap-4 mb-6">
+        <select name="match" class="border p-2 rounded">
+            <option value="">Semua Pertandingan</option>
+            {% for m in matches %}
+                <option value="{{ m.id }}" {% if selected_match and m.id == selected_match.id %}selected{% endif %}>
+                    {{ m.home_team.name }} vs {{ m.away_team.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <select name="sentiment" class="border p-2 rounded">
+            <option value="">Semua Kategori</option>
+            <option value="baik" {% if sentiment == "baik" %}selected{% endif %}>Baik (4-5 ★)</option>
+            <option value="netral" {% if sentiment == "netral" %}selected{% endif %}>Netral (3 ★)</option>
+            <option value="buruk" {% if sentiment == "buruk" %}selected{% endif %}>Buruk (1-2 ★)</option>
+        </select>
+
+        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Terapkan</button>
+    </form>
+
+    <!-- Daftar Review -->
+    {% if reviews %}
+        <div class="space-y-6">
+            {% for review in reviews %}
+                <div class="border rounded-lg p-4 bg-white shadow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-semibold">{{ review.user.username }}</p>
+                            <p class="text-sm text-gray-500">
+                                {{ review.match.home_team.name }} vs {{ review.match.away_team.name }}
+                            </p>
+                        </div>
+                        <p class="text-yellow-500 font-semibold">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+                            {% endfor %}
+                        </p>
+                    </div>
+
+                    <p class="mt-2 text-gray-800">{{ review.comment }}</p>
+
+                    {% if review.reply %}
+                        <div class="mt-3 border-l-4 border-blue-300 pl-3 bg-blue-50 rounded">
+                            <strong>Admin ({{ review.reply.admin.username }})</strong>:
+                            <p class="text-gray-700">{{ review.reply.reply_text }}</p>
+                        </div>
+                        <button class="mt-2 bg-gray-300 text-gray-600 cursor-not-allowed px-3 py-1 rounded text-sm" disabled>
+                            Sudah Dibalas
+                        </button>
+                    {% else %}
+                        <button onclick="openReplyModal({{ review.id }})"
+                                class="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                            Balas Review
+                        </button>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-gray-500 italic mt-8 text-center">Belum ada review untuk pertandingan ini.</p>
+    {% endif %}
+</div>
+
+<!-- Modal -->
+<div id="replyModal" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+        <h2 class="text-xl font-bold mb-4">Balas Review</h2>
+        <textarea id="replyText" rows="4" class="w-full border rounded p-2" placeholder="Tulis balasan..."></textarea>
+        <div class="flex justify-end gap-2 mt-4">
+            <button onclick="closeReplyModal()" class="px-4 py-2 bg-gray-300 rounded">Batal</button>
+            <button id="sendReply" class="px-4 py-2 bg-blue-500 text-white rounded">Kirim</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-8 right-8 bg-green-500 text-white py-3 px-5 rounded-lg shadow-lg hidden">
+    Balasan berhasil dikirim!
+</div>
+
+<script>
+let currentReviewId = null;
+
+function openReplyModal(reviewId) {
+    currentReviewId = reviewId;
+    document.getElementById("replyModal").classList.remove("hidden");
+}
+
+function closeReplyModal() {
+    document.getElementById("replyModal").classList.add("hidden");
+    document.getElementById("replyText").value = '';
+}
+
+// AJAX Kirim balasan
+document.getElementById("sendReply").addEventListener("click", async () => {
+    const text = document.getElementById("replyText").value;
+    if (!text.trim()) return alert("Balasan tidak boleh kosong!");
+
+    const res = await fetch(`/reviews/api/reply/${currentReviewId}/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reply_text: text }),
+    });
+    const data = await res.json();
+
+    if (data.status === "success") {
+        showToast(data.message);
+        closeReplyModal();
+        setTimeout(() => location.reload(), 1000);
+    } else {
+        alert("Gagal mengirim balasan!");
+    }
+});
+
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.remove("hidden");
+    setTimeout(() => toast.classList.add("hidden"), 2000);
+}
+</script>
+{% endblock %}
