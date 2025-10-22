@@ -1,204 +1,1008 @@
 {% extends "base.html" %}
-{% block title %}Pembayaran{% endblock %}
-
-{% block content %}
+{% block title %}Pembayaran Booking{% endblock %}
 {% load static %}
-<link rel="stylesheet" href="{% static 'css/payment.css' %}">
-<div class="payment-container">
-  <!-- Pilihan Metode -->
-  <div class="method-list">
-  <h3>Pilih Metode Pembayaran</h3>
+{% block content %}
+{% include "components/step_wizard.html" with step=3 %}
+<style>
+.payment-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); /* Flexible columns */
+  gap: 32px;
+  padding: 40px 60px;
+  background: #f3f4f6 !important;
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+  color: #111827 !important;
+}
 
-  <div class="method-item" data-method="card">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1158px-Mastercard-logo.svg.png?20210817144358" alt="Card">
-    <span>Kartu Kredit/Debit</span>
-  </div>
+/* === LEFT BOX === */
+.left-box {
+  background: #ffffff;
+  padding: 30px 36px;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
 
-  <div class="method-item" data-method="gopay">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/QRIS_logo.svg/576px-QRIS_logo.svg.png" alt="GoPay">
-    <span></span>
-  </div>
+.page-title {
+  color: #2563eb;
+  font-size: 1.8em;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 6px;
+}
 
-  <h4 style="margin-top:16px; font-size:14px; color:#6b7280;">Virtual Account Bank</h4>
+.booking-id {
+  color: #6b7280;
+  font-size: 0.9em;
+  font-family: monospace;
+}
 
-  <div class="bank-grid">
-    <div class="method-item bank-item" data-method="bank" data-bank="bca">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia.svg/1199px-Bank_Central_Asia.svg.png" alt="BCA">
+.alert-warning {
+  background: #fffbeb; /* Warna kuning lebih soft */
+  border-left: 4px solid #f59e0b; /* Border kiri */
+  color: #b45309; /* Warna teks lebih gelap */
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 20px 0;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+.alert-warning::before { /* Tambah ikon warning */
+    content: "⚠️";
+    margin-right: 8px;
+    font-size: 1.1em;
+}
+
+.info p {
+  margin: 8px 0;
+  font-size: 0.95em;
+  color: #374151;
+}
+.info p strong {
+    color: #111827;
+}
+
+.result-box {
+  margin-top: 24px;
+  min-height: 250px; /* Jaga tinggi saat loading */
+  display: flex; /* Untuk centering loading */
+  flex-direction: column;
+  justify-content: center;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.loading-text {
+  color: #6b7280;
+  font-weight: 500;
+  text-align: center;
+}
+
+.va-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px; /* Lebih rounded */
+  padding: 24px;
+  text-align: left; /* Rata kiri */
+}
+
+.va-header {
+  display: flex;
+  align-items: center;
+  gap: 16px; /* Jarak logo & teks */
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.bank-logo {
+  height: 40px;
+  max-width: 100px;
+  object-fit: contain;
+}
+
+.va-header h3 {
+  margin: 0;
+  font-size: 1.2em;
+  font-weight: 600; /* Sedikit tebal */
+  color: #111827;
+}
+
+.va-content {
+  padding: 16px 0;
+}
+
+.va-label {
+  font-size: 0.85em; /* Label lebih kecil */
+  color: #6b7280;
+  margin-bottom: 6px; /* Jarak ke box nomor */
+  display: block; /* Pastikan block */
+}
+
+.va-number-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.va-number-text {
+  font-size: 1.6em;
+  font-weight: 700;
+  color: #2563eb;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+  word-break: break-all; /* Agar nomor panjang tidak overflow */
+}
+
+.copy-btn {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px; /* Sedikit lebih besar */
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9em;
+  margin-left: 12px; /* Jarak dari nomor */
+  white-space: nowrap; /* Jangan wrap text 'Salin' */
+}
+.copy-btn:hover {
+  background: #c7d2fe;
+}
+.copy-btn:active {
+    transform: scale(0.95);
+}
+
+.va-footer {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.va-footer .status {
+  margin: 0 0 4px 0;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95em;
+}
+.va-footer .note {
+  margin: 0;
+  font-size: 0.9em;
+  color: #6b7280;
+}
+
+/* === QRIS === */
+.qr-card {
+  background: #f9fafb;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+}
+.qr-card h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
+.qr-card img.qr-image {
+  width: 220px;
+  height: 220px;
+  display: block;
+  margin: 16px auto;
+  border-radius: 8px; /* Lebih smooth */
+  border: 1px solid #d1d5db;
+}
+.qr-card .btn-primary { /* Tombol 'Buka Aplikasi' */
+    margin-top: 16px;
+}
+.qr-card .status { /* Status 'Menunggu pembayaran' */
+    margin-top: 16px;
+    font-weight: 500;
+    color: #374151;
+}
+
+/* === CARD FORM === */
+.form-card {
+  margin-top: 24px;
+}
+
+.form-card h3 {
+  font-size: 1.25em; /* Sedikit lebih besar */
+  font-weight: 600;
+  color: #111827; /* Warna teks biasa */
+  margin-bottom: 16px;
+}
+
+.form-card label {
+  display: block;
+  font-weight: 500; /* Normal weight */
+  margin-bottom: 4px; /* Jarak ke input */
+  margin-top: 12px; /* Jarak antar field */
+  font-size: 0.9em;
+  color: #374151;
+}
+
+.form-card input {
+  width: 100%;
+  padding: 10px 12px; /* Padding lebih nyaman */
+  border: 1px solid #d1d5db;
+  border-radius: 8px; /* Lebih rounded */
+  font-size: 1em;
+}
+.form-card input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+
+.form-row {
+  display: grid; /* Ganti ke grid agar lebih rapi */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 4px; /* Dekatkan ke label */
+}
+/* Hapus margin top dari label di form-row */
+.form-row label {
+    margin-top: 0;
+}
+
+.btn-primary {
+  display: inline-block;
+  background: #2563eb;
+  color: white;
+  padding: 12px 18px; /* Padding lebih besar */
+  border-radius: 8px;
+  font-weight: 600;
+  margin-top: 24px; /* Jarak lebih jauh */
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s; /* Transisi semua properti */
+  width: 100%; /* Tombol bayar kartu full width */
+}
+.btn-primary:hover {
+  background: #1d4ed8;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); /* Shadow on hover */
+}
+.btn-primary:active {
+    transform: scale(0.98);
+}
+.hidden { display: none !important; }
+
+/* === RIGHT BOX === */
+.right-box {
+  background: #ffffff;
+  padding: 24px 28px;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  height: fit-content;
+  position: sticky; /* Tetap terlihat saat scroll */
+  top: 40px;
+}
+
+.summary-card h3 {
+  color: #111827; /* Warna teks biasa */
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb; /* Border lebih tipis */
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  font-size: 1.2em;
+}
+
+.summary-item {
+  display: grid; /* Pakai grid */
+  grid-template-columns: 1fr auto;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dotted #e5e7eb; /* Dotted separator */
+  font-size: 0.9em;
+}
+.summary-item strong { font-weight: 600; }
+.summary-item .seat {
+  color: #6b7280;
+  font-weight: 500;
+  text-align: right;
+}
+/* Hilangkan border bawah item terakhir */
+.summary-item:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px solid #2563eb; /* Border biru tebal */
+  font-weight: 700;
+  font-size: 1.1em; /* Ukuran font total */
+  color: #111827;
+}
+.summary-total strong {
+    font-size: 1.4em; /* Harga total lebih besar */
+    color: #2563eb; /* Biru */
+}
+
+/* ================================== */
+/* === STYLING TOMBOL REFRESH === */
+/* ================================== */
+.refresh-box {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 20px;
+  margin-top: 20px;
+  text-align: center; /* Center tombol & teks */
+}
+
+.refresh-btn {
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: auto; /* Jangan full-width, biarkan auto */
+  font-size: 0.95em;
+  display: inline-flex; /* Agar icon dan text sejajar */
+  align-items: center;
+  gap: 8px;
+}
+.refresh-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+.refresh-btn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  border-color: #e5e7eb;
+}
+/* Ikon refresh (gunakan SVG atau font icon jika ada) */
+.refresh-btn svg {
+    width: 16px;
+    height: 16px;
+    /* Tambahkan animasi spin jika sedang loading */
+}
+.refresh-btn.loading svg {
+    animation: spin 1s linear infinite;
+}
+
+
+#manual-status-text {
+  margin-top: 12px; /* Jarak dari tombol */
+  font-size: 0.9em;
+  font-weight: 500;
+  min-height: 1.2em; /* Jaga tinggi agar tidak lompat */
+}
+/* Warna status text */
+#manual-status-text.pending { color: #f59e0b; }
+#manual-status-text.error { color: #dc2626; }
+#manual-status-text.checking { color: #6b7280; }
+
+
+/* ================================== */
+/* === STYLING MODAL SUKSES === */
+/* ================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  padding: 20px; /* Padding agar modal tidak nempel di edge */
+}
+
+.modal-box {
+  background: white;
+  padding: 32px 40px; /* Padding horizontal lebih banyak */
+  border-radius: 16px;
+  text-align: center;
+  width: 100%; /* Width 100% di mobile */
+  max-width: 450px;
+  transform: scale(0.9);
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.modal-overlay.show {
+  opacity: 1;
+}
+.modal-overlay.show .modal-box {
+  transform: scale(1);
+}
+
+.modal-icon {
+  width: 70px; /* Sedikit lebih kecil */
+  height: 70px;
+  margin-bottom: 20px;
+}
+
+.modal-box h2 {
+  color: #16a34a;
+  font-size: 1.7em; /* Lebih besar */
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.modal-box p {
+  color: #374151;
+  font-size: 1em;
+  line-height: 1.6;
+  margin-bottom: 28px; /* Jarak lebih jauh ke tombol */
+}
+
+.modal-buttons {
+  display: flex;
+  flex-direction: column; /* Tombol atas bawah di mobile */
+  gap: 12px;
+}
+.modal-buttons .btn-primary,
+.modal-buttons .btn-secondary {
+  width: 100%;
+  text-decoration: none;
+  padding: 12px 18px; /* Padding konsisten */
+  font-size: 1em;
+  margin-top: 0; /* Hapus margin top default */
+}
+.modal-buttons .btn-secondary {
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+.modal-buttons .btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+/* Layout tombol side-by-side di layar lebih besar */
+@media (min-width: 400px) {
+    .modal-buttons {
+        flex-direction: row;
+    }
+}
+
+
+/* === RESPONSIVE === */
+@media (max-width: 900px) {
+  .payment-grid {
+    grid-template-columns: 1fr; /* Stack layout */
+    padding: 24px; /* Kurangi padding */
+  }
+  .right-box {
+    position: static; /* Hapus sticky */
+    margin-top: 0; /* Hapus gap */
+  }
+}
+@media (max-width: 600px) {
+    .payment-grid {
+        padding: 16px;
+    }
+    .left-box, .right-box {
+        padding: 20px; /* Kurangi padding card */
+    }
+    .page-title { font-size: 1.5em; }
+    .va-number-text { font-size: 1.4em; }
+    .summary-total strong { font-size: 1.2em; }
+    .form-row { grid-template-columns: 1fr; } /* Stack input CC di mobile */
+}
+
+</style>
+
+<div class="payment-grid">
+  <section class="left-box">
+    <h1 class="page-title">Pembayaran Booking</h1>
+    <p class="booking-id">Booking ID: {{ booking.booking_id|slice:":8" }}</p>
+
+    <div class="alert-warning">
+      Jangan tutup atau refresh halaman ini selama proses pembayaran berlangsung.
     </div>
-    <div class="method-item bank-item" data-method="bank" data-bank="bni">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Bank_Negara_Indonesia_logo_%282004%29.svg/300px-Bank_Negara_Indonesia_logo_%282004%29.svg.png" alt="BNI">
+
+    <div class="info">
+      <p><strong>Status:</strong> <span id="booking-status">{{ booking.get_status_display }}</span></p>
+      <p><strong>Tanggal Pemesanan:</strong> {{ booking.created_at|date:"d M Y, H:i" }}</p>
+      <p><strong>Nama Pemesan:</strong> {{ booking.user.username }}</p>
     </div>
-    <div class="method-item bank-item" data-method="bank" data-bank="bri">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/BANK_BRI_logo.svg/189px-BANK_BRI_logo.svg.png" alt="BRI">
+
+    <div id="result-box" class="result-box">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Menyiapkan pembayaran untuk <strong>{{ selected_method|upper }}</strong>...</p>
     </div>
-    <div class="method-item bank-item" data-method="bank" data-bank="mandiri">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Bank_Mandiri_logo_2016.svg/320px-Bank_Mandiri_logo_2016.svg.png" alt="Mandiri">
+
+    </section>
+
+  <aside class="right-box">
+    <div class="summary-card">
+      <h3>Ringkasan Pesanan</h3>
+      {% for item in booking.items.all %}
+      <div class="summary-item">
+        <div>
+          <strong>{{ item.ticket_type.match.home_team.name }}</strong> vs
+          <strong>{{ item.ticket_type.match.away_team.name }}</strong>
+        </div>
+        <div class="seat">{{ item.ticket_type.seat_category }} × {{ item.quantity }}</div>
+      </div>
+      {% endfor %}
+      <div class="summary-total">
+        <span>Total Pembayaran</span>
+        <strong>Rp {{ booking.total_price|floatformat:0 }}</strong>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div id="success-modal-overlay" class="modal-overlay hidden">
+  <div class="modal-box">
+    <img src="{% static 'image/success-icon.png' %}" alt="Success" class="modal-icon">
+    <h2>Pembayaran Berhasil!</h2>
+    <p>Tiket Anda sudah diterbitkan dan dapat dilihat di halaman profil.</p>
+    <div class="modal-buttons">
+      <a href="#" class="btn-secondary">Lihat Tiket</a>
+      <a href="{% url 'matches:calendar' %}" class="btn-primary">Kembali ke Home</a>
     </div>
   </div>
 </div>
 
 
-  <!-- Detail Form -->
-  <div class="payment-detail">
-    <h2>Pembayaran Booking {{ booking.booking_id }}</h2>
-    <p><strong>Total:</strong> Rp {{ booking.total_price }}</p>
-    <p>Status: {{ booking.get_status_display }}</p>
-
-    <!-- Form: Card -->
-    <div id="form-card" class="form-section">
-      <label>No Kartu</label>
-      <input type="text" id="card_number" placeholder="4811 1111 1111 1114">
-
-      <label>Bulan Exp</label>
-      <input type="number" id="card_exp_month" placeholder="2">
-
-      <label>Tahun Exp</label>
-      <input type="number" id="card_exp_year" placeholder="2025">
-
-      <label>CVV</label>
-      <input type="number" id="card_cvv" placeholder="123">
-
-      <button id="pay-card">Bayar dengan Kartu</button>
-    </div>
-
-    <!-- Form: QRIS / GoPay -->
-    <div id="form-gopay" class="form-section hidden">
-      <div id="gopay-box"></div>
-    </div>
-
-    <!-- Form: Bank -->
-    <div id="form-bank" class="form-section hidden">
-      <label>Pilih Bank</label>
-      <select id="bank_code">
-        <option value="bca">BCA</option>
-        <option value="bni">BNI</option>
-        <option value="bri">BRI</option>
-      </select>
-      <p style="margin-top:10px; color:#6b7280;">Nomor VA akan dibuat setelah menekan tombol di bawah.</p>
-      <button id="create-va">Buat Virtual Account</button>
-    </div>
-    <div id="result-box" style="margin-top:20px;"></div>
-  </div>
-</div>
-
-<!-- Midtrans 3DS SDK -->
 <script src="https://api.midtrans.com/v2/assets/js/midtrans-new-3ds.min.js"
-        data-environment="sandbox"
-        data-client-key="{{ MIDTRANS_CLIENT_KEY }}">
+  data-environment="sandbox"
+  data-client-key="{{ MIDTRANS_CLIENT_KEY }}">
 </script>
 
 <script>
 const bookingId = "{{ booking.booking_id }}";
+const selectedMethod = "{{ selected_method|default:'' }}"; // Default jika kosong
 const csrftoken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
+const resultBox = document.getElementById("result-box");
+// Hapus 'cardForm' karena form CC dibuat dinamis
 
-// === EVENT LISTENER UNTUK METODE ===
-document.querySelectorAll(".method-item").forEach(item => {
-  item.addEventListener("click", () => {
-    const method = item.dataset.method;
-    const bank = item.dataset.bank || null;
+// Flag untuk menonaktifkan peringatan jika pembayaran selesai
+let paymentInProgress = true;
 
-    // Bersihin tampilan
-    const box = document.getElementById("result-box");
-    box.innerHTML = "";
-
-    // Highlight metode aktif
-    document.querySelectorAll(".method-item").forEach(m => m.classList.remove("active"));
-    item.classList.add("active");
-
-    if (method === "card") {
-      document.getElementById("form-card").classList.remove("hidden");
-      document.getElementById("form-gopay").classList.add("hidden");
-      return;
-    }
-
-    // GoPay
-    if (method === "gopay") {
-      document.getElementById("form-card").classList.add("hidden");
-      document.getElementById("form-gopay").classList.remove("hidden");
-      payWith("gopay");
-      return;
-    }
-
-    // Bank
-    if (method === "bank" && bank) {
-      document.getElementById("form-card").classList.add("hidden");
-      document.getElementById("form-gopay").classList.add("hidden");
-      payWith("bank", bank);
-      return;
-    }
-  });
+window.addEventListener("beforeunload", e => {
+  if (paymentInProgress) {
+    e.preventDefault();
+    e.returnValue = "Jangan tutup halaman ini selama proses pembayaran berlangsung!";
+  }
 });
 
-// Global Flag
-let paymentInProgress = false;
+/**
+ * Fungsi untuk menambahkan listener 'copy' ke tombol
+ */
+function addCopyListener(textToCopy, buttonId = 'copy-btn') {
+  const copyBtn = document.getElementById(buttonId);
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        copyBtn.textContent = 'Disalin!';
+        copyBtn.style.background = '#16a34a'; // Hijau
+        copyBtn.style.color = 'white';
+        setTimeout(() => {
+          copyBtn.textContent = 'Salin';
+          copyBtn.style.background = '#e0e7ff';
+          copyBtn.style.color = '#3730a3';
+        }, 1500); // Durasi lebih cepat
+      }).catch(err => {
+        console.error('Gagal menyalin: ', err);
+        copyBtn.textContent = 'Gagal!';
+      });
+    });
+  }
+}
 
-// Main function
-function payWith(method, bank = null) {
-  const box = document.getElementById("result-box");
-  box.innerHTML = `<p>Menghubungi Midtrans...</p>`;
+/**
+ * Fungsi untuk menampilkan Modal Sukses
+ */
+function showSuccessModal() {
+  const overlay = document.getElementById("success-modal-overlay");
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    setTimeout(() => {
+      overlay.classList.add("show");
+    }, 10);
+  }
+}
 
-  // Cegah multiple payment
-  if (paymentInProgress) {
-    box.innerHTML = `<p style="color:red;">Transaksi sedang diproses... mohon tunggu.</p>`;
+/**
+ * Fungsi untuk mengecek status secara manual (dipanggil tombol refresh)
+ */
+async function manualCheckStatus() {
+  const refreshBtn = document.getElementById('refresh-status-btn');
+  const statusText = document.getElementById('manual-status-text');
+  const refreshIcon = document.getElementById('refresh-icon'); // Icon SVG
+
+  if (refreshBtn) {
+    refreshBtn.disabled = true;
+    refreshBtn.classList.add('loading'); // Tambah class untuk animasi ikon
+    refreshBtn.querySelector('span').textContent = 'Mengecek...'; // Ubah teks span
+  }
+  if (statusText) {
+    statusText.textContent = 'Mengecek status pembayaran...';
+    statusText.className = 'checking'; // Reset class warna
+  }
+
+  try {
+    // Pastikan URL check_status sudah benar
+    const res = await fetch(`/bookings/check_status/${bookingId}/`);
+    if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || `HTTP error! status: ${res.status}`);
+    }
+    
+    const data = await res.json();
+    
+    if (data.status === "CONFIRMED") {
+      paymentInProgress = false;
+      showSuccessModal();
+      // Tombol refresh tidak perlu di-enable lagi karena modal muncul
+    
+    } else if (data.status === "EXPIRED" || data.status === "CANCELLED" || data.status === "DENY") {
+      paymentInProgress = false;
+      // Tampilkan pesan gagal yang lebih jelas di result box
+      resultBox.innerHTML = `
+        <div class="va-card" style="border-color: #fecaca; background: #fef2f2;">
+          <h3 style="color: #dc2626;">Pembayaran Gagal / Dibatalkan</h3>
+          <p class="note">Status booking ini adalah: <strong>${data.status}</strong></p>
+          <p class="note" style="margin-top: 10px;">Anda bisa mencoba membuat booking baru jika diinginkan.</p>
+          <a href="/" class="btn-primary" style="margin-top: 20px; width: auto; padding: 10px 20px;">Kembali ke Home</a>
+        </div>
+      `;
+    
+    } else {
+      // Masih PENDING
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.classList.remove('loading');
+        refreshBtn.querySelector('span').textContent = 'Cek Ulang Status';
+      }
+      if (statusText) {
+        statusText.textContent = 'Pembayaran masih tertunda. Silakan coba cek lagi beberapa saat.';
+        statusText.className = 'pending'; // Warna kuning
+      }
+    }
+    
+  } catch (err) {
+    console.error("Manual check error:", err);
+    if (refreshBtn) {
+      refreshBtn.disabled = false;
+      refreshBtn.classList.remove('loading');
+       refreshBtn.querySelector('span').textContent = 'Cek Status Pembayaran';
+    }
+    if (statusText) {
+      statusText.textContent = `Gagal mengecek status: ${err.message}. Coba lagi.`;
+      statusText.className = 'error'; // Warna merah
+    }
+  }
+}
+
+/**
+ * Helper function untuk HTML tombol refresh
+ */
+function getRefreshButtonHTML() {
+  return `
+    <div class="refresh-box">
+      <p class="note" style="text-align:center; margin-bottom:12px;">Sudah melakukan pembayaran? Klik tombol di bawah untuk memeriksa status.</p>
+      <button id="refresh-status-btn" class="refresh-btn">
+        <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+        <span>Cek Status Pembayaran</span>
+      </button>
+      <p id="manual-status-text" class="note checking" style="text-align:center; min-height: 1.2em;"></p>
+    </div>
+  `;
+}
+
+/**
+ * Helper function untuk HTML form kartu kredit
+ */
+function getCardFormHTML() {
+    return `
+    <div id="form-card" class="form-card" style="text-align: left;">
+      <h3>Detail Kartu Kredit / Debit</h3>
+      <label for="card_number">Nomor Kartu</label>
+      <input type="text" id="card_number" placeholder="4111 1111 1111 ....">
+
+      <div class="form-row">
+        <div>
+          <label for="card_exp_month">Bulan Exp</label>
+          <input type="number" id="card_exp_month" placeholder="MM">
+        </div>
+        <div>
+          <label for="card_exp_year">Tahun Exp</label>
+          <input type="number" id="card_exp_year" placeholder="YYYY">
+        </div>
+        <div>
+          <label for="card_cvv">CVV</label>
+          <input type="number" id="card_cvv" placeholder="123">
+        </div>
+      </div>
+      <button id="pay-card" class="btn-primary">Bayar Sekarang</button>
+      <p id="card-error-text" class="error" style="text-align: center; margin-top: 10px;"></p> </div>
+    `;
+}
+
+
+/**
+ * Fungsi displayPaymentResult utama
+ */
+function displayPaymentResult(data) {
+  resultBox.innerHTML = ""; // Bersihkan loading awal
+
+  if (data.error) {
+    resultBox.innerHTML = `<p class="error" style="font-weight: bold;">${data.error}</p>`;
+    paymentInProgress = false;
+    return;
+  }
+  
+  // Jika respons dari status check (fallback refresh tanpa session)
+  if (data.message && data.midtrans_data) {
+      data = data.midtrans_data; // Gunakan data dari midtrans_data
+  }
+
+  const currentStatus = data.transaction_status; // Ambil status
+
+  // Cek jika status sudah final (Sukses/Gagal/Expired) dari data yang diterima
+  if (currentStatus === "settlement" || currentStatus === "capture") {
+      paymentInProgress = false;
+      showSuccessModal();
+      return;
+  }
+  if (currentStatus === "expire" || currentStatus === "cancel" || currentStatus === "deny") {
+      paymentInProgress = false;
+      resultBox.innerHTML = `
+        <div class="va-card" style="border-color: #fecaca; background: #fef2f2;">
+          <h3 style="color: #dc2626;">Pembayaran Gagal / Dibatalkan</h3>
+          <p class="note">Status transaksi ini adalah: <strong>${currentStatus.toUpperCase()}</strong></p>
+          <a href="/" class="btn-primary" style="margin-top: 20px; width: auto; padding: 10px 20px;">Kembali ke Home</a>
+        </div>
+      `;
+      return;
+  }
+
+  // --- JIKA MASIH PENDING, tampilkan instruksi ---
+  paymentInProgress = true; // Tetap aktifkan warning refresh
+
+  const logos = {
+      bca: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia.svg/512px-Bank_Central_Asia.svg.png",
+      bni: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Bank_Negara_Indonesia_logo_%282004%29.svg/512px-Bank_Negara_Indonesia_logo_%282004%29.svg.png",
+      bri: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/BANK_BRI_logo.svg/512px-BANK_BRI_logo.svg.png",
+      mandiri: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Bank_Mandiri_logo_2016.svg/512px-Bank_Mandiri_logo_2016.svg.png",
+      cimb: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/CIMB_Niaga_logo.svg/512px-CIMB_Niaga_logo.svg.png"
+  };
+
+  let instructionHTML = ''; // Variabel untuk menampung HTML instruksi
+
+  // --- BANK MANDIRI (ECHANNEL) ---
+  if (selectedMethod === "bank_mandiri" && data.biller_code) {
+    instructionHTML = `
+      <div class="va-card">
+        <div class="va-header">
+          <img src="${logos.mandiri}" alt="Mandiri" class="bank-logo">
+          <h3>Mandiri Bill Payment</h3>
+        </div>
+        <div class="va-content">
+          <p class="va-label">Kode Perusahaan</p>
+          <div class="va-number-box">
+            <span class="va-number-text">${data.biller_code}</span>
+            <button id="copy-btn" class="copy-btn">Salin</button>
+          </div>
+          <p class="va-label" style="margin-top:15px;">Nomor Pembayaran (Bill Key)</p>
+          <div class="va-number-box">
+            <span class="va-number-text">${data.bill_key}</span>
+            <button id="copy-btn-2" class="copy-btn">Salin</button>
+          </div>
+        </div>
+        <div class="va-footer">
+          <p class="status">Status: ${currentStatus.toUpperCase()}</p>
+          <p class="note">Gunakan Mandiri Bill Payment untuk membayar.</p>
+        </div>
+        ${getRefreshButtonHTML()}
+      </div>`;
+    resultBox.innerHTML = instructionHTML;
+    addCopyListener(data.biller_code, 'copy-btn');
+    addCopyListener(data.bill_key, 'copy-btn-2');
+    document.getElementById('refresh-status-btn').addEventListener('click', manualCheckStatus);
     return;
   }
 
-  paymentInProgress = true;
-  fetch(`/bookings/payment/${bookingId}/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": csrftoken
+  // --- BANK TRANSFER (VA LAINNYA) ---
+  if (selectedMethod.startsWith("bank_") && data.va_numbers && data.va_numbers.length > 0) {
+    const va = data.va_numbers[0];
+    const bank = va.bank.toLowerCase();
+    const logo = logos[bank] || "";
+    instructionHTML = `
+      <div class="va-card">
+        <div class="va-header">
+          <img src="${logo}" alt="${va.bank}" class="bank-logo">
+          <h3>Virtual Account ${va.bank.toUpperCase()}</h3>
+        </div>
+        <div class="va-content">
+          <p class="va-label">Nomor Virtual Account</p>
+          <div class="va-number-box">
+            <span class="va-number-text">${va.va_number}</span>
+            <button id="copy-btn" class="copy-btn">Salin</button>
+          </div>
+        </div>
+        <div class="va-footer">
+          <p class="status">Status: ${currentStatus.toUpperCase()}</p>
+          <p class="note">Gunakan nomor VA di atas untuk melakukan pembayaran.</p>
+        </div>
+        ${getRefreshButtonHTML()}
+      </div>`;
+    resultBox.innerHTML = instructionHTML;
+    addCopyListener(va.va_number, 'copy-btn');
+    document.getElementById('refresh-status-btn').addEventListener('click', manualCheckStatus);
+    return;
+  }
+
+  // --- QRIS / GOPAY ---
+  if (selectedMethod === "gopay" && data.actions && data.actions.length > 0) {
+    const qr = data.actions.find(a => a.name.includes("qr-code"));
+    const deeplink = data.actions.find(a => a.name.includes("deeplink"));
+    if (qr) { // Pastikan QR ada
+        instructionHTML = `
+          <div class="qr-card">
+            <h3>Scan QR Code</h3>
+            <img src="${qr.url}" alt="QRIS" class="qr-image">
+            ${deeplink ? `<a href="${deeplink.url}" target="_blank" class="btn-primary" style="width:auto; padding: 10px 20px; margin-top: 16px;">Buka di Aplikasi</a>` : ""}
+            <p class="status" style="margin-top:16px;">Menunggu pembayaran...</p>
+            ${getRefreshButtonHTML()}
+          </div>`;
+        resultBox.innerHTML = instructionHTML;
+        document.getElementById('refresh-status-btn').addEventListener('click', manualCheckStatus);
+        return;
+    }
+  }
+
+  // --- CARD (Redirect) ---
+  if (selectedMethod === "card" && data.redirect_url) {
+    // CC tidak perlu tombol refresh
+    resultBox.innerHTML = `<div class="loading-spinner"></div><p class="loading-text">Mengarahkan ke halaman verifikasi aman...</p>`;
+    window.midtransNew3ds(data.redirect_url, {
+      onSuccess: r => {
+        // Langsung show modal, webhook akan update DB
+        paymentInProgress = false;
+        showSuccessModal();
+      },
+      onPending: r => {
+        resultBox.innerHTML = `<h3 style="color: #f59e0b;">Pembayaran Pending</h3><p>${r.status_message}</p>`;
+        paymentInProgress = false;
+      },
+      onError: r => {
+        resultBox.innerHTML = `<h3 class="error" style="color: #dc2626;">Pembayaran Gagal</h3><p>${r.status_message}</p>`;
+        paymentInProgress = false;
+      },
+    });
+    return;
+  }
+
+  // --- CARD (Form - Jika tidak ada redirect_url tapi metode card) ---
+  if (selectedMethod === "card") {
+      resultBox.innerHTML = getCardFormHTML();
+      document.getElementById("pay-card").addEventListener("click", handleCardPayment);
+      return;
+  }
+
+  // --- Fallback jika tidak ada instruksi yang cocok ---
+  paymentInProgress = false;
+  console.error("Tidak bisa menampilkan instruksi:", data); // Log data aneh
+  resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Gagal menampilkan instruksi pembayaran.</p><p>Status Transaksi: ${currentStatus || "Unknown"}</p>`;
+}
+
+/**
+ * Fungsi initiatePayment (Tidak berubah banyak)
+ */
+async function initiatePayment(payload) {
+  // Tampilkan spinner loading awal
+  resultBox.innerHTML = `<div class="loading-spinner"></div><p class="loading-text">Menghubungi Midtrans...</p>`;
+  try {
+    const res = await fetch(`/bookings/payment/${bookingId}/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        // Tangani error dari view (misal 400 Bad Request)
+        throw new Error(data.error || `HTTP error! status: ${res.status}`);
+    }
+    displayPaymentResult(data); // Tampilkan instruksi atau modal
+  } catch (err) {
+    resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Gagal memulai pembayaran:</p><p class="error">${err.message}</p>`;
+    paymentInProgress = false;
+  }
+}
+
+/**
+ * Fungsi handleCardPayment (Sedikit diperbarui)
+ */
+function handleCardPayment() {
+  const cardData = {
+    card_number: document.getElementById('card_number').value.replace(/\s/g, ''), // Hapus spasi
+    card_exp_month: document.getElementById('card_exp_month').value,
+    card_exp_year: document.getElementById('card_exp_year').value,
+    card_cvv: document.getElementById('card_cvv').value
+  };
+  const errorText = document.getElementById('card-error-text');
+  errorText.textContent = ''; // Bersihkan error lama
+
+  // Validasi sederhana
+  if (!cardData.card_number || !/^\d+$/.test(cardData.card_number)) {
+    errorText.textContent = 'Nomor kartu tidak valid.'; return;
+  }
+  if (!cardData.card_exp_month || !/^\d{1,2}$/.test(cardData.card_exp_month) || cardData.card_exp_month < 1 || cardData.card_exp_month > 12) {
+    errorText.textContent = 'Bulan expired tidak valid.'; return;
+  }
+  if (!cardData.card_exp_year || !/^\d{4}$/.test(cardData.card_exp_year) || cardData.card_exp_year < new Date().getFullYear()) {
+    errorText.textContent = 'Tahun expired tidak valid.'; return;
+  }
+   if (!cardData.card_cvv || !/^\d{3,4}$/.test(cardData.card_cvv)) {
+    errorText.textContent = 'CVV tidak valid.'; return;
+  }
+
+  // Tampilkan loading di resultBox
+  resultBox.innerHTML = `<div class="loading-spinner"></div><p class="loading-text">Memvalidasi kartu...</p>`;
+
+  MidtransNew3ds.getCardToken(cardData, {
+    onSuccess: function(response) {
+      initiatePayment({ method: "card", token_id: response.token_id });
     },
-    body: JSON.stringify({ method, bank })
-  })
-  .then(res => res.json())
-  .then(data => {
-    console.log("[MIDTRANS RAW]", data);
-
-    if (data.error) {
-      box.innerHTML = `<p style="color:red;">${data.error}</p>`;
-      return;
+    onError: function(response) {
+      // Kembalikan form dan tampilkan error
+      resultBox.innerHTML = getCardFormHTML();
+      document.getElementById('card-error-text').textContent = response.message;
+      document.getElementById("pay-card").addEventListener("click", handleCardPayment); // Re-attach listener
+      paymentInProgress = false;
     }
-
-    // --- GOPAY / QRIS ---
-    if (method === "gopay" && data.actions) {
-      const qr = data.actions.find(a => a.name === "generate-qr-code-v2") ||
-                 data.actions.find(a => a.name === "generate-qr-code");
-      const deeplink = data.actions.find(a => a.name === "deeplink-redirect");
-
-      if (qr) {
-        box.innerHTML = `
-          <p>Pindai QR di bawah ini menggunakan GoPay / aplikasi e-wallet lain:</p>
-          <img src="${qr.url}" alt="QRIS" style="width:200px;height:200px;margin:15px 0;border:1px solid #ddd;border-radius:8px;">
-          ${deeplink ? `<p><a href="${deeplink.url}" target="_blank" class="btn">Buka di Aplikasi</a></p>` : ""}
-        `;
-      } else {
-        box.innerHTML = `<p style="color:red;">Gagal menemukan QR Code (${JSON.stringify(data)})</p>`;
-      }
-      return;
-    }
-
-    // --- BANK TRANSFER ---
-    if (method === "bank" && (data.va_numbers || data.permata_va_number)) {
-      const va = data.va_numbers ? data.va_numbers[0] : { bank: "permata", va_number: data.permata_va_number };
-      box.innerHTML = `
-        <h3>Virtual Account ${va.bank.toUpperCase()}</h3>
-        <p>No. VA: <strong>${va.va_number}</strong></p>
-        <p>Status: ${data.transaction_status}</p>
-        <p><em>Lakukan pembayaran ke nomor VA di atas (sandbox).</em></p>
-      `;
-      return;
-    }
-
-    // --- fallback ---
-    box.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-  })
-  .catch(err => {
-    console.error("Payment Error:", err);
-    box.innerHTML = `<p style="color:red;">Gagal memproses: ${err}</p>`;
   });
 }
-</script>
 
+document.addEventListener("DOMContentLoaded", () => {
+  if (!selectedMethod) {
+      resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Metode pembayaran tidak ditemukan.</p><p>Silakan kembali dan pilih metode pembayaran.</p>`;
+      paymentInProgress = false;
+      return;
+  }
+
+  // Untuk CC, tampilkan form dulu, bukan initiatePayment
+  if (selectedMethod === "card") {
+    resultBox.innerHTML = getCardFormHTML();
+    document.getElementById("pay-card").addEventListener("click", handleCardPayment);
+    paymentInProgress = true; // Biarkan warning refresh aktif
+  } else {
+    // Untuk metode lain (VA, QRIS), langsung initiate
+    const payload = { method: selectedMethod };
+    if (selectedMethod.startsWith("bank_")) {
+        payload.bank = selectedMethod.split("_")[1];
+    }
+    initiatePayment(payload);
+  }
+});
+</script>
 {% endblock %}
