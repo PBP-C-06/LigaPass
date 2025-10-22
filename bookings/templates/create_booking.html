@@ -1,81 +1,281 @@
 {% extends "base.html" %}
-{% block title %}Pemesanan Tiket{% endblock %}
-
+{% block title %}Pilih Tiket & Pembayaran{% endblock %}
 {% block content %}
-<h1>Pemesanan Tiket</h1>
+{% include "components/step_wizard.html" with step=2 %}
+{% load static %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.13/dist/tailwind.min.css">
+<style>
+  :root {
+  --vvip-color: #fde68a;        /* kuning lembut */
+  --vip-color: #fecaca;         /* merah muda lembut */
+  --regular-color: #bfdbfe;     /* biru lembut */
+  --border-gray: #d1d5db;
+  --text-dark: #111827;         /* hitam pekat */
+  --text-medium: #374151;       /* abu gelap */
+  --highlight: #2563eb;
+}
 
-<h2>{{ match.home_team.name }} vs {{ match.away_team.name }}</h2>
-<p><strong>Tanggal:</strong> {{ match.date|date:"d M Y, H:i" }}</p>
-<p><strong>Stadion:</strong> {{ match.venue.name }}</p>
-<hr>
+/* Layout grid kursi */
+.seat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
 
-<form id="booking-form">
-  <h3>Pilih Kategori Kursi</h3>
+/* Kartu kursi */
+.seat-card {
+  border-radius: 16px;
+  padding: 24px;
+  background: #ffffff;
+  border: 2px solid var(--border-gray);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  color: var(--text-dark);
+}
 
-  {% for price in ticket_prices %}
-    <div style="margin-bottom: 15px;">
-      <h4>{{ price.get_seat_category_display }}</h4>
-      <p>Harga: Rp {{ price.price }} <br> Tersedia: {{ price.quantity_available }}</p>
-      <input type="number" 
-             id="{{ price.seat_category }}" 
-             min="0" 
-             max="{{ price.quantity_available }}" 
-             value="0">
+.seat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--highlight);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2);
+}
+
+/* Warna per kategori (tetap lembut) */
+.seat-card.vvip {
+  background: linear-gradient(to bottom right, #fffbe6, var(--vvip-color));
+}
+
+.seat-card.vip {
+  background: linear-gradient(to bottom right, #fff1f2, var(--vip-color));
+}
+
+.seat-card.regular {
+  background: linear-gradient(to bottom right, #eff6ff, var(--regular-color));
+}
+
+/* Judul kategori */
+.seat-card h4 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+
+/* Deskripsi fitur */
+.seat-card ul {
+  margin: 8px 0 14px;
+  color: var(--text-medium);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Select dropdown */
+.seat-card select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-gray);
+  background-color: #ffffff;
+  font-size: 15px;
+  color: var(--text-dark);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.seat-card select:focus {
+  border-color: var(--highlight);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  outline: none;
+}
+
+/* Harga dan total */
+.price {
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-top: 10px;
+  font-size: 1.1rem;
+}
+
+.total-line {
+  font-size: 14px;
+  color: var(--text-medium);
+  margin-top: 4px;
+}
+
+/* Responsif */
+@media (max-width: 768px) {
+  .seat-card {
+    padding: 20px;
+  }
+}
+</style>
+
+<div class="max-w-7xl mx-auto px-6 py-10">
+  <!-- Match Info -->
+  <div class="bg-white shadow-md rounded-lg p-6 mb-8 flex justify-between items-center">
+    <div>
+      <h2 class="text-xl font-bold text-gray-800">{{ match.home_team }} vs {{ match.away_team }}</h2>
+      <p class="text-gray-500">{{ match.venue }}</p>
+      <p class="text-gray-500">{{ match.date|date:"M d, Y" }} • {{ match.time }}</p>
     </div>
-  {% empty %}
-    <p>Tidak ada kategori tiket yang tersedia.</p>
-  {% endfor %}
+    <div class="text-right">
+      <p class="text-gray-500">🏟 Capacity: {{ match.capacity }}</p>
+      <p class="text-gray-500">⏱ Duration: {{ match.duration }} mins</p>
+    </div>
+  </div>
 
-  <button type="button" id="submit-booking">Pesan Sekarang</button>
-</form>
+  <!-- Seat Category Section -->
+  <h3 class="text-xl font-semibold mb-5 text-gray-800">Select Your Seat Category</h3>
 
-<div id="booking-result" style="margin-top:20px;"></div>
+  <div class="seat-grid">
+    {% for tp in ticket_prices %}
+    <div class="seat-card {% if tp.seat_category == 'VVIP' %}vvip{% elif tp.seat_category == 'VIP' %}vip{% else %}regular{% endif %}" data-category="{{ tp.seat_category }}" data-price="{{ tp.price }}">
+      <h4>{{ tp.seat_category }}</h4>
+      <ul>
+        {% if tp.seat_category == 'VVIP' %}
+          <li>✨ VIP Lounge Access</li>
+          <li>🍽 Premium Dining</li>
+          <li>👀 Best View</li>
+          <li>🤝 Meet & Greet</li>
+        {% elif tp.seat_category == 'VIP' %}
+          <li>🥂 Complimentary Drinks</li>
+          <li>🎉 Great View</li>
+          <li>⚡ Fast Entry</li>
+          <li>🪑 Premium Seating</li>
+        {% else %}
+          <li>🪑 Standard Seating</li>
+          <li>🌟 Good View</li>
+          <li>🎵 Stadium Atmosphere</li>
+          <li>💰 Affordable Pricing</li>
+        {% endif %}
+      </ul>
+
+      <label for="{{ tp.seat_category }}-qty">Jumlah Tiket:</label>
+      <select id="{{ tp.seat_category }}-qty" class="seat-qty">
+        <option value="0">Pilih jumlah</option>
+        {% for i in "12345678" %}
+          <option value="{{ forloop.counter }}">{{ forloop.counter }} Tiket</option>
+        {% endfor %}
+      </select>
+
+      <p class="price">Rp {{ tp.price|floatformat:0 }}</p>
+      <p class="total-line">Total: Rp 0</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Payment Method -->
+  <div class="mt-10 grid md:grid-cols-3 gap-8">
+    <div class="col-span-2 bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-semibold mb-3 text-gray-800">Select Payment Method</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="method border rounded-lg p-3 cursor-pointer hover:border-blue-500 transition" data-method="card">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1158px-Mastercard-logo.svg.png?20210817144358" class="h-10 mx-auto mb-2">
+          <p class="text-center text-sm text-gray-700">Visa / Mastercard</p>
+        </div>
+        <div class="method border rounded-lg p-3 cursor-pointer hover:border-blue-500 transition" data-method="gopay">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/QRIS_logo.svg/300px-QRIS_logo.svg.png" class="h-10 mx-auto mb-2">
+          <p class="text-center text-sm text-gray-700">QRIS</p>
+        </div>
+        <div class="method border rounded-lg p-3 cursor-pointer hover:border-blue-500 transition" data-method="bank_bca">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia.svg/200px-Bank_Central_Asia.svg.png" class="h-10 mx-auto mb-2">
+          <p class="text-center text-sm text-gray-700">Virtual Account BCA</p>
+        </div>
+        <div class="method border rounded-lg p-3 cursor-pointer hover:border-blue-500 transition" data-method="bank_cimb">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/3/38/CIMB_Niaga_logo.svg" class="h-10 mx-auto mb-2">
+          <p class="text-center text-sm text-gray-700">Virtual Account CIMB</p>
+        </div>
+        <div class="method border rounded-lg p-3 cursor-pointer hover:border-blue-500 transition" data-method="bank_bni">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Bank_Negara_Indonesia_logo_%282004%29.svg/200px-Bank_Negara_Indonesia_logo_%282004%29.svg.png" class="h-10 mx-auto mb-2">
+          <p class="text-center text-sm text-gray-700">Virtual Account BNI</p>
+        </div>
+        <div class="method border rounded-lg p-3 cursor-pointer hover:border-blue-500 transition" data-method="bank_bri">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/BANK_BRI_logo.svg/200px-BANK_BRI_logo.svg.png" class="h-10 mx-auto mb-2">
+          <p class="text-center text-sm text-gray-700">Virtual Account BRI</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Summary -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-semibold mb-3 text-gray-800">Order Summary</h3>
+      <p id="summary-seat" class="text-gray-700 mb-1">Belum memilih kursi</p>
+      <p id="summary-price" class="text-gray-700 mb-2">Rp 0</p>
+      <hr class="my-3">
+      <p class="font-semibold text-gray-800">Total: <span id="summary-total">Rp 0</span></p>
+      <button id="continueBtn" class="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg disabled:bg-gray-400" disabled>Continue to Payment</button>
+    </div>
+  </div>
+</div>
 
 <script>
-document.getElementById("submit-booking").addEventListener("click", function() {
-    const types = {};
+const csrftoken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
+let selectedMethod = null;
+let seatTotals = {};
+let seatCounts = {};
 
-    document.querySelectorAll("input[type='number']").forEach(input => {
-        const quantity = parseInt(input.value);
-        if (quantity > 0) {
-            types[input.id] = quantity;
-        }
-    });
+// 🧩 Update summary box
+function updateSummary() {
+  const seatInfo = Object.entries(seatCounts)
+    .filter(([_, qty]) => qty > 0)
+    .map(([cat, qty]) => `${qty}x ${cat}`)
+    .join(", ");
 
-    if (Object.keys(types).length === 0) {
-        alert("Pilih minimal satu kategori tiket!");
-        return;
-    }
+  const totalAll = Object.values(seatTotals).reduce((a, b) => a + b, 0);
+  document.getElementById("summary-seat").innerText = seatInfo || "Belum memilih kursi";
+  document.getElementById("summary-price").innerText = seatInfo ? `Subtotal: Rp ${totalAll.toLocaleString()}` : "Rp 0";
+  document.getElementById("summary-total").innerText = `Rp ${totalAll.toLocaleString()}`;
+  document.getElementById("continueBtn").disabled = totalAll === 0 || !selectedMethod;
+}
 
-    fetch(window.location.pathname, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
-        },
-        body: JSON.stringify({ types: types })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.error) {
-            document.getElementById("booking-result").innerHTML = 
-              `<p style='color:red;'>${data.error}</p>`;
-        } else {
-            document.getElementById("booking-result").innerHTML = `
-                <h3>Booking Berhasil!</h3>
-                <p>ID Booking: ${data.booking_id}</p>
-                <p>Total Harga: Rp ${data.total_price}</p>
-                <a href="/bookings/payment/${data.booking_id}/" class="btn btn-primary">
-                  Lanjut ke Pembayaran
-                </a>
-            `;
-        }
-    })
-    .catch(err => {
-        console.error("Booking gagal:", err);
-        document.getElementById("booking-result").innerHTML =
-          "<p style='color:red;'>Terjadi kesalahan. Silakan coba lagi.</p>";
-    });
+// 🎟 Update total setiap dropdown berubah
+document.querySelectorAll(".seat-card").forEach(card => {
+  const select = card.querySelector("select");
+  const totalLine = card.querySelector(".total-line");
+  const price = parseInt(card.dataset.price);
+
+  select.addEventListener("change", () => {
+    const qty = parseInt(select.value);
+    const total = qty * price;
+    const cat = card.dataset.category;
+
+    seatTotals[cat] = total;
+    seatCounts[cat] = qty;
+
+    totalLine.innerText = `Total: Rp ${total.toLocaleString()}`;
+    updateSummary();
+  });
+});
+
+// 💳 Pilih metode pembayaran
+document.querySelectorAll(".method").forEach(method => {
+  method.addEventListener("click", () => {
+    document.querySelectorAll(".method").forEach(m => m.classList.remove("border-blue-500"));
+    method.classList.add("border-blue-500");
+    selectedMethod = method.dataset.method;
+    updateSummary();
+  });
+});
+
+// 🚀 Kirim ke backend
+document.getElementById("continueBtn").addEventListener("click", async () => {
+  const types = {};
+  document.querySelectorAll(".seat-card select").forEach(s => {
+    const qty = parseInt(s.value);
+    if (qty > 0) types[s.id.replace("-qty","")] = qty;
+  });
+
+  const res = await fetch("", {
+    method: "POST",
+    headers: {"Content-Type": "application/json","X-CSRFToken": csrftoken},
+    body: JSON.stringify({types, method: selectedMethod})
+  });
+
+  const data = await res.json();
+  if (res.ok) {
+    window.location.href = `/bookings/payment/${data.booking_id}/`;
+  } else {
+    alert(data.error || "Gagal membuat booking");
+  }
 });
 </script>
 {% endblock %}

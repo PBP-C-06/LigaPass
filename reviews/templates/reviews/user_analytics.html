@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-8">
+  <h1 class="text-3xl font-bold text-gray-800 mb-6">User Analytics</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <h2 class="font-semibold text-gray-700 mb-3">Total Pengeluaran per Bulan</h2>
+      <canvas id="spendingChart"></canvas>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow">
+      <h2 class="font-semibold text-gray-700 mb-3">Distribusi Kategori Tiket Dibeli</h2>
+      <canvas id="seatChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/analytics.js' %}"></script>
+<script>
+  initUserAnalytics();
+</script>
+{% endblock %}
