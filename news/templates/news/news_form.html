@@ -1,0 +1,17 @@
+<!-- news/templates/news/news_form.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+  <h1>{{ is_create|yesno:"Create News,Edit News" }}</h1>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">
+      {{ is_create|yesno:"Create News,Save Edit" }}
+    </button>
+  </form>
+
+  <p><a href="{% url 'news:news_list' %}">← Back to News List</a></p>
+{% endblock %}

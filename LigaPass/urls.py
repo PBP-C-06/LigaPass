@@ -61,6 +61,7 @@ urlpatterns = [
     path('bookings/', include('bookings.urls')),
     # path('matches/', include('matches.urls')),
     path('profiles/', include('profiles.urls')),
+    path('news/', include('news.urls')),
     path("reviews/", include("reviews.urls")),
     
 ]

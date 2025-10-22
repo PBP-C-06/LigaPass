@@ -174,7 +174,6 @@ class TeamUpdateView(AdminRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context['messages_json'] = _get_cleaned_messages(self.request)
         return context
-
 class TeamDeleteView(AdminRequiredMixin, DeleteView):
     model = Team
     template_name = 'matches/manage/team_confirm_delete.html'
