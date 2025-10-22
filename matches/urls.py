@@ -28,8 +28,8 @@ urlpatterns = [
     # Teams
     path('manage/teams/', TeamListView.as_view(), name='manage_teams'),
     path('manage/teams/add/', TeamCreateView.as_view(), name='add_team'),
-    path('manage/teams/edit/<int:pk>/', TeamUpdateView.as_view(), name='edit_team'),
-    path('manage/teams/delete/<int:pk>/', TeamDeleteView.as_view(), name='delete_team'),
+    path('manage/teams/edit/<uuid:pk>/', TeamUpdateView.as_view(), name='edit_team'),
+    path('manage/teams/delete/<uuid:pk>/', TeamDeleteView.as_view(), name='delete_team'),
 
     # Matches
     path('manage/matches/', MatchListView.as_view(), name='manage_matches'),

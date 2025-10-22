@@ -149,18 +149,8 @@ class TeamCreateView(AdminRequiredMixin, CreateView):
     success_url = reverse_lazy('matches:manage_teams')
 
     def form_valid(self, form):
-        # 1. Tunda simpan form utama dan set api_id
-        self.object = form.save(commit=False)
-        
-        if not self.object.pk:
-            min_api_id = Team.objects.aggregate(Min('api_id'))['api_id__min']
-            next_negative_id = min_api_id - 1 if min_api_id is not None and min_api_id < 0 else -1
-            self.object.api_id = next_negative_id
-        
-        # 2. Simpan instance yang sudah dimodifikasi
-        self.object.save()
-        form.save_m2m() 
-
+        # API ID Logic DIBERSIHKAN TOTAL
+        self.object = form.save() 
         messages.success(self.request, f'Tim "{self.object.name}" berhasil ditambahkan.')
         return redirect(self.get_success_url())
 
@@ -232,33 +222,34 @@ class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
         # 1. Tunda simpan form utama
         self.object = form.save(commit=False)
         
-        # 2. Set API ID dan nilai default untuk kolom NOT NULL
+        # 2. Set API ID ke NULL, dan set nilai default yang dibutuhkan
         if not self.object.pk:
-            min_api_id = Match.objects.aggregate(Min('api_id'))['api_id__min']
-            next_negative_id = min_api_id - 1 if min_api_id is not None and min_api_id < 0 else -1
-            self.object.api_id = next_negative_id
-
+            self.object.api_id = None # Set to NULL/None because it's nullable now
             self.object.status_short = "NS"
             self.object.status_long = "Not Started"
             self.object.home_goals = None
             self.object.away_goals = None
-        
-        # 3. Validasi Formset
-        context = self.get_context_data(form=form)
-        formset = context['formset']
+            
+        # 3. Simpan object utama (CRITICAL: Match object must be saved to DB)
+        self.object.save()
+        form.save_m2m() 
+
+        # 4. Validasi dan Simpan Formset
+        formset = TicketPriceFormSet(self.request.POST, self.request.FILES, instance=self.object)
 
         if formset.is_valid():
-            # 4. Simpan object utama dan formset
-            self.object.save()
-            form.save_m2m() 
-
-            formset.instance = self.object
             formset.save()
 
             messages.success(self.request, f'Pertandingan {self.object.home_team.name} vs {self.object.away_team.name} berhasil ditambahkan.')
             return redirect(self.get_success_url())
         else:
-            # 5. Render ulang jika formset invalid
+            # If formset fails, delete the partially created match object
+            messages.error(self.request, "Gagal menambahkan harga tiket. Pertandingan yang dibuat telah dihapus. Silakan coba lagi.")
+            self.object.delete() 
+            
+            # Re-render the form with errors
+            context = self.get_context_data(form=form)
+            context['formset'] = formset 
             return self.render_to_response(context)
 
 class MatchUpdateView(AdminRequiredMixin, MatchCreateUpdateMixin, UpdateView):
@@ -271,22 +262,24 @@ class MatchUpdateView(AdminRequiredMixin, MatchCreateUpdateMixin, UpdateView):
         # 1. Tunda simpan form utama
         self.object = form.save(commit=False)
 
-        # 2. Validasi Formset
-        context = self.get_context_data(form=form)
-        formset = context['formset']
+        # 2. Simpan object utama (untuk update fields)
+        self.object.save()
+        form.save_m2m() 
+
+        # 3. Validasi dan Simpan Formset
+        formset = TicketPriceFormSet(self.request.POST, self.request.FILES, instance=self.object)
 
         if formset.is_valid():
-            # 3. Simpan object utama dan formset
-            self.object.save()
-            form.save_m2m() 
-
-            formset.instance = self.object
             formset.save()
             
             messages.success(self.request, f'Pertandingan {self.object.home_team.name} vs {self.object.away_team.name} berhasil diperbarui.')
             return redirect(self.get_success_url())
         else:
-            # 4. Render ulang jika formset invalid
+            # No need to delete on update, just render with errors
+            messages.error(self.request, "Gagal memperbarui harga tiket.")
+            
+            context = self.get_context_data(form=form)
+            context['formset'] = formset 
             return self.render_to_response(context)
 
 class MatchDeleteView(AdminRequiredMixin, DeleteView):
