@@ -3,13 +3,6 @@
 {% block content %}
 <div class="max-w-4xl mx-auto">
   <h1 class="text-3xl font-bold text-center mb-6 text-slate-800">Kalender Pertandingan</h1>
-
-  <div class="mt-8 flex justify-center space-x-4">
-    <button id="testSuccess" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">Test Success</button>
-    <button id="testError" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">Test Error</button>
-    <button id="testInfo" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">Test Info</button>
-  </div>
-
   <form method="GET" action="{% url 'matches:calendar' %}" class="mb-8 mt-6">
     <div class="flex">
       <input type="text" name="q" placeholder="Cari nama tim..." value="{{ request.GET.q }}"
