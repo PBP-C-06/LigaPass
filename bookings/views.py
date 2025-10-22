@@ -35,18 +35,16 @@ def create_booking(request, match_id):
             return JsonResponse({"error": "Payment method not selected"}, status=400)
 
         # Hitung total dan kurangi stok tiket
-        # Tambahkan 'try...except' untuk atomicity jika perlu
         for seat_category, quantity in ticket_types.items():
             try:
                 ticket_type = TicketPrice.objects.get(match=match, seat_category=seat_category)
             except TicketPrice.DoesNotExist:
                  return JsonResponse({"error": f"Ticket type {seat_category} not found"}, status=404)
 
-            quantity = int(quantity) # Pastikan integer
-            if quantity <= 0: continue # Lewati jika qty 0
+            quantity = int(quantity)
+            if quantity <= 0: continue
 
             if ticket_type.quantity_available < quantity:
-                # OPTIONAL: Batalkan pengurangan stok sebelumnya jika ada error di tengah
                 return JsonResponse(
                     {"error": f"Not enough tickets available for {seat_category}"},
                     status=400
@@ -57,15 +55,13 @@ def create_booking(request, match_id):
             ticket_type.save()
             booking_items.append((ticket_type, quantity))
 
-        # Jika tidak ada item valid setelah loop (misal semua qty 0)
         if not booking_items:
              return JsonResponse({"error": "No valid tickets selected"}, status=400)
 
-        # Simpan booking
         booking = Booking.objects.create(
             user=request.user,
             total_price=total_price,
-            status='PENDING' # Set status awal
+            status='PENDING'
         )
 
         # Simpan item booking
@@ -91,15 +87,10 @@ def create_booking(request, match_id):
 
 @login_required
 def payment(request, booking_id):
-    # Pastikan booking milik user yang login
     booking = get_object_or_404(Booking, booking_id=booking_id, user=request.user)
 
-    # --- GET: render halaman pembayaran ---
     if request.method == "GET":
-        # FIX 1: GANTI .pop() MENJADI .get()
         selected_method = request.session.get("selected_method", None)
-
-        # Jika user langsung akses URL tanpa lewat create_booking
         if not selected_method and booking.status == 'PENDING' and not booking.midtrans_order_id:
             pass
 
@@ -114,7 +105,6 @@ def payment(request, booking_id):
         data = json.loads(request.body)
         method = data.get("method")
         token_id = data.get("token_id")
-        bank = data.get("bank") # bank sebenarnya tidak perlu dikirim dari JS jika method sudah benar
 
         if not method:
             return JsonResponse({"error": "Payment method is required"}, status=400)
@@ -128,57 +118,47 @@ def payment(request, booking_id):
             "Accept": "application/json",
         }
 
-        # FIX 2: LOGIKA REFRESH (Cek Session Dulu)
         if booking.midtrans_order_id:
             payment_responses = request.session.get("payment_responses", {})
             stored_response = payment_responses.get(str(booking.booking_id))
 
             if stored_response:
-                # Ditemukan di session! Kembalikan data lama
                 return JsonResponse(stored_response, status=200)
             else:
-                # Tidak ada di session, cek status ke Midtrans (fallback)
                 check_url = f"https://api.sandbox.midtrans.com/v2/{booking.midtrans_order_id}/status"
-                # FIX Auth Basic untuk status check
                 check_res = requests.get(check_url, headers=headers)
                 check_data = check_res.json()
-                # Kembalikan data status, JS akan coba menampilkannya
                 return JsonResponse(check_data, status=check_res.status_code)
 
-
-        # --- BUAT ORDER BARU ---
         # Pastikan booking masih PENDING sebelum membuat order baru
         if booking.status != 'PENDING':
             return JsonResponse({"error": "Booking is already processed or expired"}, status=400)
 
-        order_id = f"book-{method[:3]}-{uuid.uuid4().hex[:8]}" # Order ID lebih pendek
+        order_id = f"book-{method[:3]}-{uuid.uuid4().hex[:8]}"
 
-        # FIX 3: TAMBAHKAN item_details
         item_details = []
         for item in booking.items.all():
             item_details.append({
-                "id": str(item.id), # Pakai ID BookingItem agar unik
+                "id": str(item.id),
                 "price": float(item.ticket_type.price),
                 "quantity": item.quantity,
-                "name": f"Ticket: {item.ticket_type.seat_category}" # Nama bisa lebih deskriptif
+                "name": f"Ticket: {item.ticket_type.seat_category}" 
             })
 
-        # --- PAYLOAD DASAR ---
         payload = {
             "transaction_details": {
                 "order_id": order_id,
-                "gross_amount": int(booking.total_price), # Midtrans butuh integer
+                "gross_amount": int(booking.total_price),
             },
             "customer_details": {
                 "first_name": booking.user.first_name or booking.user.username,
                 "last_name": booking.user.last_name or "",
                 "email": booking.user.email,
-                # "phone": "08123456789", # Tambahkan jika ada
+                "phone":booking.user.profile.phone_number if hasattr(booking.user, 'profile') else "",
             },
             "item_details": item_details
         }
 
-        # --- Tentukan metode pembayaran ---
         if method == "card":
             if not token_id:
                  return JsonResponse({"error": "Card token is required"}, status=400)
@@ -186,14 +166,6 @@ def payment(request, booking_id):
             payload["credit_card"] = {
                 "token_id": token_id,
                 "authentication": True
-            }
-
-        # FIX 4: PERBAIKI URUTAN LOGIKA BANK
-        elif method == "bank_mandiri":
-            payload["payment_type"] = "echannel"
-            payload["echannel"] = {
-                "bill_info1": f"Booking: {booking.booking_id}",
-                "bill_info2": "Pembayaran Tiket"
             }
 
         elif method.startswith("bank_"):
@@ -214,31 +186,26 @@ def payment(request, booking_id):
         # --- KIRIM REQUEST KE MIDTRANS ---
         try:
             response = requests.post(
-                "https://api.sandbox.midtrans.com/v2/charge", # Pastikan URL benar (sandbox/prod)
+                "https://api.sandbox.midtrans.com/v2/charge",
                 headers=headers,
                 json=payload,
-                timeout=20 # Tambahkan timeout
+                timeout=20
             )
             midtrans_data = response.json()
 
             # Tangani error dari Midtrans
             if response.status_code >= 400:
-                print(f"Midtrans Error: {midtrans_data}") # Log errornya
                 return JsonResponse(midtrans_data, status=response.status_code)
 
         except requests.exceptions.RequestException as e:
-            print(f"Midtrans Request Failed: {e}") # Log errornya
             return JsonResponse({"error": f"Midtrans request failed: {e}"}, status=500)
 
-        # FIX 5: SIMPAN RESPONS LENGKAP KE SESSION
         if "payment_responses" not in request.session:
             request.session["payment_responses"] = {}
         request.session["payment_responses"][str(booking.booking_id)] = midtrans_data
         request.session.modified = True
 
-        # --- Simpan order_id dan status dari Midtrans di booking ---
         booking.midtrans_order_id = order_id
-        # FIX 6: AMBIL STATUS DARI MIDTRANS
         booking.status = midtrans_data.get("transaction_status", "PENDING").upper()
         booking.save(update_fields=["midtrans_order_id", "status"])
 
