@@ -354,9 +354,6 @@ def midtrans_notification(request):
         # Kirim 500 tapi Midtrans mungkin akan retry
         return JsonResponse({'error': str(e)}, status=500)
 
-# ===============================
-# ✔️ VIEW BARU: CHECK STATUS (Untuk Tombol Refresh)
-# ===============================
 @login_required
 def check_booking_status(request, booking_id):
     try:
