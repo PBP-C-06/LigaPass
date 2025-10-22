@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from authentication.forms import RegisterForm
 import datetime
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.conf import settings
@@ -13,6 +13,10 @@ from authentication.models import User
 from django.views.decorators.csrf import csrf_exempt
 
 def register_user(request):
+    
+    if request.user.is_authenticated:
+        return redirect(reverse("matches:calendar"))
+    
     form = RegisterForm()
     if request.method == "POST":
         form = RegisterForm(request.POST)
@@ -36,6 +40,9 @@ def register_user(request):
 
 # Non Google login
 def login_user(request):
+    if request.user.is_authenticated:
+        return redirect(reverse("matches:calendar"))
+    
     if request.method == "POST":
         form = AuthenticationForm(data=request.POST)
         if form.is_valid():
@@ -65,18 +72,18 @@ def login_user(request):
     return render(request, "login.html", {"form": form})
 
 def logout_user(request):
+    logout(request)
+    redirect_url = reverse("matches:calendar")
+
     if request.method == "POST":
-        logout(request)
         response = JsonResponse({
             "status": "success",
             "message": "You have been logged out successfully.",
-            "redirect_url": reverse("authentication:login"),
+            "redirect_url": redirect_url,
         })
-        response.delete_cookie("last_login")
-        return response
+    else:
+        response = HttpResponseRedirect(redirect_url)
 
-    logout(request)
-    response = redirect("authentication:login")
     response.delete_cookie("last_login")
     return response
 
