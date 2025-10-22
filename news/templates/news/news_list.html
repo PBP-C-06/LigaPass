@@ -1,0 +1,42 @@
+<!-- news/templates/news/news_list.html -->
+<h1>Berita</h1>
+
+<form method="get">
+    <input type="text" name="q" placeholder="Cari judul..." />
+    <select name="category">
+        <option value="">Semua Kategori</option>
+        <option value="transfer">Transfer</option>
+        <option value="update">Update</option>
+        <option value="exclusive">Exclusive</option>
+        <option value="match">Match</option>
+        <option value="rumor">Rumor</option>
+        <option value="analysis">Analysis</option>
+    </select>
+    <select name="sort">
+        <option value="created_at">Terbaru</option>
+        <option value="edited_at">Terakhir Diedit</option>
+        <option value="news_views">Populer</option>
+    </select>
+    <button type="submit">Filter</button>
+</form>
+
+{% if request.user.role == 'journalist' %}
+    <a href="{% url 'news:news_create' %}">+ Create News</a>
+{% endif %}
+
+<ul>
+    {% for item in news_list %}
+        <li>
+            <h2><a href="{% url 'news:news_detail' item.pk %}">{{ item.title }}</a></h2>
+            <p>Kategori: {{ item.category }} | 
+               {{ item.edited_at|default:item.created_at }} | 
+               Views: {{ item.news_views }} 
+               {% if item.is_featured %}⭐{% endif %}
+            </p>
+            <img src="{{ item.thumbnail.url }}" width="120"/>
+            <p>{{ item.content|truncatewords:20 }}</p>
+        </li>
+    {% empty %}
+        <li>Tidak ada berita.</li>
+    {% endfor %}
+</ul>
