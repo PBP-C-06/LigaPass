@@ -133,3 +133,7 @@ def edit_profile_for_user(request, id):
         profile.save()
 
         return HttpResponse(b"PROFILE UPDATED", status=200)
+
+# Untuk menampilkan admin to user profile page 
+# def admin_to_user_view(request, id):
+

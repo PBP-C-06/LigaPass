@@ -11,6 +11,5 @@ urlpatterns = [
     path("admin/", admin_view, name="admin_view"),
     path("journalist/", journalist_view, name="journalist_view"),
     path('user/<uuid:id>/edit/', edit_profile_for_user, name='edit_profile_for_user'), 
-    # TODO: Lanjutkan yang dibawah
     # path('admin/<uuid:id>/', admin_to_user_view, name='admin_user_edit'),
 ]
