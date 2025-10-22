@@ -14,14 +14,23 @@
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background-color: #0f172a; /* slate-950 */
-      color: white;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e2e8f0 100%);
+      color: #1e293b;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
 
-    /* Toast Notification Styles */
+    /* --- Footer --- */
+    footer {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(226, 232, 240, 0.6);
+      color: #334155;
+      font-size: 0.9rem;
+    }
+
+    /* --- Toast (biar tetep matching) --- */
     #toast-container {
       position: fixed;
       top: 1.5rem;
@@ -40,99 +49,37 @@
       opacity: 0;
       transform: translateX(100%);
       transition: all 0.5s ease-in-out;
-      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.15);
     }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    .toast.success { background-color: #16a34a; } /* green-600 */
-    .toast.error { background-color: #dc2626; }   /* red-600 */
-    .toast.info { background-color: #2563eb; }    /* blue-600 */
-    .toast.warning { background-color: #f59e0b; } /* amber-500 */
-    .toast.debug { background-color: #64748b; }   /* slate-500 */
+    .toast.show { opacity: 1; transform: translateX(0); }
+    .toast.success { background-color: #16a34a; }
+    .toast.error { background-color: #dc2626; }
+    .toast.info { background-color: #2563eb; }
+    .toast.warning { background-color: #f59e0b; }
   </style>
 
   {% block extra_head %}{% endblock %}
 </head>
-<body>
 
+<body>
+  {% include 'navbar.html' %}
   <div id="toast-container"></div>
 
-  {% include 'navbar.html' %}
-
-  <main class="flex-grow container mx-auto px-6 py-8">
+  <main class="flex-grow container mx-auto px-6 py-10">
     {% block content %}
-    <div class="text-center text-slate-400">
-      <h2 class="text-2xl font-semibold mb-4">Welcome to LigaPass ⚽</h2>
-      <p>Where football passion meets technology.</p>
-    </div>
+      <div class="text-center text-slate-600">
+        <h2 class="text-2xl font-semibold mb-4">Welcome to LigaPass ⚽</h2>
+        <p>Where football passion meets technology.</p>
+      </div>
     {% endblock %}
   </main>
 
-  <footer class="bg-slate-900 text-center py-4 text-slate-400 mt-auto">
+  <footer class="text-center py-4 mt-auto">
     <p>© {% now "Y" %} LigaPass. All rights reserved.</p>
   </footer>
 
   {% block scripts %}
     <script src="{% static 'js/toast.js' %}"></script>
-    
-    {% if messages_json %}
-      {{ messages_json|json_script:"json-messages" }}
-    {% endif %}
-
-    <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // --- Logika untuk menampilkan Toast dari Django Messages ---
-      const messagesElement = document.getElementById('json-messages');
-      if (messagesElement) {
-        const messages = JSON.parse(messagesElement.textContent);
-        messages.forEach(message => {
-          showToast(message.message, message.tags);
-        });
-      }
-
-      // --- Logika untuk form Logout ---
-      const logoutForm = document.getElementById("logoutForm");
-      if (logoutForm) {
-        logoutForm.addEventListener("submit", async (e) => {
-          e.preventDefault(); 
-          const csrfToken = logoutForm.querySelector("[name=csrfmiddlewaretoken]").value;
-
-          try {
-            const response = await fetch(logoutForm.action, {
-              method: "POST",
-              headers: { "X-CSRFToken": csrfToken, "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" },
-            });
-
-            const data = await response.json();
-            if (data.status === "success" && data.redirect_url) {
-              window.location.href = data.redirect_url;
-            } else {
-              showToast(data.message || "An error occurred.", "error");
-            }
-          } catch (error) {
-            console.error("An error occurred during logout:", error);
-            showToast("An error occurred during logout.", "error");
-          }
-        });
-      }
-
-      document.getElementById('testSuccess')?.addEventListener('click', () => {
-          showToast('Yeay! Tes sukses. Toast berhasil ditampilkan!', 'success');
-      });
-
-      document.getElementById('testError')?.addEventListener('click', () => {
-          showToast('Oops. Ada yang error saat testing.', 'error');
-      });
-
-      document.getElementById('testInfo')?.addEventListener('click', () => {
-          showToast('Ini adalah pesan informasi biasa.', 'info');
-      });
-    });
-    </script>
   {% endblock %}
 </body>
 </html>
