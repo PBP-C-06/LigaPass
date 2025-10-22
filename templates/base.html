@@ -80,6 +80,47 @@
 
   {% block scripts %}
     <script src="{% static 'js/toast.js' %}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const logoutForm = document.getElementById('logoutForm');
+
+      if (logoutForm) {
+        logoutForm.addEventListener('submit', function(event) {
+          event.preventDefault();
+
+          const form = event.target;
+          const url = form.action;
+          const formData = new FormData(form);
+          const csrfToken = formData.get('csrfmiddlewaretoken');
+          fetch(url, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrfToken,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Logout request failed');
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.status === 'success') {
+              showToast(data.message || "Logout successful", "success");
+              setTimeout(() => window.location.href = data.redirect_url, 800);
+            } else {
+              showToast(data.message || "Logout failed", "error");
+            }
+          })
+                    .catch(error => {
+            console.error('Logout error:', error);
+            alert('An error occurred during logout. Please try again.');
+          });
+        });
+      }
+    });
+  </script>
   {% endblock %}
 </body>
 </html>

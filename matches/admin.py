@@ -13,7 +13,7 @@ class MatchAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'date', 'venue', 'status_short')
     list_filter = ('date', 'status_short', 'venue')
     search_fields = ('home_team__name', 'away_team__name', 'venue__name')
-    inlines = [TicketPriceInline] # Tambahkan inline di sini
+    inlines = [TicketPriceInline]
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):

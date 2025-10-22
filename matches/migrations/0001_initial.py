@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Venue',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('api_id', models.IntegerField(blank=True, null=True, unique=True)),
                 ('name', models.CharField(max_length=100)),
                 ('city', models.CharField(blank=True, max_length=100, null=True)),
@@ -36,10 +36,10 @@ class Migration(migrations.Migration):
             name='Match',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('api_id', models.IntegerField(unique=True)),
+                ('api_id', models.IntegerField(blank=True, null=True, unique=True)),
                 ('date', models.DateTimeField()),
-                ('status_short', models.CharField(max_length=10)),
-                ('status_long', models.CharField(max_length=50)),
+                ('status_short', models.CharField(default='NS', max_length=10)),
+                ('status_long', models.CharField(default='Not Started', max_length=50)),
                 ('home_goals', models.IntegerField(blank=True, null=True)),
                 ('away_goals', models.IntegerField(blank=True, null=True)),
                 ('away_team', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='away_matches', to='matches.team')),
