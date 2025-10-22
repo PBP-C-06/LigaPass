@@ -9,8 +9,8 @@ from .models import Team, Venue, Match, TicketPrice
 
 # --- Caching Configuration ---
 # File cache akan disimpan di root proyek (BASE_DIR)
-CACHE_FILE = Path(settings.BASE_DIR) / 'match_cache.json'
-CACHE_EXPIRY = 86400 # Waktu kedaluwarsa cache dalam detik (24 jam/Harian)
+# CACHE_FILE = Path(settings.BASE_DIR) / 'match_cache.json'
+# CACHE_EXPIRY = 86400 # Waktu kedaluwarsa cache dalam detik (24 jam/Harian)
 # ---------------------------
 
 # --- PEMETAAN NAMA TIM SECARA HARDCODE ---
@@ -184,6 +184,7 @@ def sync_database_with_apis():
     print("Memulai sinkronisasi database dengan API...")
     all_matches, processed_ids = [], set()
     
+    # 1. Ambil data dari API-Football terlebih dahulu
     api_football_data = _fetch_api_football_matches()
     
     # 2. BANGUN logo_map LENGKAP dari API-Football (sumber logo utama)
@@ -202,6 +203,7 @@ def sync_database_with_apis():
             all_matches.append(normalized)
             processed_ids.add(normalized['id'])
     
+    # 4. Lanjutkan Normalisasi Data Free-API
     for match in _fetch_freeapi_matches():
         normalized = _normalize_match_data(match, 'free-api', logo_map)
         if normalized and normalized['id'] not in processed_ids:
