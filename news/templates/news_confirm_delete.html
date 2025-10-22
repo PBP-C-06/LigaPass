@@ -1,0 +1,17 @@
+<!-- news/templates/news/news_confirm_delete.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+  <h1>Konfirmasi Hapus Berita</h1>
+
+  <p>Apakah kamu yakin ingin menghapus berita berikut?</p>
+
+  <h3>{{ news.title }}</h3>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" onclick="return confirm('Yakin hapus berita ini?')">Hapus</button>
+    <a href="{% url 'news_detail' news.pk %}">Batal</a>
+  </form>
+{% endblock %}

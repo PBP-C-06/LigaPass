@@ -2,7 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
@@ -14,15 +14,25 @@ from django.conf import settings
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+
+# Asumsi Team, Match, TicketPrice, TeamForm, sync_database_with_apis sudah terdefinisi/diimpor
 from .models import Team, Match, TicketPrice
 from .forms import TeamForm
 from .services import sync_database_with_apis
 
-# --- FUNGSI PEMBANTU UNTUK PESAN (FIX: TypeError) ---
+# --- AUTHENTICATION HELPERS ---
+
+def is_admin(user):
+    return user.is_authenticated and user.role == 'admin'
+
+class AdminRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_authenticated and self.request.user.role == 'admin'
+
+# --- MESSAGE PROCESSING (FIX FOR TypeError) ---
 
 def _get_cleaned_messages(request):
     """Mengubah objek pesan Django menjadi daftar dictionary yang aman untuk JSON."""
-    # Mengambil dan mengonsumsi pesan dari storage.
     django_messages = messages.get_messages(request)
     message_list = []
     for message in django_messages:
@@ -32,10 +42,7 @@ def _get_cleaned_messages(request):
         })
     return message_list
 
-# --------------------------------------------------
-
-def is_admin(user):
-    return user.is_authenticated and user.role == 'admin'
+# --- MATCH VIEW HELPERS ---
 
 # Fungsi pembantu untuk mengelompokkan status pertandingan
 def get_match_status(match_time):
@@ -47,7 +54,7 @@ def get_match_status(match_time):
     else:
         return 'Past'
 
-# --- FUNCTION-BASED VIEWS ---
+# --- MATCH VIEWS ---
 
 def match_calendar_view(request):
     queryset = Match.objects.select_related('home_team', 'away_team', 'venue').order_by('date')
@@ -68,7 +75,7 @@ def match_calendar_view(request):
 
     context = {
         'grouped_matches': grouped_matches,
-        'messages_json': _get_cleaned_messages(request), # FIX
+        'messages_json': _get_cleaned_messages(request), # FIX: Pesan JSON bersih
     }
     return render(request, 'matches/calendar.html', context)
 
@@ -82,7 +89,7 @@ def match_details_view(request, match_id):
     context = {
         'match': match,
         'ticket_prices': ticket_prices,
-        'messages_json': _get_cleaned_messages(request), # FIX
+        'messages_json': _get_cleaned_messages(request), # FIX: Pesan JSON bersih
     }
     
     return render(request, 'matches/details.html', context)
@@ -135,11 +142,7 @@ def live_score_api(request, match_api_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-# --- CLASS-BASED VIEWS (CRUD Tim) ---
-
-class AdminRequiredMixin(UserPassesTestMixin):
-    def test_func(self):
-        return self.request.user.is_authenticated and self.request.user.role == 'admin'
+# --- TEAM CRUD VIEWS (Menggunakan Class-Based Views) ---
 
 class TeamListView(AdminRequiredMixin, ListView):
     model = Team
@@ -148,7 +151,8 @@ class TeamListView(AdminRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['messages_json'] = _get_cleaned_messages(self.request) # FIX
+        # Tambahkan pesan yang sudah bersih
+        context['messages_json'] = _get_cleaned_messages(self.request) 
         return context
 
 class TeamCreateView(AdminRequiredMixin, CreateView):
@@ -164,7 +168,7 @@ class TeamCreateView(AdminRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['messages_json'] = _get_cleaned_messages(self.request) # FIX
+        context['messages_json'] = _get_cleaned_messages(self.request)
         return context
 
 class TeamUpdateView(AdminRequiredMixin, UpdateView):
@@ -175,25 +179,27 @@ class TeamUpdateView(AdminRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        messages.success(self.request, f'Tim "{self.object.name}" berhasil diperbarui.')
+        messages.success(self.request, f'Tim "{self.object.name}" berhasil diperbarui, termasuk logo.')
         return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['messages_json'] = _get_cleaned_messages(self.request) # FIX
+        context['messages_json'] = _get_cleaned_messages(self.request)
         return context
-
+    
 class TeamDeleteView(AdminRequiredMixin, DeleteView):
     model = Team
     template_name = 'matches/manage/team_confirm_delete.html'
     success_url = reverse_lazy('matches:manage_teams')
     
     def form_valid(self, form):
+        # Karena DeleteView akan memanggil super().form_valid(form) yang akan menghapus objek,
+        # kita ambil nama sebelum dihapus untuk pesan sukses.
         team_name = self.object.name
         messages.success(self.request, f'Tim "{team_name}" berhasil dihapus.')
         return super().form_valid(form)
-        
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['messages_json'] = _get_cleaned_messages(self.request) # FIX
+        context['messages_json'] = _get_cleaned_messages(self.request)
         return context
