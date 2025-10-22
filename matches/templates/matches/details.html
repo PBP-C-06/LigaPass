@@ -44,7 +44,7 @@
     <div class="mt-8 text-center">
         {% if match.status_key == 'Upcoming' %}
             {% if user.is_authenticated %}
-                <a href="#" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors">Beli Tiket</a>
+                <a href="{% url 'bookings:create_booking' match.id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors">Beli Tiket</a>
             {% else %}
                 <a href="{% url 'authentication:login' %}" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors">Login untuk Membeli Tiket</a>
             {% endif %}
