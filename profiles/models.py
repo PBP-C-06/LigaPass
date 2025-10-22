@@ -29,6 +29,3 @@ class AdminJournalistProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.role} : {self.user.username}"
-
-# TODO: JournalistData from news
-# TODO: UserReviewsInfo from reviews
