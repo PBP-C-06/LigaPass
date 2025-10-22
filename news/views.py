@@ -50,7 +50,7 @@ def news_create(request):
             news.author = request.user
             news.save()
             messages.success(request, "Berita berhasil dibuat!")
-            return redirect('news_list')
+            return redirect('news:news_list')
     else:
         form = NewsForm()
     return render(request, 'news/news_form.html', {'form': form, 'is_create': True})
@@ -66,7 +66,7 @@ def news_edit(request, pk):
             news.edited_at = datetime.now()
             news.save()
             messages.success(request, "Berita berhasil diedit!")
-            return redirect('news_detail', pk=pk)
+            return redirect('news:news_detail', pk=pk)
     else:
         form = NewsForm(instance=news)
     return render(request, 'news/news_form.html', {'form': form, 'is_create': False, 'news': news})
@@ -78,5 +78,5 @@ def news_delete(request, pk):
     if request.method == 'POST':
         news.delete()
         messages.success(request, "Berita berhasil dihapus.")
-        return redirect('news_list')
+        return redirect('news:news_list')
     return render(request, 'news/news_confirm_delete.html', {'news': news})

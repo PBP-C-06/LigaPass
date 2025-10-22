@@ -21,10 +21,10 @@
   <p>{{ news.content|linebreaks }}</p>
 
   {% if request.user.is_authenticated and request.user == news.author %}
-    <a href="{% url 'news_edit' news.pk %}">✏️ Edit News</a>
+    <a href="{% url 'news:news_edit' news.pk %}">✏️ Edit News</a>
     |
-    <a href="{% url 'news_delete' news.pk %}">🗑️ Delete News</a>
+    <a href="{% url 'news:news_delete' news.pk %}">🗑️ Delete News</a>
   {% endif %}
 
-  <p><a href="{% url 'news_list' %}">← Back to News List</a></p>
+  <p><a href="{% url 'news:news_list' %}">← Back to News List</a></p>
 {% endblock %}

@@ -21,13 +21,13 @@
 </form>
 
 {% if request.user.role == 'journalist' %}
-    <a href="{% url 'news_create' %}">+ Create News</a>
+    <a href="{% url 'news:news_create' %}">+ Create News</a>
 {% endif %}
 
 <ul>
     {% for item in news_list %}
         <li>
-            <h2><a href="{% url 'news_detail' item.pk %}">{{ item.title }}</a></h2>
+            <h2><a href="{% url 'news:news_detail' item.pk %}">{{ item.title }}</a></h2>
             <p>Kategori: {{ item.category }} | 
                {{ item.edited_at|default:item.created_at }} | 
                Views: {{ item.news_views }} 

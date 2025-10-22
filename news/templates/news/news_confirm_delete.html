@@ -12,6 +12,6 @@
   <form method="post">
     {% csrf_token %}
     <button type="submit" onclick="return confirm('Yakin hapus berita ini?')">Hapus</button>
-    <a href="{% url 'news_detail' news.pk %}">Batal</a>
+    <a href="{% url 'news:news_list' %}">Batal</a>
   </form>
 {% endblock %}
