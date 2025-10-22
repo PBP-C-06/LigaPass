@@ -25,8 +25,7 @@ jobs:
           # Get current branch name
           current_branch=$(git branch --show-current)
           echo "Current branch: $current_branch"
-          
-          # Push current branch to PWS main branch
+          # Push current branch to PWS master branch
           push_output=$(git push $PWS_URL $current_branch:master 2>&1 --force)
           if [[ $? -ne 0 ]]; then
             echo "Push failed with output: $push_output"
