@@ -1,48 +1,158 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="min-h-screen flex items-center justify-center bg-slate-950">
-  <div class="bg-slate-900 p-8 rounded-xl shadow-lg w-full max-w-md">
-    <h1 class="text-2xl text-white font-bold mb-6 text-center">Register</h1>
+{% load static %}
 
-    <form id="registerForm" method="POST">
+{% block content %}
+<div class="flex justify-center items-center min-h-[80vh] px-4 py-8">
+  <div class="bg-white/80 backdrop-blur-lg shadow-xl rounded-2xl p-8 w-full max-w-lg border border-slate-200">
+
+    <!-- Heading -->
+    <div class="text-center mb-4">
+      <h2 class="text-xl font-semibold text-blue-600">LigaPass</h2>
+    </div>
+
+    <h1 class="text-2xl font-bold text-slate-800 mb-6 text-center">Daftar Akun Baru</h1>
+
+    <form id="registerForm" method="POST" class="space-y-4">
       {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg w-full mb-4">
-        Register
+
+      {% if form.non_field_errors %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          {% for error in form.non_field_errors %}
+            <span class="block sm:inline">{{ error }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          {{ form.first_name }}
+          {% if form.first_name.errors %}
+            <div class="text-red-600 text-xs mt-1">{% for error in form.first_name.errors %}{{ error }}{% endfor %}</div>
+          {% endif %}
+        </div>
+        <div>
+          {{ form.last_name }}
+          {% if form.last_name.errors %}
+            <div class="text-red-600 text-xs mt-1">{% for error in form.last_name.errors %}{{ error }}{% endfor %}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div>
+        {{ form.username }}
+        {% if form.username.errors %}
+          <div class="text-red-600 text-xs mt-1">{% for error in form.username.errors %}{{ error }}{% endfor %}</div>
+        {% endif %}
+      </div>
+
+      <div>
+        {{ form.email }}
+        {% if form.email.errors %}
+          <div class="text-red-600 text-xs mt-1">{% for error in form.email.errors %}{{ error }}{% endfor %}</div>
+        {% endif %}
+      </div>
+
+      <!-- Password 1 -->
+      <div class="relative">
+        {{ form.password1 }}
+        <button type="button"
+                class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-500 hover:text-blue-600"
+                onclick="togglePasswordVisibility('id_password1', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+               stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 
+                     12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 
+                     .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 
+                     0-8.573-3.007-9.963-7.178z" />
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
+      {% if form.password1.errors %}
+        <div class="text-red-600 text-xs -mt-3">
+          {% for error in form.password1.errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Password 2 -->
+      <div class="relative">
+        {{ form.password2 }}
+        <button type="button"
+                class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-500 hover:text-blue-600"
+                onclick="togglePasswordVisibility('id_password2', this)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+               stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 
+                     7.36 4.5 12 4.5c4.638 0 8.573 3.007 
+                     9.963 7.178.07.207.07.431 0 
+                     .639C20.577 16.49 16.64 19.5 12 
+                     19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
+      {% if form.password2.errors %}
+        <div class="text-red-600 text-xs -mt-3">
+          {% for error in form.password2.errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+
+      <button type="submit"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg shadow-md hover:shadow-lg transition duration-200 ease-in-out mt-6">
+        Daftar Sekarang
       </button>
     </form>
+
+    <div class="text-center mt-6 text-sm">
+      <p class="text-slate-600">
+        Udah punya akun?
+        <a href="{% url 'authentication:login' %}" class="text-blue-600 hover:text-blue-700 font-semibold underline hover:no-underline transition">
+          Masuk di sini
+        </a>
+      </p>
+    </div>
   </div>
 </div>
 
 <script>
-document.getElementById("registerForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const form = e.target;
-  const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
-  const formData = new FormData(form);
+  document.addEventListener('DOMContentLoaded', function() {
+    const formInputs = document.querySelectorAll('#registerForm input');
+    const placeholders = {
+        'id_first_name': 'Nama depan',
+        'id_last_name': 'Nama belakang',
+        'id_username': 'Username',
+        'id_email': 'Alamat email aktif',
+        'id_password1': 'Buat password',
+        'id_password2': 'Ulangi password'
+    };
+    const commonClasses = 'w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150 ease-in-out placeholder-slate-400';
+    const passwordClasses = 'pr-10';
 
-  try {
-    const res = await fetch("{% url 'authentication:register' %}", {
-      method: "POST",
-      headers: { 
-        "X-CSRFToken": csrfToken, 
-        "X-Requested-With": "XMLHttpRequest" 
-      },
-      body: formData
+    formInputs.forEach(input => {
+      if (input.type === 'hidden') return;
+      input.classList.add(...commonClasses.split(' '));
+      if (placeholders[input.id]) input.setAttribute('placeholder', placeholders[input.id]);
+      if (input.type === 'password' || input.id.includes('password'))
+        input.classList.add(passwordClasses);
     });
+  });
 
-    const data = await res.json();
-    console.log("Register response:", data);
+  function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const iconOpen = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`;
+    const iconClosed = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>`;
 
-    if (data.status === "success") {
-      window.location.href = data.redirect_url;
+    if (input.type === "password") {
+      input.type = "text";
+      button.innerHTML = iconClosed;
     } else {
-      alert("❌ Register gagal:\n" + JSON.stringify(data.errors || data.message || "Unknown error", null, 2));
+      input.type = "password";
+      button.innerHTML = iconOpen;
     }
-  } catch (err) {
-    console.error("Register error:", err);
-    alert("Terjadi kesalahan saat register.");
   }
-});
 </script>
 {% endblock %}
