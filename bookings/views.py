@@ -58,7 +58,6 @@ def create_booking(request, match_id):
         if not booking_items:
              return JsonResponse({"error": "No valid tickets selected"}, status=400)
 
-        # Simpan booking
         booking = Booking.objects.create(
             user=request.user,
             total_price=total_price,
@@ -88,14 +87,10 @@ def create_booking(request, match_id):
 
 @login_required
 def payment(request, booking_id):
-    # Pastikan booking milik user yang login
     booking = get_object_or_404(Booking, booking_id=booking_id, user=request.user)
 
-    # --- GET: render halaman pembayaran ---
     if request.method == "GET":
         selected_method = request.session.get("selected_method", None)
-
-        # Jika user langsung akses URL tanpa lewat create_booking
         if not selected_method and booking.status == 'PENDING' and not booking.midtrans_order_id:
             pass
 
@@ -110,7 +105,6 @@ def payment(request, booking_id):
         data = json.loads(request.body)
         method = data.get("method")
         token_id = data.get("token_id")
-        bank = data.get("bank")
 
         if not method:
             return JsonResponse({"error": "Payment method is required"}, status=400)
@@ -151,7 +145,6 @@ def payment(request, booking_id):
                 "name": f"Ticket: {item.ticket_type.seat_category}"
             })
 
-        # --- PAYLOAD DASAR ---
         payload = {
             "transaction_details": {
                 "order_id": order_id,
@@ -166,7 +159,6 @@ def payment(request, booking_id):
             "item_details": item_details
         }
 
-        # --- Tentukan metode pembayaran ---
         if method == "card":
             if not token_id:
                  return JsonResponse({"error": "Card token is required"}, status=400)
@@ -196,7 +188,7 @@ def payment(request, booking_id):
                 "https://api.sandbox.midtrans.com/v2/charge",
                 headers=headers,
                 json=payload,
-                timeout=20 # Tambahkan timeout
+                timeout=20
             )
             midtrans_data = response.json()
 
@@ -212,7 +204,6 @@ def payment(request, booking_id):
         request.session["payment_responses"][str(booking.booking_id)] = midtrans_data
         request.session.modified = True
 
-        # --- Simpan order_id dan status dari Midtrans di booking ---
         booking.midtrans_order_id = order_id
         booking.status = midtrans_data.get("transaction_status", "PENDING").upper()
         booking.save(update_fields=["midtrans_order_id", "status"])
