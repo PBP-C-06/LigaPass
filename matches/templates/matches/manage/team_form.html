@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Manajemen Tim - {% if form.instance.pk %}Edit{% else %}Tambah{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto bg-slate-800 p-8 rounded-lg shadow-xl">
+    <h1 class="text-3xl font-bold mb-6 text-white">
+        {% if form.instance.pk %}Edit Tim: {{ form.instance.name }}{% else %}Tambah Tim Baru{% endif %}
+    </h1>
+
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="bg-red-900 text-red-100 p-3 rounded">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% for field in form %}
+        <div class="field-wrapper">
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-1">
+                {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+                <p class="text-xs text-slate-400 mt-1">{{ field.help_text }}</p>
+            {% endif %}
+            {% for error in field.errors %}
+                <p class="text-xs text-red-400 mt-1">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        
+        <style>
+            .field-wrapper input, .field-wrapper textarea, .field-wrapper select {
+                width: 100%;
+                padding: 10px;
+                border-radius: 6px;
+                background-color: #334155; 
+                border: 1px solid #475569; 
+                color: white;
+                transition: border-color 0.2s;
+            }
+            .field-wrapper input:focus, .field-wrapper textarea:focus, .field-wrapper select:focus {
+                border-color: #3b82f6; 
+                outline: none;
+            }
+        </style>
+
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors mt-6">
+            Simpan
+        </button>
+    </form>
+    
+    <div class="mt-4 text-center">
+        <a href="{% url 'matches:manage_teams' %}" class="text-slate-400 hover:text-slate-300 text-sm">Kembali ke Daftar Tim</a>
+    </div>
+</div>
+{% endblock %}
