@@ -1,30 +1,128 @@
-<!-- news/templates/news/news_detail.html -->
-{% extends 'base.html' %}
-{% load static %}
+{% extends "base.html" %}
+{% block title %}{{ news.title }} - LigaPass{% endblock %}
 
 {% block content %}
-  <h1>{{ news.title }}</h1>
+<a href="{% url 'news:news_list' %}" class="inline-flex items-center text-blue-600 hover:underline mb-4">
+  ← Kembali ke Daftar Berita
+</a>
 
-  {% if news.edited_at %}
-    <p><strong>Tanggal disunting:</strong> {{ news.edited_at }}</p>
-  {% else %}
-    <p><strong>Tanggal ditulis:</strong> {{ news.created_at }}</p>
+<h1 class="text-3xl font-bold mb-2">{{ news.title }}</h1>
+
+<div class="flex flex-wrap items-center gap-2 text-sm mb-4">
+
+  <!-- Badge kategori -->
+  {% if news.category %}
+    {% if news.category == 'transfer' %}
+      <span class="bg-blue-500 text-white font-semibold text-xs px-4 py-1 rounded-full">Transfer</span>
+    {% elif news.category == 'update' %}
+      <span class="bg-green-500 text-white font-semibold text-xs px-4 py-1 rounded-full">Pembaruan</span>
+    {% elif news.category == 'exclusive' %}
+      <span class="bg-purple-500 text-white font-semibold text-xs px-4 py-1 rounded-full">Eksklusif</span>
+    {% elif news.category == 'match' %}
+      <span class="bg-yellow-500 text-white font-semibold text-xs px-4 py-1 rounded-full">Pertandingan</span>
+    {% elif news.category == 'rumor' %}
+      <span class="bg-pink-500 text-white font-semibold text-xs px-4 py-1 rounded-full">Rumor</span>
+    {% elif news.category == 'analysis' %}
+      <span class="bg-indigo-500 text-white font-semibold text-xs px-4 py-1 rounded-full">Analisis</span>
+    {% endif %}
   {% endif %}
 
-  <p><strong>Kategori:</strong> {{ news.category }}</p>
-  <p><strong>Jumlah Views:</strong> {{ news.news_views }}</p>
-
-  {% if news.thumbnail %}
-    <img src="{{ news.thumbnail.url }}" width="300" />
+  <!-- Badge featured -->
+  {% if news.is_featured %}
+    <span class="bg-red-500 text-white font-semibold text-xs px-4 py-1 rounded-full">Unggulan</span>
   {% endif %}
 
-  <p>{{ news.content|linebreaks }}</p>
+  <!-- Tanggal & views -->
+  <span class="text-gray-500 ml-auto">
+    {% if news.edited_at %}
+      Diedit: {{ news.edited_at|date:"d M Y, H:i" }}
+    {% else %}
+      Dibuat: {{ news.created_at|date:"d M Y, H:i" }}
+    {% endif %}
+    | Dilihat: {{ news.news_views }}
+  </span>
+</div>
 
-  {% if request.user.is_authenticated and request.user == news.author %}
-    <a href="{% url 'news:news_edit' news.pk %}">✏️ Edit News</a>
-    |
-    <a href="{% url 'news:news_delete' news.pk %}">🗑️ Delete News</a>
-  {% endif %}
+{% if news.thumbnail %}
+  <div class="w-full max-w-xl my-4 overflow-hidden rounded shadow group mx-auto">
+    <img src="{{ news.thumbnail.url }}" alt="thumbnail"
+         class="w-full transition-transform duration-300 ease-in-out group-hover:scale-105 object-cover">
+  </div>
+{% endif %}
 
-  <p><a href="{% url 'news:news_list' %}">← Back to News List</a></p>
+<div class="prose max-w-none leading-relaxed">
+  {{ news.content|linebreaks }}
+</div>
+
+{% if request.user.role == 'journalist' %}
+  <div class="mt-6 flex gap-4">
+    <a href="{% url 'news:news_edit' news.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">
+      ✏️ Edit Berita
+    </a>
+    <button onclick="openDeleteModal()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2">
+      🗑️ Hapus Berita
+    </button>
+  </div>
+{% endif %}
+
+<a href="{% url 'news:news_list' %}" class="inline-flex items-center text-blue-600 hover:underline mt-8 block">
+  ← Kembali ke Daftar Berita
+</a>
+
+{% if recommended_news %}
+  <hr class="my-10">
+  <h2 class="text-2xl font-bold mb-4">Berita Lainnya</h2>
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for item in recommended_news %}
+      {% include 'news/news_card.html' with news=item %}
+    {% endfor %}
+  </div>
+{% endif %}
+
+<!-- Modal Konfirmasi Hapus -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full text-center">
+    <div class="text-red-600 text-3xl mb-2">🗑️</div>
+    <h3 class="text-lg font-semibold mb-2">Hapus Berita?</h3>
+    <p class="text-gray-600 mb-4">Berita <strong>{{ news.title }}</strong> akan dihapus secara permanen.</p>
+    <div class="flex justify-center gap-4">
+      <button onclick="confirmDelete()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Ya, Hapus</button>
+      <button onclick="closeDeleteModal()" class="border border-gray-300 px-4 py-2 rounded hover:bg-gray-100">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Script AJAX -->
+<script>
+  function openDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('hidden');
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+  }
+
+  function confirmDelete() {
+    fetch("{% url 'news:news_delete' news.pk %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    })
+    .then(response => {
+      if (response.ok) {
+        showToast("Berita berhasil dihapus.", "success");
+        setTimeout(() => window.location.href = "{% url 'news:news_list' %}", 1200);
+      } else {
+        throw new Error("Terjadi kesalahan saat menghapus berita.");
+      }
+    })
+    .catch(error => {
+      console.error(error);
+      showToast("Gagal menghapus berita.", "error");
+      closeDeleteModal();
+    });
+  }
+</script>
 {% endblock %}
