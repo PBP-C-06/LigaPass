@@ -1,10 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}Manajemen Pertandingan - {% if form.instance.pk %}Edit{% else %}Tambah{% endif %}{% endblock %}
+{% block title %}Manajemen Pertandingan - {% if is_update %}Edit{% else %}Tambah{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto bg-slate-800 p-8 rounded-lg shadow-xl">
     <h1 class="text-3xl font-bold mb-6 text-white">
-        {% if form.instance.pk %}Edit Pertandingan: {{ object.home_team.name }} vs {{ object.away_team.name }}{% else %}Tambah Pertandingan Baru{% endif %}
+        {% if is_update %}
+            Edit Pertandingan: {{ object.home_team.name|default:'N/A' }} vs {{ object.away_team.name|default:'N/A' }}
+        {% else %}
+            Tambah Pertandingan Baru
+        {% endif %}
     </h1>
 
     <form method="post" class="space-y-6">
