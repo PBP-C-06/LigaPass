@@ -13,12 +13,20 @@
       <h2 class="text-2xl font-bold text-slate-800">{{ match.home_team.name }}</h2>
     </div>
     <div class="text-center">
-      <p id="score-display" class="text-5xl font-bold text-slate-900">{{ match.home_goals|default_if_none:"-" }} - {{ match.away_goals|default_if_none:"-" }}</p>
+      {% if match.status_key == 'Ongoing' %}
+        <div id="top-timer" class="text-lg font-semibold text-gray-600 mb-1">
+          <span id="elapsed-time">N/A</span>
+        </div>
+      {% endif %}
+      <p id="score-display" class="text-5xl font-bold text-slate-900">{{ match.home_goals|default:"0" }} - {{ match.away_goals|default:"0" }}</p>
+      
       <div id="status-container" class="mt-2">
         {% if match.status_key == 'Past' %}
           <span id="status-badge" class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Finished</span>
         {% elif match.status_key == 'Ongoing' %}
-          <span id="status-badge" class="bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse">LIVE</span>
+          <span id="status-badge" class="bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse">
+            LIVE
+          </span>
         {% else %}
           <span id="status-badge" class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Upcoming</span>
         {% endif %}
@@ -61,43 +69,199 @@
 
 <script>
   const matchApiId = "{{ match.api_id }}";
+  const matchKickoffTime = "{{ match.date|date:'c' }}"; 
   let currentStatus = "{{ match.status_key }}";
   const scoreDisplay = document.getElementById('score-display');
   const statusContainer = document.getElementById('status-container');
   const statusBadge = document.getElementById('status-badge');
+  const topTimerContainer = document.getElementById('top-timer'); 
+  const elapsedTimeElement = document.getElementById('elapsed-time');
 
-  function updateDom(homeGoals, awayGoals, statusShort, statusLong) {
-    // 1. Update Skor
-    scoreDisplay.textContent = `${homeGoals || '-'} - ${awayGoals || '-'}`;
+  let timerInterval; 
+  let elapsedSeconds = 0;
+  // Konstanta untuk jeda Half Time dalam detik
+  const HALF_TIME_BREAK_SECONDS = 15 * 60; // 15 menit
+
+  function parseTimeStringToSeconds(timeStr) {
+    if (typeof timeStr !== 'string' || !timeStr.includes(':')) {
+        return 0;
+    }
+    const parts = timeStr.split(':');
+    const minutes = parseInt(parts[0]);
+    const seconds = parseInt(parts[1]);
+    
+    if (isNaN(minutes) || isNaN(seconds)) return 0;
+    
+    return (minutes * 60) + seconds;
+  }
+
+  function formatElapsed(totalSeconds) {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  function startTimer(initialElapsedSeconds) {
+    clearInterval(timerInterval);
+    elapsedSeconds = initialElapsedSeconds;
+    
+    if (elapsedTimeElement) {
+        elapsedTimeElement.textContent = formatElapsed(elapsedSeconds);
+    }
+
+    timerInterval = setInterval(() => {
+        elapsedSeconds += 1;
+        if (elapsedTimeElement) {
+            elapsedTimeElement.textContent = formatElapsed(elapsedSeconds);
+        }
+        
+        // --- LOGIKA MANUAL HALF TIME (Hanya berlaku untuk match manual) ---
+        if ((!matchApiId || matchApiId === 'None') && elapsedSeconds === (45 * 60)) {
+            handleManualHalfTime();
+        }
+        // -----------------------------------------------------------------
+
+    }, 1000);
+  }
+  
+  function handleManualHalfTime() {
+    stopTimer();
+    
+    const halfTimeStart = 45 * 60;
+    
+    // Perbarui UI menjadi Half Time
+    if (statusBadge) {
+      statusBadge.className = 'bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded';
+      statusBadge.textContent = 'Half Time';
+    }
+    if (elapsedTimeElement) {
+      elapsedTimeElement.textContent = '45:00'; // Bekukan waktu di 45:00
+    }
+    
+    console.log("Manual Half Time reached. Resuming in 15 minutes.");
+
+    // Set timeout untuk melanjutkan timer setelah jeda 15 menit
+    setTimeout(() => {
+        console.log("Resuming from Half Time break.");
+        
+        // Lanjutkan timer dari 45:00, dihitung sebagai 45 menit pertama + jeda 15 menit (total 60 menit)
+        const resumedSeconds = (45 * 60) + (15 * 60); 
+        
+        // Atur UI kembali ke LIVE
+        if (statusBadge) {
+            statusBadge.className = 'bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse';
+            statusBadge.textContent = 'LIVE';
+        }
+        
+        // Mulai timer lagi
+        startTimer(resumedSeconds);
+
+    }, HALF_TIME_BREAK_SECONDS * 1000); // 15 menit * 1000 ms
+  }
+
+
+  function stopTimer() {
+      clearInterval(timerInterval);
+  }
+
+  function updateDom(homeGoals, awayGoals, statusShort, statusLong, elapsedStr) {
+    let elapsed;
+    if (typeof elapsedStr === 'number') {
+        elapsed = elapsedStr;
+    } else if (typeof elapsedStr === 'string' && elapsedStr.includes(':')) {
+        elapsed = parseTimeStringToSeconds(elapsedStr);
+    } else {
+        elapsed = 0;
+    }
+
+    const finalHomeGoals = homeGoals != null ? homeGoals : '0';
+    const finalAwayGoals = awayGoals != null ? awayGoals : '0';
+    scoreDisplay.textContent = `${finalHomeGoals} - ${finalAwayGoals}`;
 
     // 2. Update Status dan UI
     if (statusShort === 'FT') {
       currentStatus = 'Past';
+      stopTimer(); 
       if (statusBadge) {
         statusBadge.className = 'bg-red-500 text-white text-xs font-bold px-2 py-1 rounded';
         statusBadge.textContent = 'Finished';
-      } else {
-        statusContainer.innerHTML = `<span id="status-badge" class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Finished</span>`;
       }
+      if (topTimerContainer) topTimerContainer.remove(); 
+    } else if (statusShort === 'HT') {
+      // API Half Time: Timer berhenti dan dibekukan
+      currentStatus = 'Half Time';
+      stopTimer(); 
+      if (statusBadge) {
+        statusBadge.className = 'bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded';
+        statusBadge.textContent = 'Half Time'; 
+      }
+      if (elapsedTimeElement) {
+        elapsedTimeElement.textContent = elapsed ? formatElapsed(elapsed) : '0:00';
+      }
+
     } else if (statusShort !== 'NS') {
+      // Ongoing (LIVE)
       currentStatus = 'Ongoing';
       if (statusBadge) {
         statusBadge.className = 'bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse';
-        statusBadge.textContent = 'LIVE';
+        statusBadge.textContent = 'LIVE'; 
       }
+      
+      if (elapsedTimeElement) {
+        elapsedTimeElement.textContent = elapsed ? formatElapsed(elapsed) : '0:00';
+      }
+
+      // Kalibrasi ulang timer dan mulai
+      if (!timerInterval || (Math.abs(elapsedSeconds - elapsed) > 5)) {
+          startTimer(elapsed);
+      }
+      
+    } else {
+        stopTimer();
     }
   }
-
+    
   function startWebSocket() {
-    // Pastikan match memiliki API ID dan statusnya Ongoing
-    if (!matchApiId || currentStatus !== 'Ongoing') {
+    const isManualMatch = !matchApiId || matchApiId === 'None';
+    
+    if (isManualMatch && currentStatus === 'Ongoing') {
+        const kickoff = new Date(matchKickoffTime);
+        
+        setTimeout(() => {
+            const now = new Date();
+            let localElapsedSeconds = Math.floor((now.getTime() - kickoff.getTime()) / 1000);
+            
+            if (localElapsedSeconds < 0) localElapsedSeconds = 0;
+
+            // Jika pertandingan manual sudah melewati 45 menit + 15 menit jeda,
+            // atur waktu awal agar langsung memasuki babak kedua.
+            if (localElapsedSeconds > (45 * 60) && localElapsedSeconds < (45 * 60) + HALF_TIME_BREAK_SECONDS) {
+                // Berada di dalam jeda istirahat
+                localElapsedSeconds = 45 * 60; // Paksa 45:00
+                updateDom(null, null, 'HT', 'Half Time', localElapsedSeconds);
+                
+                // Panggil handleManualHalfTime untuk mengatur timeout lanjutan
+                handleManualHalfTime(); 
+                return;
+                
+            } else if (localElapsedSeconds >= (45 * 60) + HALF_TIME_BREAK_SECONDS) {
+                // Sudah selesai istirahat, lanjutkan hitungan
+                localElapsedSeconds -= HALF_TIME_BREAK_SECONDS; 
+            }
+            
+            // Lanjutkan atau mulai timer
+            updateDom(null, null, 'LIVE', 'Ongoing', localElapsedSeconds);
+        }, 1000);
+        
+        return;
+    }
+    
+    if (currentStatus !== 'Ongoing') {
       return;
     }
-
-    // Ganti protokol http/https menjadi ws/wss
+    
     const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
     const host = window.location.host;
-    // URL WebSocket: /ws/match/<match_api_id>/
     const wsUrl = protocol + host + `/ws/match/${matchApiId}/`;
     
     const liveSocket = new WebSocket(wsUrl);
@@ -105,12 +269,13 @@
     liveSocket.onmessage = function(e) {
       const data = JSON.parse(e.data);
       const message = data.message;
-      updateDom(message.home_goals, message.away_goals, message.status_short, message.status_long);
+      
+      // Update untuk API
+      updateDom(message.home_goals, message.away_goals, message.status_short, message.status_long, message.elapsed);
     };
 
     liveSocket.onclose = function(e) {
       console.log('Live score socket closed unexpectedly. Attempting to reconnect...', e);
-      // Reconnect setelah 3 detik
       setTimeout(startWebSocket, 3000); 
     };
 
@@ -123,7 +288,7 @@
     };
   }
 
-  // Mulai koneksi WebSocket jika pertandingan sedang berlangsung
+  // Mulai koneksi/timer segera
   if (currentStatus === 'Ongoing') {
     startWebSocket();
   }

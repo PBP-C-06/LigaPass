@@ -65,11 +65,13 @@ class Command(BaseCommand):
                         home_goals = live_match['home']['score']
                         away_goals = live_match['away']['score']
 
+                        elapsed_time_str = live_match['status']['liveTime'].get('long', '0:00') if live_match['status'].get('liveTime') else '0:00'
+
                         live_data = {
                             'home_goals': home_goals,
                             'away_goals': away_goals,
                             'status_short': status_str,
-                            'elapsed': live_match['status']['liveTime'].get('long', '0:00') if live_match['status'].get('liveTime') else '0:00',
+                            'elapsed': elapsed_time_str,
                             'status_long': live_match['status'].get('long', 'Ongoing')
                         }
 
@@ -79,7 +81,7 @@ class Command(BaseCommand):
                         match.status_long = live_match['status']['long']
                         match.save()
                         updated_count += 1
-
+                                        
                         async_to_sync(channel_layer.group_send)(
                             f'match_{match_api_id}',
                             {
