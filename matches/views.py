@@ -139,6 +139,7 @@ def match_details_view(request, match_id):
     reviews = []
     user_review = None
     can_review = False
+    avg_rating = 0
 
     if status == "Past":
         # Ambil semua review utk match ini
