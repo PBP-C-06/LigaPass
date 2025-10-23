@@ -48,7 +48,7 @@
         const newsCountEl = document.getElementById("news-count");
         const totalViewsEl = document.getElementById("total-views");
     
-        // --- Fetch Journalist Profile ---
+        // Fetch journalist profile
         try {
             const response = await fetch(`/profiles/json/adminjournalist/`);
             if (!response.ok) throw new Error("Gagal mengambil data journalist dari server.");
@@ -58,7 +58,7 @@
             profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
             profilePicture.alt = "Foto Profil journalist";
     
-            // --- News info ---
+            // News infos
             newsCountEl.textContent = data.total_news ?? 0;
             totalViewsEl.textContent = data.total_views ?? 0;
         } catch (error) {

@@ -223,40 +223,59 @@ def edit_profile_for_user(request, id):
 @login_required
 def admin_change_status(request, id):
     import json
-    
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
     
+    # Hanya admin yang boleh mengubah status sisanya permission denied
     if request.user.role != "admin":
         return JsonResponse({"error": "Permission denied"}, status=403)
     
+    # Ambil data JSON dari request body
     data = json.loads(request.body)
-    new_status = data.get("status")
+    new_status = data.get("status") # Ambil status baru 
     
-    STATUS_CHOICES = ['active', 'suspended', 'banned']
+    STATUS_CHOICES = ['active', 'suspended', 'banned'] # Adalah daftar status yang valid
 
+    # Jika status invalid maka error
     if new_status not in STATUS_CHOICES:
         return JsonResponse({"error": "Invalid status"}, status=400)
-    
+    # Jika valid maka
     try:
+        # Ambil user berdasarkan id
         user = User.objects.get(pk=id)
+
+        # Ambil profile user jika ada
         profile = getattr(user, 'profile', None)
         if not profile:
             return JsonResponse({"error": "Profile not found"}, status=404)
         
+        # Ubah dan save perubahan status
         profile.status = new_status
         profile.save()
         return JsonResponse({"status": profile.status})
-    except User.DoesNotExist:
+    except User.DoesNotExist: # Jika user tidak ditemukan 
         return JsonResponse({"error": "User not found"}, status=404)
-    
-def current_user_json(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({"authenticated": False})
 
+def current_user_json(request):
     user = request.user
     profile = getattr(user, "profile", None)
 
+    login_page = reverse("authentication:login") 
+    
+    if not user.is_authenticated:
+        # Tampilkan anonymous untuk user yang belum login 
+        return JsonResponse({
+            "authenticated": False,
+            "username": "Anonymous",
+            "email": "",
+            "role": "anonymous",
+            "id": None,
+            "profile_picture": static("images/default-profile-picture.png"),
+            "my_profile_url": login_page,
+            "my_tickets_url": login_page,
+            "my_analytics_url": login_page,
+        })
+    
     # Tentukan url profile picture berdasarkan role
     if user.role == "admin":
         profile_picture_url = static("images/Admin.png")
@@ -271,7 +290,7 @@ def current_user_json(request):
             profile_picture_url = static("images/default-profile-picture.png")
         my_profile_url = reverse("profiles:user_view", args=[user.id])
 
-    my_tickets_url = reverse("profiles:user_tickets_page", args=[user.id]) # GUYS JGN LUPA DIGANTI!!!!
+    my_tickets_url = reverse("profiles:user_tickets_page", args=[user.id]) 
     my_analytics_url = reverse("profiles:user_view", args=[user.id]) # GUYS JGN LUPA DIGANTI!!!!
 
     return JsonResponse({
