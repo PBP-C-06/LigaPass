@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.core.cache import cache
 import requests
 from django.conf import settings
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 
@@ -44,9 +44,38 @@ def get_match_status(match_time):
     else:
         return 'Past'
 
+def _serialize_match(match):
+    return {
+        'id': str(match.id),
+        'home_team_name': match.home_team.name,
+        'home_logo_url': match.home_team.display_logo_url,
+        'away_team_name': match.away_team.name,
+        'away_logo_url': match.away_team.display_logo_url,
+        'date': match.date.strftime('%d %b %Y @ %H:%M WIB'),
+        'status_key': get_match_status(match.date), # Gunakan get_match_status() terbaru
+        'home_goals': match.home_goals if match.home_goals is not None else 0,
+        'away_goals': match.away_goals if match.away_goals is not None else 0,
+        'details_url': reverse('matches:details', args=[match.id])
+    }
+
+
 # --- FUNCTION-BASED VIEWS ---
 
 def match_calendar_view(request):
+    # Dapatkan query jika ada (untuk mengisi input)
+    search_query = request.GET.get('q', '')
+
+    # Render template HTML tanpa filter logic di sini
+    context = {
+        'messages_json': _get_cleaned_messages(request),
+        'search_query': search_query, # Untuk mengisi kembali input
+    }
+    # Perhatikan: grouped_matches dikirim KOSONG atau Anda bisa pre-load data
+    # Untuk menghindari flashing, kita akan memuat data di client-side melalui AJAX saat DOMContentLoaded
+    return render(request, 'matches/calendar.html', context)
+
+
+def api_match_list(request):
     queryset = Match.objects.select_related('home_team', 'away_team', 'venue').order_by('date')
     
     search_query = request.GET.get('q', '')
@@ -61,13 +90,13 @@ def match_calendar_view(request):
     for match in queryset:
         status = get_match_status(match.date)
         match.status_key = status
-        grouped_matches[status].append(match)
+        grouped_matches[status].append(_serialize_match(match))
 
-    context = {
+    return JsonResponse({
         'grouped_matches': grouped_matches,
-        'messages_json': _get_cleaned_messages(request),
-    }
-    return render(request, 'matches/calendar.html', context)
+        'search_query': search_query,
+    })
+
 
 def match_details_view(request, match_id):
     match = get_object_or_404(Match.objects.select_related('home_team', 'away_team', 'venue'), id=match_id)
@@ -88,7 +117,16 @@ def match_details_view(request, match_id):
 def update_matches_view(request):
     print("Memicu pembaruan database dari API...")
     sync_database_with_apis()
-    messages.success(request, 'Database pertandingan berhasil diperbarui dari API.')
+    
+    message = 'Database pertandingan berhasil diperbarui dari API.'
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'status': 'success',
+            'message': message,
+        })
+
+    messages.success(request, message)
     return redirect('matches:calendar') 
 
 def live_score_api(request, match_api_id):
@@ -155,7 +193,6 @@ class TeamCreateView(AdminRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Di CreateView, mode selalu Tambah
         context['is_update'] = False
         context['messages_json'] = _get_cleaned_messages(self.request)
         return context
@@ -173,7 +210,6 @@ class TeamUpdateView(AdminRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Di UpdateView, mode selalu Edit
         context['is_update'] = True
         context['messages_json'] = _get_cleaned_messages(self.request)
         return context
