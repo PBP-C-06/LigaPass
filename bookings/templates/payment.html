@@ -562,7 +562,7 @@
     <h2>Pembayaran Berhasil!</h2>
     <p>Tiket Anda sudah diterbitkan dan dapat dilihat di halaman profil.</p>
     <div class="modal-buttons">
-      <a href="{% url 'profiles:user_tickets_page' %}" class="btn-secondary">Lihat Tiket</a>
+      <a href="{% url 'profiles:user_tickets_page' user.id %}" class="btn-secondary">Lihat Tiket</a>
       <a href="{% url 'main:home' %}" class="btn-primary">Kembali ke Home</a>
     </div>
   </div>
