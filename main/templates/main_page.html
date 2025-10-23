@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<!-- === HERO SECTION === -->
+<div class="relative w-full overflow-hidden group">
+  <div id="hero-slider" class="flex transition-transform duration-700">
+    {% for slide in hero_slides %}
+      <div class="min-w-full relative">
+        <img src="{{ slide.image }}" alt="banner"
+             class="w-full h-[450px] object-cover brightness-75">
+        <div class="absolute inset-0 flex flex-col items-start justify-center px-16 text-white">
+          <h1 class="text-5xl font-extrabold mb-4 drop-shadow-lg">{{ slide.title }}</h1>
+          <p class="text-xl mb-8 max-w-2xl drop-shadow-md">{{ slide.description }}</p>
+          <a href="{{ slide.cta_link }}"
+             class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-xl font-semibold transition transform hover:scale-105">
+            {{ slide.cta_text }}
+          </a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Navigation Buttons -->
+  <button id="prevSlide"
+          class="absolute left-5 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 opacity-0 group-hover:opacity-100 transition">
+    &#10094;
+  </button>
+  <button id="nextSlide"
+          class="absolute right-5 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 opacity-0 group-hover:opacity-100 transition">
+    &#10095;
+  </button>
+
+  <!-- Dot Indicators -->
+  <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2">
+    {% for slide in hero_slides %}
+      <span class="dot w-3 h-3 bg-white/60 rounded-full cursor-pointer transition hover:bg-white"></span>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+let currentSlide = 0;
+const slider = document.getElementById("hero-slider");
+const slides = slider.querySelectorAll("div.min-w-full");
+const dots = document.querySelectorAll(".dot");
+
+function showSlide(index) {
+  currentSlide = (index + slides.length) % slides.length;
+  slider.style.transform = `translateX(-${currentSlide * 100}%)`;
+  dots.forEach((dot, i) => {
+    dot.classList.toggle("bg-white", i === currentSlide);
+    dot.classList.toggle("bg-white/60", i !== currentSlide);
+  });
+}
+
+// Auto-slide every 5 seconds
+let autoSlide = setInterval(() => showSlide(currentSlide + 1), 3000);
+
+// Manual controls
+document.getElementById("nextSlide").addEventListener("click", () => {
+  showSlide(currentSlide + 1);
+  resetAutoSlide();
+});
+document.getElementById("prevSlide").addEventListener("click", () => {
+  showSlide(currentSlide - 1);
+  resetAutoSlide();
+});
+
+// Dot click navigation
+dots.forEach((dot, i) => {
+  dot.addEventListener("click", () => {
+    showSlide(i);
+    resetAutoSlide();
+  });
+});
+
+// Reset auto-slide timer
+function resetAutoSlide() {
+  clearInterval(autoSlide);
+  autoSlide = setInterval(() => showSlide(currentSlide + 1), 5000);
+}
+
+// Initialize
+showSlide(0);
+</script>
+
+<!-- === UPCOMING MATCHES === -->
+<section class="py-12 px-10 bg-gray-50">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-3xl font-bold text-gray-800">Pertandingan Mendatang</h2>
+    <a href="/matches/" class="border border-slate-800 px-4 py-2 rounded-lg hover:bg-slate-800 hover:text-white transition">Lihat Selengkapnya</a>
+  </div>
+
+  <div class="grid gap-4">
+    {% for match in upcoming_matches %}
+      {% include 'matches/match_card.html' with match=match %}
+    {% empty %}
+      <p class="text-gray-500">Tidak ada pertandingan mendatang saat ini.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- === LATEST NEWS === -->
+<section class="py-12 px-10 bg-white">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-3xl font-bold text-gray-800">Berita Terbaru</h2>
+    <a href="/news/" class="border border-slate-800 px-4 py-2 rounded-lg hover:bg-slate-800 hover:text-white transition">Lihat Selengkapnya</a>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-6">
+    {% for article in latest_news %}
+      <div class="bg-gray-100 rounded-lg overflow-hidden shadow hover:shadow-lg transition">
+        <img src="{{ article.image.url }}" alt="{{ article.title }}" class="h-48 w-full object-cover">
+        <div class="p-4">
+          <p class="text-sm text-slate-500 mb-1">Posted: {{ article.published_at|date:"M d, Y" }}</p>
+          <h3 class="font-semibold text-lg mb-2">{{ article.title }}</h3>
+          <p class="text-slate-700 text-sm line-clamp-3">{{ article.summary }}</p>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-gray-500">No news available.</p>
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}

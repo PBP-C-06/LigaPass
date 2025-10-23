@@ -111,15 +111,35 @@
 
 <div class="max-w-7xl mx-auto px-6 py-10">
   <!-- Match Info -->
-  <div class="bg-white shadow-md rounded-lg p-6 mb-8 flex justify-between items-center">
-    <div>
-      <h2 class="text-xl font-bold text-gray-800">{{ match.home_team }} vs {{ match.away_team }}</h2>
-      <p class="text-gray-500">{{ match.venue }}</p>
-      <p class="text-gray-500">{{ match.date|date:"M d, Y" }} • {{ match.time }}</p>
+  <div class="bg-white shadow-lg rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-center justify-between gap-6 border border-slate-200">
+
+    <!-- Team Kiri -->
+    <div class="flex flex-col items-center sm:flex-row sm:gap-4">
+      <img src="{{ match.home_team.display_logo_url }}" alt="{{ match.home_team.name }}"
+          class="w-16 h-16 object-contain mb-2 sm:mb-0">
+      <h3 class="text-lg font-semibold text-slate-800 text-center sm:text-left">{{ match.home_team.name }}</h3>
     </div>
-    <div class="text-right">
-      <p class="text-gray-500">🏟 Capacity: {{ match.capacity }}</p>
-      <p class="text-gray-500">⏱ Duration: {{ match.duration }} mins</p>
+
+    <!-- Tengah: Info -->
+    <div class="flex flex-col items-center text-center">
+      <h2 class="text-xl font-bold text-slate-900">
+        {{ match.home_team.name }} <span class="text-blue-600">vs</span> {{ match.away_team.name }}
+      </h2>
+      <p class="text-sm text-slate-600 mt-1">
+        {{ match.date|date:"l, d F Y" }}{% if match.date %} - {{ match.date|time:"H:i" }} WIB{% endif %}
+      </p>
+      {% if match.venue %}
+        <p class="text-sm text-slate-500 flex items-center gap-1 mt-1">
+          🏟 <span>{{ match.venue.name }}</span>{% if match.venue.city %}, {{ match.venue.city }}{% endif %}
+        </p>
+      {% endif %}
+    </div>
+
+    <!-- Team Kanan -->
+    <div class="flex flex-col items-center sm:flex-row-reverse sm:gap-4">
+      <img src="{{ match.away_team.display_logo_url }}" alt="{{ match.away_team.name }}"
+          class="w-16 h-16 object-contain mb-2 sm:mb-0">
+      <h3 class="text-lg font-semibold text-slate-800 text-center sm:text-right">{{ match.away_team.name }}</h3>
     </div>
   </div>
 

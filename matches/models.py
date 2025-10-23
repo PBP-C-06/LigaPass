@@ -60,8 +60,8 @@ class Match(models.Model):
     status_short = models.CharField(max_length=10, default="NS")
     status_long = models.CharField(max_length=50, default="Not Started")
     
-    home_goals = models.IntegerField(null=True, blank=True)
-    away_goals = models.IntegerField(null=True, blank=True)
+    home_goals = models.IntegerField(null=True, blank=True, default=0)
+    away_goals = models.IntegerField(null=True, blank=True, default=0)
 
     def __str__(self):
         return f"{self.home_team} vs {self.away_team} on {self.date.strftime('%Y-%m-%d')}"

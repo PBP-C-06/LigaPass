@@ -13,16 +13,23 @@ from django.conf import settings
 
 import json
 
-# fungsi helper untuk cek role user
+
+# =====================================================
+# ✅ Helper Functions
+# =====================================================
 def is_admin(user):
     """Cek apakah user merupakan admin (berdasarkan role atau bawaan Django)."""
-    return user.is_authenticated and user.role == 'admin'
+    return user.is_authenticated and getattr(user, "role", None) == "admin"
 
 
 def is_user(user):
     """Cek apakah user merupakan user biasa (bukan admin atau jurnalis)."""
-    return user.is_authenticated and user.role == 'user'
+    return user.is_authenticated and getattr(user, "role", None) == "user"
 
+
+# =====================================================
+# ✅ USER VIEWS
+# =====================================================
 @user_passes_test(is_user)
 @login_required
 def user_review_entry(request):
@@ -37,13 +44,13 @@ def user_review_entry(request):
 
     team_name = (request.GET.get("team") or "").strip()
 
-    # Ambil semua match yang user SUDAH beli tiketnya
+    # ⚙️ FIXED: gunakan related_name yang benar (ticket_prices)
     qs = Match.objects.filter(
-        ticketprice__ticket__booking__user=request.user,
-        ticketprice__ticket__booking__status="CONFIRMED",
+        ticket_prices__ticket__booking__user=request.user,
+        ticket_prices__ticket__booking__status="CONFIRMED",
     ).select_related("home_team", "away_team").distinct().order_by("-date")
 
-    # Filter tambahan berdasarkan tim home/away jika dipilih
+    # Filter berdasarkan tim
     if team_name:
         qs = qs.filter(
             Q(home_team__name=team_name) | Q(away_team__name=team_name)
@@ -57,10 +64,11 @@ def user_review_entry(request):
             "selected_team": team_name,
         })
 
-    # Cek apakah user sudah membuat review untuk match ini
+    # Cek apakah user sudah review
     has_review = Review.objects.filter(match=match, user=request.user).exists()
 
-    url = reverse("reviews:user_review_page", args=[match.id])
+    # ⚙️ FIXED: gunakan str(match.id) untuk UUID
+    url = reverse("reviews:user_review_page", args=[str(match.id)])
     if not has_review:
         return redirect(f"{url}?autopop=1&team={team_name}")
     else:
@@ -87,16 +95,29 @@ def user_review_page(request, match_id):
     my_review = reviews.filter(user=request.user).first()
     autopop = request.GET.get("autopop") == "1" and (my_review is None)
 
+    # ⚙️ FIXED: convert my_review ke dict agar tidak error JSON
+    my_review_dict = None
+    if my_review:
+        my_review_dict = {
+            "id": str(my_review.id),
+            "rating": my_review.rating,
+            "comment": my_review.comment,
+            "user": my_review.user.username,
+        }
+
     return render(request, "reviews/user_review_page.html", {
         "match": match,
         "reviews": reviews,
-        "my_review": my_review,
+        "my_review": my_review_dict,
         "teams": teams,
         "selected_team": selected_team,
         "autopop": autopop,
     })
 
 
+# =====================================================
+# ✅ API untuk User (CRUD Review)
+# =====================================================
 @csrf_exempt
 @user_passes_test(is_user)
 @login_required
@@ -107,7 +128,7 @@ def api_create_review(request, match_id):
 
     match = get_object_or_404(Match, id=match_id)
 
-    # Cek apakah user benar-benar membeli tiket match ini
+    # Pastikan user beli tiket
     has_booking = Ticket.objects.filter(
         ticket_type__match=match,
         booking__user=request.user,
@@ -119,7 +140,7 @@ def api_create_review(request, match_id):
             "message": "Kamu hanya bisa mereview pertandingan yang sudah kamu beli tiketnya."
         }, status=403)
 
-    # Cegah duplikat review
+    # Cegah duplikat
     if Review.objects.filter(match=match, user=request.user).exists():
         return JsonResponse({
             "ok": False,
@@ -183,6 +204,10 @@ def api_update_review(request, match_id):
         "review_id": str(review.id)
     })
 
+
+# =====================================================
+# ✅ ADMIN VIEWS
+# =====================================================
 @user_passes_test(is_admin)
 @login_required
 def admin_review_page(request):
@@ -242,5 +267,5 @@ def api_add_reply(request, review_id):
         "status": "success",
         "message": "Balasan berhasil disimpan.",
         "reply_text": reply.reply_text,
-        "review_id": review.id
+        "review_id": str(review.id)
     })

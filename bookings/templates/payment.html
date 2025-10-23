@@ -568,6 +568,18 @@
   </div>
 </div>
 
+<div id="confirm-modal-overlay" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h2>Periksa Status Pembayaran?</h2>
+    <p>Pastikan Anda sudah menyelesaikan pembayaran di aplikasi bank atau e-wallet sebelum melanjutkan.</p>
+    <div class="modal-buttons">
+      <button id="confirm-refresh" class="btn-primary">Ya, Periksa Sekarang</button>
+      <button id="cancel-refresh" class="btn-secondary">Nanti Saja</button>
+    </div>
+  </div>
+</div>
+
+
 
 <script src="https://api.midtrans.com/v2/assets/js/midtrans-new-3ds.min.js"
   data-environment="sandbox"
@@ -575,205 +587,182 @@
 </script>
 
 <script>
-const bookingId = "{{ booking.booking_id }}";
-const selectedMethod = "{{ selected_method|default:'' }}"; // Default jika kosong
-const csrftoken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
-const resultBox = document.getElementById("result-box");
-// Hapus 'cardForm' karena form CC dibuat dinamis
+  const bookingId = "{{ booking.booking_id }}";
+  const selectedMethod = "{{ selected_method|default:'' }}";
+  const csrftoken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
+  const resultBox = document.getElementById("result-box");
 
-// Flag untuk menonaktifkan peringatan jika pembayaran selesai
-let paymentInProgress = true;
+  let paymentInProgress = true;
 
-window.addEventListener("beforeunload", e => {
-  if (paymentInProgress) {
-    e.preventDefault();
-    e.returnValue = "Jangan tutup halaman ini selama proses pembayaran berlangsung!";
-  }
-});
+  window.addEventListener("beforeunload", e => {
+    if (paymentInProgress) {
+      e.preventDefault();
+      e.returnValue = "Jangan tutup halaman ini selama proses pembayaran berlangsung!";
+    }
+  });
 
-/**
- * Fungsi untuk menambahkan listener 'copy' ke tombol
- */
-function addCopyListener(textToCopy, buttonId = 'copy-btn') {
-  const copyBtn = document.getElementById(buttonId);
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        copyBtn.textContent = 'Disalin!';
-        copyBtn.style.background = '#16a34a'; // Hijau
-        copyBtn.style.color = 'white';
-        setTimeout(() => {
-          copyBtn.textContent = 'Salin';
-          copyBtn.style.background = '#e0e7ff';
-          copyBtn.style.color = '#3730a3';
-        }, 1500); // Durasi lebih cepat
-      }).catch(err => {
-        console.error('Gagal menyalin: ', err);
-        copyBtn.textContent = 'Gagal!';
+  function addCopyListener(textToCopy, buttonId = 'copy-btn') {
+    const copyBtn = document.getElementById(buttonId);
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          showToast("📋 Nomor berhasil disalin!", "success");
+          copyBtn.textContent = 'Disalin!';
+          copyBtn.style.background = '#16a34a';
+          copyBtn.style.color = 'white';
+          setTimeout(() => {
+            copyBtn.textContent = 'Salin';
+            copyBtn.style.background = '#e0e7ff';
+            copyBtn.style.color = '#3730a3';
+          }, 1500);
+        }).catch(err => {
+          console.error('Gagal menyalin: ', err);
+          copyBtn.textContent = 'Gagal!';
+        });
       });
-    });
-  }
-}
-
-/**
- * Fungsi untuk menampilkan Modal Sukses
- */
-function showSuccessModal() {
-  const overlay = document.getElementById("success-modal-overlay");
-  if (overlay) {
-    overlay.classList.remove("hidden");
-    setTimeout(() => {
-      overlay.classList.add("show");
-    }, 10);
-  }
-}
-
-/**
- * Fungsi untuk mengecek status secara manual (dipanggil tombol refresh)
- */
-async function manualCheckStatus() {
-  const refreshBtn = document.getElementById('refresh-status-btn');
-  const statusText = document.getElementById('manual-status-text');
-  const refreshIcon = document.getElementById('refresh-icon'); // Icon SVG
-
-  if (refreshBtn) {
-    refreshBtn.disabled = true;
-    refreshBtn.classList.add('loading'); // Tambah class untuk animasi ikon
-    refreshBtn.querySelector('span').textContent = 'Mengecek...'; // Ubah teks span
-  }
-  if (statusText) {
-    statusText.textContent = 'Mengecek status pembayaran...';
-    statusText.className = 'checking'; // Reset class warna
+    }
   }
 
-  try {
-    // Pastikan URL check_status sudah benar
-    const res = await fetch(`/bookings/check_status/${bookingId}/`);
-    if (!res.ok) {
+  function showSuccessModal() {
+    const overlay = document.getElementById("success-modal-overlay");
+    if (overlay) {
+      overlay.classList.remove("hidden");
+      setTimeout(() => {
+        overlay.classList.add("show");
+      }, 10);
+    }
+  }
+
+  async function manualCheckStatus() {
+    const refreshBtn = document.getElementById('refresh-status-btn');
+    const statusText = document.getElementById('manual-status-text');
+
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.classList.add('loading');
+      refreshBtn.querySelector('span').textContent = 'Mengecek...';
+    }
+    if (statusText) {
+      statusText.textContent = 'Mengecek status pembayaran...';
+      statusText.className = 'checking';
+    }
+
+    try {
+      const res = await fetch(`/bookings/check_status/${bookingId}/`);
+      if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || `HTTP error! status: ${res.status}`);
-    }
-    
-    const data = await res.json();
-    
-    if (data.status === "CONFIRMED") {
-      paymentInProgress = false;
-      showSuccessModal();
-      // Tombol refresh tidak perlu di-enable lagi karena modal muncul
-    
-    } else if (data.status === "EXPIRED" || data.status === "CANCELLED" || data.status === "DENY") {
-      paymentInProgress = false;
-      // Tampilkan pesan gagal yang lebih jelas di result box
-      resultBox.innerHTML = `
-        <div class="va-card" style="border-color: #fecaca; background: #fef2f2;">
-          <h3 style="color: #dc2626;">Pembayaran Gagal / Dibatalkan</h3>
-          <p class="note">Status booking ini adalah: <strong>${data.status}</strong></p>
-          <p class="note" style="margin-top: 10px;">Anda bisa mencoba membuat booking baru jika diinginkan.</p>
-          <a href="/" class="btn-primary" style="margin-top: 20px; width: auto; padding: 10px 20px;">Kembali ke Home</a>
-        </div>
-      `;
-    
-    } else {
-      // Masih PENDING
+      }
+      
+      const data = await res.json();
+      
+      if (data.status === "CONFIRMED") {
+        paymentInProgress = false;
+        showSuccessModal();
+      
+      } else if (data.status === "EXPIRED" || data.status === "CANCELLED" || data.status === "DENY") {
+        paymentInProgress = false;
+        resultBox.innerHTML = `
+          <div class="va-card" style="border-color: #fecaca; background: #fef2f2;">
+            <h3 style="color: #dc2626;">Pembayaran Gagal / Dibatalkan</h3>
+            <p class="note">Status booking ini adalah: <strong>${data.status}</strong></p>
+            <p class="note" style="margin-top: 10px;">Anda bisa mencoba membuat booking baru jika diinginkan.</p>
+            <a href="/" class="btn-primary" style="margin-top: 20px; width: auto; padding: 10px 20px;">Kembali ke Home</a>
+          </div>
+        `;
+      
+      } else {
+        // Masih PENDING
+        showToast("⌛ Pembayaran masih tertunda. Silakan coba cek lagi.", "info");
+        if (refreshBtn) {
+          refreshBtn.disabled = false;
+          refreshBtn.classList.remove('loading');
+          refreshBtn.querySelector('span').textContent = 'Cek Ulang Status';
+        }
+        if (statusText) {
+          statusText.textContent = 'Pembayaran masih tertunda. Silakan coba cek lagi beberapa saat.';
+          statusText.className = 'pending';
+        }
+      }
+      
+    } catch (err) {
+      showToast(`❌ Gagal mengecek status: ${err.message}`, "error");
       if (refreshBtn) {
         refreshBtn.disabled = false;
         refreshBtn.classList.remove('loading');
-        refreshBtn.querySelector('span').textContent = 'Cek Ulang Status';
+        refreshBtn.querySelector('span').textContent = 'Cek Status Pembayaran';
       }
       if (statusText) {
-        statusText.textContent = 'Pembayaran masih tertunda. Silakan coba cek lagi beberapa saat.';
-        statusText.className = 'pending'; // Warna kuning
+        statusText.textContent = `Gagal mengecek status: ${err.message}. Coba lagi.`;
+        statusText.className = 'error';
       }
     }
-    
-  } catch (err) {
-    console.error("Manual check error:", err);
-    if (refreshBtn) {
-      refreshBtn.disabled = false;
-      refreshBtn.classList.remove('loading');
-       refreshBtn.querySelector('span').textContent = 'Cek Status Pembayaran';
-    }
-    if (statusText) {
-      statusText.textContent = `Gagal mengecek status: ${err.message}. Coba lagi.`;
-      statusText.className = 'error'; // Warna merah
-    }
   }
-}
 
-/**
- * Helper function untuk HTML tombol refresh
- */
-function getRefreshButtonHTML() {
-  return `
-    <div class="refresh-box">
-      <p class="note" style="text-align:center; margin-bottom:12px;">Sudah melakukan pembayaran? Klik tombol di bawah untuk memeriksa status.</p>
-      <button id="refresh-status-btn" class="refresh-btn">
-        <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-        </svg>
-        <span>Cek Status Pembayaran</span>
-      </button>
-      <p id="manual-status-text" class="note checking" style="text-align:center; min-height: 1.2em;"></p>
-    </div>
-  `;
-}
-
-/**
- * Helper function untuk HTML form kartu kredit
- */
-function getCardFormHTML() {
+  function getRefreshButtonHTML() {
     return `
-    <div id="form-card" class="form-card" style="text-align: left;">
-      <h3>Detail Kartu Kredit / Debit</h3>
-      <label for="card_number">Nomor Kartu</label>
-      <input type="text" id="card_number" placeholder="4111 1111 1111 ....">
-
-      <div class="form-row">
-        <div>
-          <label for="card_exp_month">Bulan Exp</label>
-          <input type="number" id="card_exp_month" placeholder="MM">
-        </div>
-        <div>
-          <label for="card_exp_year">Tahun Exp</label>
-          <input type="number" id="card_exp_year" placeholder="YYYY">
-        </div>
-        <div>
-          <label for="card_cvv">CVV</label>
-          <input type="number" id="card_cvv" placeholder="123">
-        </div>
+      <div class="refresh-box">
+        <p class="note" style="text-align:center; margin-bottom:12px;">Sudah melakukan pembayaran? Klik tombol di bawah untuk memeriksa status.</p>
+        <button id="refresh-status-btn" class="refresh-btn">
+          <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          <span>Cek Status Pembayaran</span>
+        </button>
+        <p id="manual-status-text" class="note checking" style="text-align:center; min-height: 1.2em;"></p>
       </div>
-      <button id="pay-card" class="btn-primary">Bayar Sekarang</button>
-      <p id="card-error-text" class="error" style="text-align: center; margin-top: 10px;"></p> </div>
     `;
-}
-
-
-/**
- * Fungsi displayPaymentResult utama
- */
-function displayPaymentResult(data) {
-  resultBox.innerHTML = ""; // Bersihkan loading awal
-
-  if (data.error) {
-    resultBox.innerHTML = `<p class="error" style="font-weight: bold;">${data.error}</p>`;
-    paymentInProgress = false;
-    return;
-  }
-  
-  // Jika respons dari status check (fallback refresh tanpa session)
-  if (data.message && data.midtrans_data) {
-      data = data.midtrans_data; // Gunakan data dari midtrans_data
   }
 
-  const currentStatus = data.transaction_status; // Ambil status
+  function getCardFormHTML() {
+      return `
+      <div id="form-card" class="form-card" style="text-align: left;">
+        <h3>Detail Kartu Kredit / Debit</h3>
+        <label for="card_number">Nomor Kartu</label>
+        <input type="text" id="card_number" placeholder="4111 1111 1111 ....">
 
-  // Cek jika status sudah final (Sukses/Gagal/Expired) dari data yang diterima
-  if (currentStatus === "settlement" || currentStatus === "capture") {
+        <div class="form-row">
+          <div>
+            <label for="card_exp_month">Bulan Exp</label>
+            <input type="number" id="card_exp_month" placeholder="MM">
+          </div>
+          <div>
+            <label for="card_exp_year">Tahun Exp</label>
+            <input type="number" id="card_exp_year" placeholder="YYYY">
+          </div>
+          <div>
+            <label for="card_cvv">CVV</label>
+            <input type="number" id="card_cvv" placeholder="123">
+          </div>
+        </div>
+        <button id="pay-card" class="btn-primary">Bayar Sekarang</button>
+        <p id="card-error-text" class="error" style="text-align: center; margin-top: 10px;"></p> </div>
+      `;
+  }
+
+  function displayPaymentResult(data) {
+    resultBox.innerHTML = ""; // Bersihkan loading awal
+
+    if (data.error) {
+      resultBox.innerHTML = `<p class="error" style="font-weight: bold;">${data.error}</p>`;
+      paymentInProgress = false;
+      return;
+    }
+    
+    if (data.message && data.midtrans_data) {
+      data = data.midtrans_data;
+    }
+
+    const currentStatus = data.transaction_status;
+
+    if (currentStatus === "settlement" || currentStatus === "capture") {
       paymentInProgress = false;
       showSuccessModal();
+      showToast("🎉 Pembayaran berhasil! Tiket Anda telah diterbitkan.", "success");
       return;
-  }
-  if (currentStatus === "expire" || currentStatus === "cancel" || currentStatus === "deny") {
+    }
+    if (currentStatus === "expire" || currentStatus === "cancel" || currentStatus === "deny") {
+      showToast("❌ Pembayaran gagal atau dibatalkan.", "error");
       paymentInProgress = false;
       resultBox.innerHTML = `
         <div class="va-card" style="border-color: #fecaca; background: #fef2f2;">
@@ -783,226 +772,210 @@ function displayPaymentResult(data) {
         </div>
       `;
       return;
-  }
+    }
 
-  // --- JIKA MASIH PENDING, tampilkan instruksi ---
-  paymentInProgress = true; // Tetap aktifkan warning refresh
+    paymentInProgress = true; 
 
-  const logos = {
-      bca: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia.svg/512px-Bank_Central_Asia.svg.png",
-      bni: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Bank_Negara_Indonesia_logo_%282004%29.svg/512px-Bank_Negara_Indonesia_logo_%282004%29.svg.png",
-      bri: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/BANK_BRI_logo.svg/512px-BANK_BRI_logo.svg.png",
-      mandiri: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Bank_Mandiri_logo_2016.svg/512px-Bank_Mandiri_logo_2016.svg.png",
-      cimb: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/CIMB_Niaga_logo.svg/512px-CIMB_Niaga_logo.svg.png"
-  };
+    const logos = {
+        bca: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia.svg/512px-Bank_Central_Asia.svg.png",
+        bni: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Bank_Negara_Indonesia_logo_%282004%29.svg/512px-Bank_Negara_Indonesia_logo_%282004%29.svg.png",
+        bri: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/BANK_BRI_logo.svg/512px-BANK_BRI_logo.svg.png",
+        cimb: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/CIMB_Niaga_logo.svg/512px-CIMB_Niaga_logo.svg.png"
+    };
 
-  let instructionHTML = ''; // Variabel untuk menampung HTML instruksi
+    let instructionHTML = '';
 
-  // --- BANK MANDIRI (ECHANNEL) ---
-  if (selectedMethod === "bank_mandiri" && data.biller_code) {
-    instructionHTML = `
-      <div class="va-card">
-        <div class="va-header">
-          <img src="${logos.mandiri}" alt="Mandiri" class="bank-logo">
-          <h3>Mandiri Bill Payment</h3>
-        </div>
-        <div class="va-content">
-          <p class="va-label">Kode Perusahaan</p>
-          <div class="va-number-box">
-            <span class="va-number-text">${data.biller_code}</span>
-            <button id="copy-btn" class="copy-btn">Salin</button>
+    // --- BANK TRANSFER (VA LAINNYA) ---
+    if (selectedMethod.startsWith("bank_") && data.va_numbers && data.va_numbers.length > 0) {
+      const va = data.va_numbers[0];
+      const bank = va.bank.toLowerCase();
+      const logo = logos[bank] || "";
+      instructionHTML = `
+        <div class="va-card">
+          <div class="va-header">
+            <img src="${logo}" alt="${va.bank}" class="bank-logo">
+            <h3>Virtual Account ${va.bank.toUpperCase()}</h3>
           </div>
-          <p class="va-label" style="margin-top:15px;">Nomor Pembayaran (Bill Key)</p>
-          <div class="va-number-box">
-            <span class="va-number-text">${data.bill_key}</span>
-            <button id="copy-btn-2" class="copy-btn">Salin</button>
+          <div class="va-content">
+            <p class="va-label">Nomor Virtual Account</p>
+            <div class="va-number-box">
+              <span class="va-number-text">${va.va_number}</span>
+              <button id="copy-btn" class="copy-btn">Salin</button>
+            </div>
           </div>
-        </div>
-        <div class="va-footer">
-          <p class="status">Status: ${currentStatus.toUpperCase()}</p>
-          <p class="note">Gunakan Mandiri Bill Payment untuk membayar.</p>
-        </div>
-        ${getRefreshButtonHTML()}
-      </div>`;
-    resultBox.innerHTML = instructionHTML;
-    addCopyListener(data.biller_code, 'copy-btn');
-    addCopyListener(data.bill_key, 'copy-btn-2');
-    document.getElementById('refresh-status-btn').addEventListener('click', manualCheckStatus);
-    return;
-  }
-
-  // --- BANK TRANSFER (VA LAINNYA) ---
-  if (selectedMethod.startsWith("bank_") && data.va_numbers && data.va_numbers.length > 0) {
-    const va = data.va_numbers[0];
-    const bank = va.bank.toLowerCase();
-    const logo = logos[bank] || "";
-    instructionHTML = `
-      <div class="va-card">
-        <div class="va-header">
-          <img src="${logo}" alt="${va.bank}" class="bank-logo">
-          <h3>Virtual Account ${va.bank.toUpperCase()}</h3>
-        </div>
-        <div class="va-content">
-          <p class="va-label">Nomor Virtual Account</p>
-          <div class="va-number-box">
-            <span class="va-number-text">${va.va_number}</span>
-            <button id="copy-btn" class="copy-btn">Salin</button>
+          <div class="va-footer">
+            <p class="status">Status: ${currentStatus.toUpperCase()}</p>
+            <p class="note">Gunakan nomor VA di atas untuk melakukan pembayaran.</p>
           </div>
-        </div>
-        <div class="va-footer">
-          <p class="status">Status: ${currentStatus.toUpperCase()}</p>
-          <p class="note">Gunakan nomor VA di atas untuk melakukan pembayaran.</p>
-        </div>
-        ${getRefreshButtonHTML()}
-      </div>`;
-    resultBox.innerHTML = instructionHTML;
-    addCopyListener(va.va_number, 'copy-btn');
-    document.getElementById('refresh-status-btn').addEventListener('click', manualCheckStatus);
-    return;
-  }
+          ${getRefreshButtonHTML()}
+        </div>`;
+      resultBox.innerHTML = instructionHTML;
+      addCopyListener(va.va_number, 'copy-btn');
+      return;
+    }
 
-  // --- QRIS / GOPAY ---
-  if (selectedMethod === "gopay" && data.actions && data.actions.length > 0) {
-    const qr = data.actions.find(a => a.name.includes("qr-code"));
-    const deeplink = data.actions.find(a => a.name.includes("deeplink"));
-    if (qr) { // Pastikan QR ada
+    // --- QRIS / GOPAY ---
+    if (selectedMethod === "gopay" && data.actions && data.actions.length > 0) {
+      let qrAction = data.actions.find(a => a.name === "generate-qr-code-v2");
+      if (!qrAction) {
+        qrAction = data.actions.find(a => a.name === "generate-qr-code");
+      }
+      const deeplinkAction = data.actions.find(a => a.name.includes("deeplink"));
+
+      if (qrAction) {
         instructionHTML = `
           <div class="qr-card">
             <h3>Scan QR Code</h3>
-            <img src="${qr.url}" alt="QRIS" class="qr-image">
-            ${deeplink ? `<a href="${deeplink.url}" target="_blank" class="btn-primary" style="width:auto; padding: 10px 20px; margin-top: 16px;">Buka di Aplikasi</a>` : ""}
+            <img src="${qrAction.url}" alt="QRIS" class="qr-image">
+            ${deeplinkAction ? `<a href="${deeplinkAction.url}" target="_blank" class="btn-primary" style="width:auto; padding: 10px 20px; margin-top: 16px;">Buka di Aplikasi</a>` : ""}
             <p class="status" style="margin-top:16px;">Menunggu pembayaran...</p>
             ${getRefreshButtonHTML()}
           </div>`;
         resultBox.innerHTML = instructionHTML;
-        document.getElementById('refresh-status-btn').addEventListener('click', manualCheckStatus);
+        return;
+      }
+    }
+
+    // --- CARD (Redirect) ---
+    if (selectedMethod === "card" && data.redirect_url) {
+      resultBox.innerHTML = `<div class="loading-spinner"></div><p class="loading-text">Mengarahkan ke halaman verifikasi aman...</p>`;
+      window.midtransNew3ds(data.redirect_url, {
+        onSuccess: r => {
+          paymentInProgress = false;
+          showSuccessModal();
+        },
+        onPending: r => {
+          resultBox.innerHTML = `<h3 style="color: #f59e0b;">Pembayaran Pending</h3><p>${r.status_message}</p>`;
+          paymentInProgress = false;
+        },
+        onError: r => {
+          resultBox.innerHTML = `<h3 class="error" style="color: #dc2626;">Pembayaran Gagal</h3><p>${r.status_message}</p>`;
+          paymentInProgress = false;
+        },
+      });
+      return;
+    }
+
+    // --- CARD (Form) ---
+    if (selectedMethod === "card") {
+        resultBox.innerHTML = getCardFormHTML();
+        document.getElementById("pay-card").addEventListener("click", handleCardPayment);
         return;
     }
+
+    // --- Fallback ---
+    paymentInProgress = false;
+    console.error("Tidak bisa menampilkan instruksi:", data);
+    resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Gagal menampilkan instruksi pembayaran.</p><p>Status Transaksi: ${currentStatus || "Unknown"}</p>`;
   }
 
-  // --- CARD (Redirect) ---
-  if (selectedMethod === "card" && data.redirect_url) {
-    // CC tidak perlu tombol refresh
-    resultBox.innerHTML = `<div class="loading-spinner"></div><p class="loading-text">Mengarahkan ke halaman verifikasi aman...</p>`;
-    window.midtransNew3ds(data.redirect_url, {
-      onSuccess: r => {
-        // Langsung show modal, webhook akan update DB
-        paymentInProgress = false;
-        showSuccessModal();
+  async function initiatePayment(payload) {
+    resultBox.innerHTML = `<div class="loading-spinner"></div><p class="loading-text">Menghubungi Midtrans...</p>`;
+    try {
+      const res = await fetch(`/bookings/payment/${bookingId}/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        // Ini akan menangkap error 410 (session expired) atau 500 (midtrans down)
+        throw new Error(data.error || data.status_message || `HTTP error! status: ${res.status}`);
+      }
+      displayPaymentResult(data);
+    } catch (err) {
+      showToast(`❌ Gagal memulai pembayaran: ${err.message}`, "error");
+      resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Gagal memulai pembayaran:</p><p class="error">${err.message}</p>`;
+      paymentInProgress = false;
+    }
+  }
+
+  function handleCardPayment() {
+    const cardData = {
+      card_number: document.getElementById('card_number').value.replace(/\s/g, ''),
+      card_exp_month: document.getElementById('card_exp_month').value,
+      card_exp_year: document.getElementById('card_exp_year').value,
+      card_cvv: document.getElementById('card_cvv').value
+    };
+    const errorText = document.getElementById('card-error-text');
+    errorText.textContent = '';
+
+    if (!cardData.card_number || !/^\d+$/.test(cardData.card_number)) {
+      errorText.textContent = 'Nomor kartu tidak valid.'; return;
+    }
+    if (!cardData.card_exp_month || !/^\d{1,2}$/.test(cardData.card_exp_month) || cardData.card_exp_month < 1 || cardData.card_exp_month > 12) {
+      errorText.textContent = 'Bulan expired tidak valid.'; return;
+    }
+    if (!cardData.card_exp_year || !/^\d{4}$/.test(cardData.card_exp_year) || cardData.card_exp_year < new Date().getFullYear()) {
+      errorText.textContent = 'Tahun expired tidak valid.'; return;
+    }
+    if (!cardData.card_cvv || !/^\d{3,4}$/.test(cardData.card_cvv)) {
+      errorText.textContent = 'CVV tidak valid.'; return;
+    }
+
+    resultBox.innerHTML = `<div class="loading-spinner"></div><p class="loading-text">Memvalidasi kartu...</p>`;
+
+    MidtransNew3ds.getCardToken(cardData, {
+      onSuccess: function(response) {
+        initiatePayment({ method: "card", token_id: response.token_id });
       },
-      onPending: r => {
-        resultBox.innerHTML = `<h3 style="color: #f59e0b;">Pembayaran Pending</h3><p>${r.status_message}</p>`;
+      onError: function(response) {
+        resultBox.innerHTML = getCardFormHTML();
+        document.getElementById('card-error-text').textContent = response.message;
+        document.getElementById("pay-card").addEventListener("click", handleCardPayment);
         paymentInProgress = false;
-      },
-      onError: r => {
-        resultBox.innerHTML = `<h3 class="error" style="color: #dc2626;">Pembayaran Gagal</h3><p>${r.status_message}</p>`;
-        paymentInProgress = false;
-      },
+      }
     });
-    return;
   }
 
-  // --- CARD (Form - Jika tidak ada redirect_url tapi metode card) ---
-  if (selectedMethod === "card") {
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!selectedMethod) {
+        resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Metode pembayaran tidak ditemukan.</p><p>Silakan kembali dan pilih metode pembayaran.</p>`;
+        paymentInProgress = false;
+        return;
+    }
+
+    if (selectedMethod === "card") {
       resultBox.innerHTML = getCardFormHTML();
       document.getElementById("pay-card").addEventListener("click", handleCardPayment);
-      return;
-  }
-
-  // --- Fallback jika tidak ada instruksi yang cocok ---
-  paymentInProgress = false;
-  console.error("Tidak bisa menampilkan instruksi:", data); // Log data aneh
-  resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Gagal menampilkan instruksi pembayaran.</p><p>Status Transaksi: ${currentStatus || "Unknown"}</p>`;
-}
-
-/**
- * Fungsi initiatePayment (Tidak berubah banyak)
- */
-async function initiatePayment(payload) {
-  // Tampilkan spinner loading awal
-  resultBox.innerHTML = `<div class="loading-spinner"></div><p class="loading-text">Menghubungi Midtrans...</p>`;
-  try {
-    const res = await fetch(`/bookings/payment/${bookingId}/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-        // Tangani error dari view (misal 400 Bad Request)
-        throw new Error(data.error || `HTTP error! status: ${res.status}`);
-    }
-    displayPaymentResult(data); // Tampilkan instruksi atau modal
-  } catch (err) {
-    resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Gagal memulai pembayaran:</p><p class="error">${err.message}</p>`;
-    paymentInProgress = false;
-  }
-}
-
-/**
- * Fungsi handleCardPayment (Sedikit diperbarui)
- */
-function handleCardPayment() {
-  const cardData = {
-    card_number: document.getElementById('card_number').value.replace(/\s/g, ''), // Hapus spasi
-    card_exp_month: document.getElementById('card_exp_month').value,
-    card_exp_year: document.getElementById('card_exp_year').value,
-    card_cvv: document.getElementById('card_cvv').value
-  };
-  const errorText = document.getElementById('card-error-text');
-  errorText.textContent = ''; // Bersihkan error lama
-
-  // Validasi sederhana
-  if (!cardData.card_number || !/^\d+$/.test(cardData.card_number)) {
-    errorText.textContent = 'Nomor kartu tidak valid.'; return;
-  }
-  if (!cardData.card_exp_month || !/^\d{1,2}$/.test(cardData.card_exp_month) || cardData.card_exp_month < 1 || cardData.card_exp_month > 12) {
-    errorText.textContent = 'Bulan expired tidak valid.'; return;
-  }
-  if (!cardData.card_exp_year || !/^\d{4}$/.test(cardData.card_exp_year) || cardData.card_exp_year < new Date().getFullYear()) {
-    errorText.textContent = 'Tahun expired tidak valid.'; return;
-  }
-   if (!cardData.card_cvv || !/^\d{3,4}$/.test(cardData.card_cvv)) {
-    errorText.textContent = 'CVV tidak valid.'; return;
-  }
-
-  // Tampilkan loading di resultBox
-  resultBox.innerHTML = `<div class="loading-spinner"></div><p class="loading-text">Memvalidasi kartu...</p>`;
-
-  MidtransNew3ds.getCardToken(cardData, {
-    onSuccess: function(response) {
-      initiatePayment({ method: "card", token_id: response.token_id });
-    },
-    onError: function(response) {
-      // Kembalikan form dan tampilkan error
-      resultBox.innerHTML = getCardFormHTML();
-      document.getElementById('card-error-text').textContent = response.message;
-      document.getElementById("pay-card").addEventListener("click", handleCardPayment); // Re-attach listener
-      paymentInProgress = false;
+      paymentInProgress = true;
+    } else {
+      const payload = { method: selectedMethod };
+      if (selectedMethod.startsWith("bank_")) {
+          payload.bank = selectedMethod.split("_")[1];
+      }
+      initiatePayment(payload);
     }
   });
-}
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (!selectedMethod) {
-      resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Metode pembayaran tidak ditemukan.</p><p>Silakan kembali dan pilih metode pembayaran.</p>`;
-      paymentInProgress = false;
-      return;
-  }
+  document.addEventListener("click", e => {
 
-  // Untuk CC, tampilkan form dulu, bukan initiatePayment
-  if (selectedMethod === "card") {
-    resultBox.innerHTML = getCardFormHTML();
-    document.getElementById("pay-card").addEventListener("click", handleCardPayment);
-    paymentInProgress = true; // Biarkan warning refresh aktif
-  } else {
-    // Untuk metode lain (VA, QRIS), langsung initiate
-    const payload = { method: selectedMethod };
-    if (selectedMethod.startsWith("bank_")) {
-        payload.bank = selectedMethod.split("_")[1];
+    if (e.target.closest && e.target.closest("#refresh-status-btn")) {
+      e.preventDefault();
+      const confirmModal = document.getElementById("confirm-modal-overlay");
+      if (!confirmModal) {
+        console.error("Modal konfirmasi tidak ditemukan");
+        return;
+      }
+
+      confirmModal.classList.remove("hidden");
+      setTimeout(() => confirmModal.classList.add("show"), 10);
+
+      const confirmBtn = document.getElementById("confirm-refresh");
+      const cancelBtn = document.getElementById("cancel-refresh");
+
+      confirmBtn.onclick = () => {
+        confirmModal.classList.remove("show");
+        setTimeout(() => confirmModal.classList.add("hidden"), 300);
+        showToast("🔄 Mengecek status pembayaran...", "info");
+        manualCheckStatus();
+      };
+
+      cancelBtn.onclick = () => {
+        confirmModal.classList.remove("show");
+        setTimeout(() => confirmModal.classList.add("hidden"), 300);
+      };
     }
-    initiatePayment(payload);
-  }
-});
+  });
 </script>
 {% endblock %}
