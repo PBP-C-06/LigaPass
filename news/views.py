@@ -34,7 +34,7 @@ def news_list(request):
 def news_detail(request, pk):
     news = get_object_or_404(News, pk=pk)
     news.news_views += 1
-    news.save()
+    news.save(update_fields=["news_views"])
     return render(request, 'news/news_detail.html', {
         'news': news,
         'is_journalist': is_journalist(request.user),

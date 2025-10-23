@@ -33,7 +33,11 @@
                Views: {{ item.news_views }} 
                {% if item.is_featured %}⭐{% endif %}
             </p>
-            <img src="{{ item.thumbnail.url }}" width="120"/>
+            {% if item.thumbnail %}
+                <img src="{{ item.thumbnail.url }}" width="120"/>
+            {% else %}
+                <p><em>Gambar tidak tersedia</em></p>
+            {% endif %}
             <p>{{ item.content|truncatewords:20 }}</p>
         </li>
     {% empty %}
