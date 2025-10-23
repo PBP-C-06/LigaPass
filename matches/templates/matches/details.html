@@ -2,34 +2,37 @@
 {% block title %}Detail Pertandingan{% endblock %}
 {% block content %}
 {% include "components/step_wizard.html" with step=1 %}
+
 <div class="bg-white max-w-4xl mx-auto p-8 rounded-xl shadow-lg border border-slate-200">
+
   {% if user.is_authenticated and user.role == 'admin' %}
-    <div class="text-right mb-4">
-        <a href="{% url 'matches:edit_match' match.id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors inline-flex items-center space-x-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-5.646 5.646l-1.55 1.55a4 4 0 00-1.127 2.518V16h2.518a4 4 0 002.517-1.127l1.55-1.55-2.828-2.828z" />
-            </svg>
-            <span>Edit Pertandingan</span>
-        </a>
-    </div>
+  <div class="text-right mb-4">
+    <a href="{% url 'matches:edit_match' match.id %}"
+      class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors inline-flex items-center space-x-1">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-5.646 5.646l-1.55 1.55a4 4 0 00-1.127 2.518V16h2.518a4 4 0 002.517-1.127l1.55-1.55-2.828-2.828z" />
+      </svg>
+      <span>Edit Pertandingan</span>
+    </a>
+  </div>
   {% endif %}
+
+  <!-- === MATCH HEADER === -->
   <div class="text-center mb-6">
     <p class="text-slate-500">{{ match.date|date:"l, d F Y - H:i" }} WIB</p>
     <p class="text-slate-600">{{ match.venue.name }}, {{ match.venue.city }}</p>
   </div>
+
   <div class="flex justify-around items-center">
     <div class="text-center w-1/3">
-      <img src="{{ match.home_team.display_logo_url }}" alt="{{ match.home_team.name }} logo" class="w-24 h-24 mx-auto mb-2">
+      <img src="{{ match.home_team.display_logo_url }}" alt="{{ match.home_team.name }} logo"
+        class="w-24 h-24 mx-auto mb-2">
       <h2 class="text-2xl font-bold text-slate-800">{{ match.home_team.name }}</h2>
     </div>
+
     <div class="text-center">
-      {% if match.status_key == 'Ongoing' %}
-        <div id="top-timer" class="text-lg font-semibold text-gray-600 mb-1">
-          <span id="elapsed-time">N/A</span>
-        </div>
-      {% endif %}
       <p id="score-display" class="text-5xl font-bold text-slate-900">{{ match.home_goals|default:"0" }} - {{ match.away_goals|default:"0" }}</p>
-      
       <div id="status-container" class="mt-2">
         {% if match.status_key == 'Past' %}
           <span id="status-badge" class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Finished</span>
@@ -42,248 +45,240 @@
         {% endif %}
       </div>
     </div>
+
     <div class="text-center w-1/3">
-      <img src="{{ match.away_team.display_logo_url }}" alt="{{ match.away_team.name }} logo" class="w-24 h-24 mx-auto mb-2">
+      <img src="{{ match.away_team.display_logo_url }}" alt="{{ match.away_team.name }} logo"
+        class="w-24 h-24 mx-auto mb-2">
       <h2 class="text-2xl font-bold text-slate-800">{{ match.away_team.name }}</h2>
     </div>
   </div>
 
-  {% if match.status_key == 'Upcoming' and ticket_prices %}
-    <div class="mt-8 border-t border-slate-200 pt-6">
-      <h3 class="text-xl font-bold text-center mb-4 text-slate-800">Kategori & Harga Tiket</h3>
-      <ul class="max-w-md mx-auto">
-        {% for ticket in ticket_prices %}
-          <li class="flex justify-between items-center bg-slate-50 p-3 rounded-lg mb-2 border border-slate-200">
-            <span class="font-semibold text-slate-800">{{ ticket.get_seat_category_display }}</span>
-            <span class="text-green-600 font-medium">Rp {{ ticket.price|floatformat:0 }}</span>
-          </li>
-        {% endfor %}
-      </ul>
-    </div>
-  {% endif %}
+  {% if match.status_key == 'Past' %}
+  <!-- === REVIEW SECTION === -->
+  <div class="mt-10 border-t border-slate-200 pt-8">
+    <div class="px-4 sm:px-6 md:px-10">
+      <h3 class="text-2xl font-bold text-center text-slate-800 mb-6">Ulasan Pertandingan</h3>
 
-  <div class="mt-8 text-center">
-    {% if match.status_key == 'Upcoming' %}
-      {% if user.is_authenticated %}
-        <a href="{% url 'bookings:create_booking' match.id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition">Beli Tiket</a>
+      {% if reviews %}
+      <!-- ⭐ Summary -->
+      <div class="text-center mb-8">
+        <div class="flex justify-center items-center space-x-2 text-lg font-semibold text-yellow-500">
+          {% for i in "12345" %}
+            {% if forloop.counter <= avg_rating|floatformat:0 %}
+              ⭐
+            {% else %}
+              ☆
+            {% endif %}
+          {% endfor %}
+          <span class="text-slate-800 ml-2">{{ avg_rating }}/5 dari {{ review_count }} ulasan</span>
+        </div>
+      </div>
+
+      <!-- Semua Review -->
+      <div id="review-section" class="flex flex-col gap-4 w-full">
+        {% for r in reviews %}
+        <div class="bg-gradient-to-br from-white to-slate-50 border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all p-6 w-full">
+          <div class="flex items-center space-x-3 mb-3">
+            <div class="w-10 h-10 flex items-center justify-center bg-blue-100 text-blue-700 font-bold rounded-full text-lg shadow-sm">
+              {{ r.user.username|first|upper }}
+            </div>
+            <div>
+              <p class="font-semibold text-slate-800">{{ r.user.username }}</p>
+              <p class="text-xs text-gray-400">{{ r.created_at|date:"d M Y, H:i" }}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-1 mb-2">
+            {% for i in "12345" %}
+              {% if forloop.counter <= r.rating %}
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.518 4.674h4.911c.969 0 1.371 1.24.588 1.81l-3.974 2.888 1.518 4.674c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.972 2.844c-.784.57-1.839-.197-1.54-1.118l1.518-4.674-3.974-2.888c-.783-.57-.38-1.81.588-1.81h4.911l1.518-4.674z"/>
+                </svg>
+              {% else %}
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.518 4.674h4.911c.969 0 1.371 1.24.588 1.81l-3.974 2.888 1.518 4.674c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.972 2.844c-.784.57-1.839-.197-1.54-1.118l1.518-4.674-3.974-2.888c-.783-.57-.38-1.81.588-1.81h4.911l1.518-4.674z"/>
+                </svg>
+              {% endif %}
+            {% endfor %}
+            <span class="ml-2 text-sm text-slate-600 font-medium">{{ r.rating }}/5</span>
+          </div>
+
+          <p class="text-gray-700 text-sm leading-relaxed mb-3 italic">"{{ r.comment }}"</p>
+
+          {% if r.reply %}
+          <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-3 mt-2 text-sm shadow-inner">
+            <strong>LigaPass:</strong>
+            <p class="mt-1">{{ r.reply.reply_text }}</p>
+          </div>
+          {% elif user.role == 'admin' %}
+          <button class="reply-btn self-end mt-3 text-xs text-blue-600 hover:underline font-semibold"
+            data-review-id="{{ r.id }}">💬 Balas</button>
+          {% endif %}
+
+          {% if user.is_authenticated and r.user == user %}
+          <button class="edit-review-btn self-end text-blue-600 text-xs font-semibold hover:underline mt-2"
+            data-match-id="{{ match.id }}" data-rating="{{ r.rating }}"
+            data-comment="{{ r.comment|escapejs }}">✏️ Edit Review</button>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
       {% else %}
-        <a href="{% url 'authentication:login' %}" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-8 rounded-lg text-lg transition">Login untuk Membeli Tiket</a>
+        <p class="text-gray-500 text-center italic">Belum ada ulasan untuk pertandingan ini.</p>
       {% endif %}
-    {% elif match.status_key == 'Ongoing' %}
-      <button disabled class="bg-yellow-400 text-black font-bold py-3 px-8 rounded-lg text-lg">Match is underway</button>
-    {% else %}
-      <button disabled class="bg-slate-300 text-slate-600 font-bold py-3 px-8 rounded-lg text-lg">Match has finished</button>
-    {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- === MODAL EDIT / ADD REVIEW === -->
+<div id="review-modal" class="fixed inset-0 bg-black/40 hidden z-50 flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 text-center relative">
+    <h3 class="text-xl font-bold text-gray-900 mb-1" id="modal-title">Beri Ulasan Anda</h3>
+    <p class="text-gray-500 mb-5" id="modal-subtitle">Bagaimana pengalaman menonton pertandingan ini?</p>
+
+    <div class="flex justify-center space-x-2 mb-5" id="rating-stars">
+      {% for i in "12345" %}
+      <svg data-value="{{ forloop.counter }}" xmlns="http://www.w3.org/2000/svg"
+           class="h-8 w-8 star text-gray-300 cursor-pointer transition hover:scale-110"
+           fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 .587l3.668 7.568L24 9.753l-6 5.853L19.335 24 12 19.897 4.665 24 6 15.606 0 9.753l8.332-1.598z"/>
+      </svg>
+      {% endfor %}
+    </div>
+
+    <textarea id="review-text" rows="4" placeholder="Tulis pengalaman Anda..."
+              class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 mb-6"></textarea>
+
+    <div class="flex justify-center space-x-4">
+      <button id="cancel-review"
+              class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2 px-5 rounded-lg transition">Batal</button>
+      <button id="submit-review"
+              class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg transition">Kirim</button>
+    </div>
+  </div>
+</div>
+
+<!-- === MODAL REPLY ADMIN === -->
+<div id="reply-modal" class="fixed inset-0 bg-black/40 hidden z-50 flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
+    <h3 class="text-lg font-bold text-gray-900 mb-2">Balas Review</h3>
+    <textarea id="reply-text" rows="3" placeholder="Tulis balasan Anda..."
+      class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 mb-5"></textarea>
+    <div class="flex justify-center space-x-3">
+      <button id="cancel-reply"
+        class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2 px-5 rounded-lg transition">Batal</button>
+      <button id="submit-reply"
+        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition">Kirim</button>
+    </div>
   </div>
 </div>
 
 <script>
-  const matchApiId = "{{ match.api_id }}";
-  const matchKickoffTime = "{{ match.date|date:'c' }}"; 
-  let currentStatus = "{{ match.status_key }}";
-  const scoreDisplay = document.getElementById('score-display');
-  const statusContainer = document.getElementById('status-container');
-  const statusBadge = document.getElementById('status-badge');
-  const topTimerContainer = document.getElementById('top-timer'); 
-  const elapsedTimeElement = document.getElementById('elapsed-time');
+document.addEventListener("DOMContentLoaded", () => {
+  // === ELEMENTS ===
+  const modal = document.getElementById("review-modal");
+  const textArea = document.getElementById("review-text");
+  const stars = document.querySelectorAll("#rating-stars .star");
+  const submitBtn = document.getElementById("submit-review");
+  const cancelBtn = document.getElementById("cancel-review");
+  const modalTitle = document.getElementById("modal-title");
+  const modalSubtitle = document.getElementById("modal-subtitle");
+  let selectedRating = 0, isEditing = false;
 
-  let timerInterval; 
-  let elapsedSeconds = 0;
-  const HALF_TIME_BREAK_SECONDS = 15 * 60; 
+  // === OPEN MODAL (EDIT) ===
+  document.querySelectorAll(".edit-review-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const rating = parseInt(btn.dataset.rating);
+      const comment = btn.dataset.comment;
+      isEditing = true;
+      modal.classList.remove("hidden");
+      modalTitle.textContent = "Edit Ulasan Anda";
+      modalSubtitle.textContent = "Perbarui pengalaman Anda untuk pertandingan ini.";
+      selectedRating = rating;
+      textArea.value = comment;
+      stars.forEach(s => {
+        const val = parseInt(s.dataset.value);
+        s.classList.toggle("text-yellow-400", val <= rating);
+        s.classList.toggle("text-gray-300", val > rating);
+      });
+    });
+  });
 
-  function parseTimeStringToSeconds(timeStr) {
-    if (typeof timeStr !== 'string' || !timeStr.includes(':')) {
-        return 0;
-    }
-    const parts = timeStr.split(':');
-    const minutes = parseInt(parts[0]);
-    const seconds = parseInt(parts[1]);
-    
-    if (isNaN(minutes) || isNaN(seconds)) return 0;
-    
-    return (minutes * 60) + seconds;
-  }
+  // === STAR RATING ===
+  stars.forEach(star => {
+    star.addEventListener("click", () => {
+      selectedRating = parseInt(star.dataset.value);
+      stars.forEach(s => {
+        const val = parseInt(s.dataset.value);
+        s.classList.toggle("text-yellow-400", val <= selectedRating);
+        s.classList.toggle("text-gray-300", val > selectedRating);
+      });
+    });
+  });
 
-  function formatElapsed(totalSeconds) {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
+  // === CANCEL ===
+  cancelBtn.addEventListener("click", () => {
+    modal.classList.add("hidden");
+    textArea.value = "";
+    selectedRating = 0;
+    stars.forEach(s => s.classList.replace("text-yellow-400", "text-gray-300"));
+  });
 
-  function startTimer(initialElapsedSeconds) {
-    clearInterval(timerInterval);
-    elapsedSeconds = initialElapsedSeconds;
-    
-    if (elapsedTimeElement) {
-        elapsedTimeElement.textContent = formatElapsed(elapsedSeconds);
-    }
-
-    timerInterval = setInterval(() => {
-        elapsedSeconds += 1;
-        if (elapsedTimeElement) {
-            elapsedTimeElement.textContent = formatElapsed(elapsedSeconds);
-        }
-        
-        if ((!matchApiId || matchApiId === 'None') && elapsedSeconds === (45 * 60)) {
-            handleManualHalfTime();
-        }
-
-    }, 1000);
-  }
-  
-  function handleManualHalfTime() {
-    stopTimer();
-    
-    const halfTimeStart = 45 * 60;
-    
-    if (statusBadge) {
-      statusBadge.className = 'bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded';
-      statusBadge.textContent = 'Half Time';
-    }
-    if (elapsedTimeElement) {
-      elapsedTimeElement.textContent = '45:00';
-    }
-    
-    console.log("Manual Half Time reached. Resuming in 15 minutes.");
-
-    setTimeout(() => {
-        console.log("Resuming from Half Time break.");
-        
-        const resumedSeconds = (45 * 60) + (15 * 60); 
-        
-        if (statusBadge) {
-            statusBadge.className = 'bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse';
-            statusBadge.textContent = 'LIVE';
-        }
-        
-        startTimer(resumedSeconds);
-
-    }, HALF_TIME_BREAK_SECONDS * 1000);
-  }
-
-
-  function stopTimer() {
-      clearInterval(timerInterval);
-  }
-
-  function updateDom(homeGoals, awayGoals, statusShort, statusLong, elapsedStr) {
-    let elapsed;
-    if (typeof elapsedStr === 'number') {
-        elapsed = elapsedStr;
-    } else if (typeof elapsedStr === 'string' && elapsedStr.includes(':')) {
-        elapsed = parseTimeStringToSeconds(elapsedStr);
-    } else {
-        elapsed = 0;
-    }
-
-    const finalHomeGoals = homeGoals != null ? homeGoals : '0';
-    const finalAwayGoals = awayGoals != null ? awayGoals : '0';
-    scoreDisplay.textContent = `${finalHomeGoals} - ${finalAwayGoals}`;
-
-    // 2. Update Status dan UI
-    if (statusShort === 'FT') {
-      currentStatus = 'Past';
-      stopTimer(); 
-      if (statusBadge) {
-        statusBadge.className = 'bg-red-500 text-white text-xs font-bold px-2 py-1 rounded';
-        statusBadge.textContent = 'Finished';
-      }
-      if (topTimerContainer) topTimerContainer.remove(); 
-    } else if (statusShort === 'HT') {
-      currentStatus = 'Half Time';
-      stopTimer(); 
-      if (statusBadge) {
-        statusBadge.className = 'bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded';
-        statusBadge.textContent = 'Half Time'; 
-      }
-      if (elapsedTimeElement) {
-        elapsedTimeElement.textContent = elapsed ? formatElapsed(elapsed) : '0:00';
-      }
-
-    } else if (statusShort !== 'NS') {
-      currentStatus = 'Ongoing';
-      if (statusBadge) {
-        statusBadge.className = 'bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse';
-        statusBadge.textContent = 'LIVE'; 
-      }
-      
-      if (elapsedTimeElement) {
-        elapsedTimeElement.textContent = elapsed ? formatElapsed(elapsed) : '0:00';
-      }
-
-      if (!timerInterval || (Math.abs(elapsedSeconds - elapsed) > 5)) {
-          startTimer(elapsed);
-      }
-      
-    } else {
-        stopTimer();
-    }
-  }
-    
-  function startWebSocket() {
-    const isManualMatch = !matchApiId || matchApiId === 'None';
-    
-    if (isManualMatch && currentStatus === 'Ongoing') {
-        const kickoff = new Date(matchKickoffTime);
-        
-        setTimeout(() => {
-            const now = new Date();
-            let localElapsedSeconds = Math.floor((now.getTime() - kickoff.getTime()) / 1000);
-            
-            if (localElapsedSeconds < 0) localElapsedSeconds = 0;
-
-            if (localElapsedSeconds > (45 * 60) && localElapsedSeconds < (45 * 60) + HALF_TIME_BREAK_SECONDS) {
-                let statusTime = 45 * 60; 
-                updateDom(null, null, 'HT', 'Half Time', statusTime);
-                
-                let timeSpentInBreak = localElapsedSeconds - (45 * 60);
-                
-                setTimeout(() => handleManualHalfTime(), (HALF_TIME_BREAK_SECONDS - timeSpentInBreak) * 1000);
-                return;
-                
-            } else if (localElapsedSeconds >= (45 * 60) + HALF_TIME_BREAK_SECONDS) {
-                localElapsedSeconds -= HALF_TIME_BREAK_SECONDS; 
-            }
-            
-            updateDom(null, null, 'LIVE', 'Ongoing', localElapsedSeconds);
-        }, 1000);
-        
-        return;
-    }
-    
-    if (currentStatus !== 'Ongoing') {
+  // === SUBMIT ===
+  submitBtn.addEventListener("click", async () => {
+    const comment = textArea.value.trim();
+    if (!selectedRating || !comment) {
+      showToast("⚠️ Harap isi rating dan ulasan terlebih dahulu!", "warning");
       return;
     }
-    
-    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-    const host = window.location.host;
-    const wsUrl = protocol + host + `/ws/match/${matchApiId}/`;
-    
-    const liveSocket = new WebSocket(wsUrl);
+    const matchId = "{{ match.id }}";
+    const url = isEditing ? `/reviews/api/${matchId}/update/` : `/reviews/api/${matchId}/create/`;
 
-    liveSocket.onmessage = function(e) {
-      const data = JSON.parse(e.data);
-      const message = data.message;
-      
-      updateDom(message.home_goals, message.away_goals, message.status_short, message.status_long, message.elapsed);
-    };
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ rating: selectedRating, comment })
+    });
+    const data = await res.json();
+    if (data.status === "success" || data.ok) {
+      showToast(isEditing ? "✅ Review diperbarui!" : "🎉 Review berhasil dikirim!", "success");
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      showToast("❌ Gagal menyimpan review.", "error");
+    }
+  });
 
-    liveSocket.onclose = function(e) {
-      console.log('Live score socket closed unexpectedly. Attempting to reconnect...', e);
-      setTimeout(startWebSocket, 3000); 
-    };
+  // === REPLY ADMIN ===
+  const replyModal = document.getElementById("reply-modal");
+  const replyText = document.getElementById("reply-text");
+  let selectedReviewId = null;
 
-    liveSocket.onerror = function(e) {
-      console.error('Live score socket error:', e);
-    };
+  document.querySelectorAll(".reply-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedReviewId = btn.dataset.reviewId;
+      replyModal.classList.remove("hidden");
+    });
+  });
 
-    liveSocket.onopen = function(e) {
-        console.log(`Live score socket connected for match ${matchApiId}`);
-    };
-  }
-
-  if (currentStatus === 'Ongoing') {
-    startWebSocket();
-  }
+  document.getElementById("cancel-reply").addEventListener("click", () => replyModal.classList.add("hidden"));
+  document.getElementById("submit-reply").addEventListener("click", async () => {
+    const reply = replyText.value.trim();
+    if (!reply) return showToast("⚠️ Balasan tidak boleh kosong.", "warning");
+    const res = await fetch(`/reviews/api/reply/${selectedReviewId}/`, {
+      method: "POST",
+      headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ reply_text: reply })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      showToast("✅ Balasan terkirim!", "success");
+      setTimeout(() => location.reload(), 1000);
+    } else showToast("❌ Gagal mengirim balasan.", "error");
+    replyModal.classList.add("hidden");
+  });
+});
 </script>
+
 {% endblock %}

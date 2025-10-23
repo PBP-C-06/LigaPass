@@ -14,7 +14,7 @@ urlpatterns = [
     path("admin/<uuid:match_id>/", views.admin_review_page, name="admin_review_page"),
 
     # API untuk membalas review user
-    path("api/reply/<uuid:review_id>/", views.api_add_reply, name="api_add_reply"),
+    path("api/reply/<int:review_id>/", views.api_add_reply, name="api_add_reply"),
 
     # === ANALYTICS ===
     path("analytics/admin/", views_analytics.admin_analytics_page, name="admin_analytics_page"),
