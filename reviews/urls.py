@@ -7,13 +7,13 @@ urlpatterns = [
     # Entry tanpa match_id → akan redirect ke match terakhir / match terakhir dari tim terpilih
     path("user/", views.user_review_entry, name="user_review_entry"),
     # Halaman user untuk 1 match tertentu
-    path("user/<int:match_id>/", views.user_review_page, name="user_review_page"),
+    path("user/<uuid:match_id>/", views.user_review_page, name="user_review_page"),
 
     # API AJAX
-    path("api/<int:match_id>/create/", views.api_create_review, name="api_create_review"),
-    path("api/<int:match_id>/update/", views.api_update_review, name="api_update_review"),
+    path("api/<uuid:match_id>/create/", views.api_create_review, name="api_create_review"),
+    path("api/<uuid:match_id>/update/", views.api_update_review, name="api_update_review"),
     path('admin/', views.admin_review_page, name='admin_review_page'),
-    path('api/reply/<int:review_id>/', views.api_add_reply, name='api_add_reply'),
+    path('api/reply/<uuid:review_id>/', views.api_add_reply, name='api_add_reply'),
 
     # Analytics URLs
     path("analytics/admin/", views_analytics.admin_analytics_page, name="admin_analytics_page"),
