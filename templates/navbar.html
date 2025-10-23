@@ -1,42 +1,88 @@
+{% load static %}
+
 <nav class="bg-white/70 backdrop-blur-md shadow-sm py-3 sticky top-0 z-50 border-b border-slate-200">
   <div class="container mx-auto px-6 flex justify-between items-center">
     <a href="/" class="font-bold text-xl text-blue-600 hover:text-blue-700 transition-colors">
       LigaPass
     </a>
 
-    <div class="flex items-center space-x-6">
-      {% if user.is_authenticated %}
-        {% if user.role == 'user' %}
-          <a href="{% url 'profiles:user_view' user.id %}" class="text-slate-700 hover:text-blue-600 transition">
-            Hi, {{ user.username }}
-          </a>
-        {% elif user.role == 'admin' %}
-          <a href="{% url 'profiles:admin_view' %}" class="text-slate-700 hover:text-blue-600 transition">
-            Hi, {{ user.username }}
-          </a>
-        {% elif user.role == 'journalist' %}
-          <a href="{% url 'profiles:journalist_view' %}" class="text-slate-700 hover:text-blue-600 transition">
-            Hi, {{ user.username }}
-          </a>
-        {% endif %}
+    <div id="navbar-user-section" class="flex items-center space-x-6">
+      <a href="{% url 'authentication:login' %}" 
+          class="text-blue-600 hover:text-blue-700 font-medium transition hidden" 
+          id="navbar-login-link">
+          Login
+      </a>
+      <a href="{% url 'authentication:register' %}" 
+          class="text-green-600 hover:text-green-700 font-medium transition hidden" 
+          id="navbar-register-link">
+          Register
+      </a>
 
-        <a href="{% url 'profiles:edit_profile_for_user' user.id %}" class="text-slate-700 hover:text-blue-600 transition">
-          Edit Profile
+      <div id="navbar-user-info" class="hidden flex items-center gap-4">
+        <a id="navbar-profile-link" href="#">
+          <div class="flex items-center gap-3">
+            <h2 class="text-lg font-medium text-gray-800">
+              Hi, <span id="navbar-username"></span>
+            </h2>
+            <img id="navbar-profile-picture" src="" alt="Profile Picture"
+              class="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md">
+          </div>
         </a>
-        <form id="logoutForm" method="POST" action="{% url 'authentication:logout' %}" class="inline">
+        <form id="logoutForm" method="POST" 
+              action="{% url 'authentication:logout' %}" class="inline">
           {% csrf_token %}
-          <button type="submit" class="text-red-500 hover:text-red-600 font-medium transition">
+          <button type="submit" 
+            class="text-red-500 hover:text-red-600 font-medium transition">
             Logout
           </button>
         </form>
-      {% else %}
-        <a href="{% url 'authentication:login' %}" class="text-blue-600 hover:text-blue-700 font-medium transition">
-          Login
-        </a>
-        <a href="{% url 'authentication:register' %}" class="text-green-600 hover:text-green-700 font-medium transition">
-          Register
-        </a>
-      {% endif %}
+      </div>
     </div>
   </div>
 </nav>
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const STATIC_URL = "{% static '' %}";
+  const DUMMY_USER_IMAGE = STATIC_URL + "images/default-profile-picture.png";
+
+  const userInfo = document.getElementById("navbar-user-info");
+  const usernameEl = document.getElementById("navbar-username");
+  const profilePic = document.getElementById("navbar-profile-picture");
+  const loginLink = document.getElementById("navbar-login-link");
+  const registerLink = document.getElementById("navbar-register-link");
+  const profileLink = document.getElementById("navbar-profile-link");
+
+  try {
+    const response = await fetch("/main/current_user_json/");
+    const data = await response.json();
+
+    if (data.authenticated) {
+      // Tampilkan section user
+      userInfo.classList.remove("hidden");
+
+      usernameEl.textContent = data.username;
+      profilePic.src = data.profile_picture ? data.profile_picture : DUMMY_USER_IMAGE;
+
+      // Tentukan redirect berdasarkan role
+      if (data.role === "user") {
+        profileLink.href = `/profiles/user/${data.id}/`;
+      } else if (data.role === "admin") {
+        profileLink.href = `/profiles/admin/`;
+      } else if (data.role === "journalist") {
+        profileLink.href = `/profiles/journalist/`;
+      }
+    } else {
+      // Jika user belum login maka tampilkan login dan register
+      loginLink.classList.remove("hidden");
+      registerLink.classList.remove("hidden");
+    }
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    loginLink.classList.remove("hidden");
+    registerLink.classList.remove("hidden");
+  }
+});
+</script>
+{% endblock scripts %}
