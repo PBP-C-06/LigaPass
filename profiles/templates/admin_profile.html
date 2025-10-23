@@ -1,6 +1,6 @@
 <!-- Menampilkan admin profile -->
 
-{% extends "base_profiles.html" %}
+{% extends "components/base_profiles.html" %}
 {% load static %}
 
 {% block profile_content %}
@@ -12,7 +12,7 @@
             <img id="profile-picture" src="" alt="Foto Profil Admin" 
             class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md">
             <div>
-                <h2 class="text-3xl font-semibold text-gray-800 mb-1">
+                <h2 class="text-3xl font-semibold text-gray-800 mb-1 capitalize">
                     <span id="username"></span>
                 </h2>
             </div>

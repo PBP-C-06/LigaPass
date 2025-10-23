@@ -103,7 +103,9 @@ def show_json_admin_journalist(request):
             profile = getattr(user, 'adminjournalistprofile', None)
             data = {
                 "username": user.username,
-                "profile_picture": profile.profile_picture if profile and profile.profile_picture else None
+                "profile_picture": profile.profile_picture if profile and profile.profile_picture else None,
+                "total_news": profile.news_count if profile else 0,
+                "total_views": profile.total_news_views if profile else 0
             }
             return JsonResponse(data)
         else:
