@@ -73,29 +73,32 @@
         
         const form = e.target;
         const formData = new FormData(form);
-        
+        const csrftoken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+    
         try {
             const response = await fetch("{% url 'profiles:create_profile' %}", {
                 method: "POST",
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
                 body: formData,
             });
+    
+            const data = await response.json().catch(() => ({ message: "Terjadi kesalahan." }));
         
-            if (response.ok) {
-                showToast("Profil berhasil disimpan!", "success");
+            if (response.ok && data.ok) {
+                showToast(data.message, "success");
                 
                 setTimeout(() => {
                     window.location.href = "{% url 'main:home' %}";
                 }, 800);
             } else {
-                const errorData = await response.json().catch(() => ({ message: "Terjadi kesalahan." }));
-                const errorMessage = errorData.message || "Gagal menyimpan profil. Mohon periksa data Anda.";
-
-                showToast(errorMessage, "error");
+                showToast(data.message || "Terjadi kesalahan saat menyimpan profil.", "error");
             }
         } catch (error) {
             console.error("Fetch error:", error);
             showToast("Terjadi kesalahan saat mengirim data. Silakan coba lagi.", "error");
         }
     });
-</script>
+</script>    
 {% endblock content %}

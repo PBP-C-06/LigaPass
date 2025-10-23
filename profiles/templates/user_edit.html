@@ -123,35 +123,35 @@
 
     // Save button
     document.getElementById('profileForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
+    e.preventDefault();
 
-        const form = e.target;
-        const formData = new FormData(form);
+    const form = e.target;
+    const formData = new FormData(form);
 
-        try {
-            const response = await fetch("{% url 'profiles:edit_profile_for_user' person.id %}", {
-                method: "POST",
-                headers: {
-                    'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
-                },
-                body: formData,
-            });
+    try {
+        const response = await fetch("{% url 'profiles:edit_profile_for_user' person.id %}", {
+            method: "POST",
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+            },
+            body: formData,
+        });
 
-            if (response.ok) {
-                showToast("Berhasil menyimpan perubahan.", "success");
-                
-                // Reload page untuk menampilkan perubahan
-                setTimeout(() => {
-                    window.location.reload(); 
-                }, 1000);
-            } else {
-                const errorText = await response.text();
-                showToast("Terjadi kesalahan saat memuat profil pengguna: " + errorText.substring(0, 100) + "...", "error");
-            }
-        } catch (error) {
-            console.error("Fetch error:", error);
-            showToast("Terjadi kesalahan saat menyimpan profil pengguna. Cek kembali koneksi jaringan anda.", "error");
+        const data = await response.json().catch(() => ({ ok: false, message: "Terjadi kesalahan." }));
+
+        if (data.ok) {
+            showToast(data.message, "success");
+
+            // Reload page untuk menampilkan perubahan
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast(data.message || "Terjadi kesalahan saat menyimpan profil.", "error");
         }
-    });
+    } catch (error) {
+        console.error("Fetch error:", error);
+        showToast("Terjadi kesalahan saat menyimpan profil pengguna. Cek kembali koneksi jaringan anda.", "error");
+    }
+});
+
 </script>
 {% endblock profile_content %}
