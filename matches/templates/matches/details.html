@@ -9,23 +9,23 @@
   </div>
   <div class="flex justify-around items-center">
     <div class="text-center w-1/3">
-      <img src="{{ match.home_team.logo_url }}" alt="{{ match.home_team.name }} logo" class="w-24 h-24 mx-auto mb-2">
+      <img src="{{ match.home_team.display_logo_url }}" alt="{{ match.home_team.name }} logo" class="w-24 h-24 mx-auto mb-2">
       <h2 class="text-2xl font-bold text-slate-800">{{ match.home_team.name }}</h2>
     </div>
     <div class="text-center">
       <p id="score-display" class="text-5xl font-bold text-slate-900">{{ match.home_goals|default_if_none:"-" }} - {{ match.away_goals|default_if_none:"-" }}</p>
       <div id="status-container" class="mt-2">
         {% if match.status_key == 'Past' %}
-          <span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Finished</span>
+          <span id="status-badge" class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Finished</span>
         {% elif match.status_key == 'Ongoing' %}
-          <span class="bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse">LIVE</span>
+          <span id="status-badge" class="bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse">LIVE</span>
         {% else %}
-          <span class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Upcoming</span>
+          <span id="status-badge" class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Upcoming</span>
         {% endif %}
       </div>
     </div>
     <div class="text-center w-1/3">
-      <img src="{{ match.away_team.logo_url }}" alt="{{ match.away_team.name }} logo" class="w-24 h-24 mx-auto mb-2">
+      <img src="{{ match.away_team.display_logo_url }}" alt="{{ match.away_team.name }} logo" class="w-24 h-24 mx-auto mb-2">
       <h2 class="text-2xl font-bold text-slate-800">{{ match.away_team.name }}</h2>
     </div>
   </div>
@@ -58,4 +58,74 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+  const matchApiId = "{{ match.api_id }}";
+  let currentStatus = "{{ match.status_key }}";
+  const scoreDisplay = document.getElementById('score-display');
+  const statusContainer = document.getElementById('status-container');
+  const statusBadge = document.getElementById('status-badge');
+
+  function updateDom(homeGoals, awayGoals, statusShort, statusLong) {
+    // 1. Update Skor
+    scoreDisplay.textContent = `${homeGoals || '-'} - ${awayGoals || '-'}`;
+
+    // 2. Update Status dan UI
+    if (statusShort === 'FT') {
+      currentStatus = 'Past';
+      if (statusBadge) {
+        statusBadge.className = 'bg-red-500 text-white text-xs font-bold px-2 py-1 rounded';
+        statusBadge.textContent = 'Finished';
+      } else {
+        statusContainer.innerHTML = `<span id="status-badge" class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Finished</span>`;
+      }
+    } else if (statusShort !== 'NS') {
+      currentStatus = 'Ongoing';
+      if (statusBadge) {
+        statusBadge.className = 'bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse';
+        statusBadge.textContent = 'LIVE';
+      }
+    }
+  }
+
+  function startWebSocket() {
+    // Pastikan match memiliki API ID dan statusnya Ongoing
+    if (!matchApiId || currentStatus !== 'Ongoing') {
+      return;
+    }
+
+    // Ganti protokol http/https menjadi ws/wss
+    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+    const host = window.location.host;
+    // URL WebSocket: /ws/match/<match_api_id>/
+    const wsUrl = protocol + host + `/ws/match/${matchApiId}/`;
+    
+    const liveSocket = new WebSocket(wsUrl);
+
+    liveSocket.onmessage = function(e) {
+      const data = JSON.parse(e.data);
+      const message = data.message;
+      updateDom(message.home_goals, message.away_goals, message.status_short, message.status_long);
+    };
+
+    liveSocket.onclose = function(e) {
+      console.log('Live score socket closed unexpectedly. Attempting to reconnect...', e);
+      // Reconnect setelah 3 detik
+      setTimeout(startWebSocket, 3000); 
+    };
+
+    liveSocket.onerror = function(e) {
+      console.error('Live score socket error:', e);
+    };
+
+    liveSocket.onopen = function(e) {
+        console.log(`Live score socket connected for match ${matchApiId}`);
+    };
+  }
+
+  // Mulai koneksi WebSocket jika pertandingan sedang berlangsung
+  if (currentStatus === 'Ongoing') {
+    startWebSocket();
+  }
+</script>
 {% endblock %}
