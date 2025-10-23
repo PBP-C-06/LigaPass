@@ -3,6 +3,16 @@
 {% block content %}
 {% include "components/step_wizard.html" with step=1 %}
 <div class="bg-white max-w-4xl mx-auto p-8 rounded-xl shadow-lg border border-slate-200">
+  {% if user.is_authenticated and user.role == 'admin' %}
+    <div class="text-right mb-4">
+        <a href="{% url 'matches:edit_match' match.id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors inline-flex items-center space-x-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-5.646 5.646l-1.55 1.55a4 4 0 00-1.127 2.518V16h2.518a4 4 0 002.517-1.127l1.55-1.55-2.828-2.828z" />
+            </svg>
+            <span>Edit Pertandingan</span>
+        </a>
+    </div>
+  {% endif %}
   <div class="text-center mb-6">
     <p class="text-slate-500">{{ match.date|date:"l, d F Y - H:i" }} WIB</p>
     <p class="text-slate-600">{{ match.venue.name }}, {{ match.venue.city }}</p>
@@ -79,8 +89,7 @@
 
   let timerInterval; 
   let elapsedSeconds = 0;
-  // Konstanta untuk jeda Half Time dalam detik
-  const HALF_TIME_BREAK_SECONDS = 15 * 60; // 15 menit
+  const HALF_TIME_BREAK_SECONDS = 15 * 60; 
 
   function parseTimeStringToSeconds(timeStr) {
     if (typeof timeStr !== 'string' || !timeStr.includes(':')) {
@@ -115,11 +124,9 @@
             elapsedTimeElement.textContent = formatElapsed(elapsedSeconds);
         }
         
-        // --- LOGIKA MANUAL HALF TIME (Hanya berlaku untuk match manual) ---
         if ((!matchApiId || matchApiId === 'None') && elapsedSeconds === (45 * 60)) {
             handleManualHalfTime();
         }
-        // -----------------------------------------------------------------
 
     }, 1000);
   }
@@ -129,34 +136,29 @@
     
     const halfTimeStart = 45 * 60;
     
-    // Perbarui UI menjadi Half Time
     if (statusBadge) {
       statusBadge.className = 'bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded';
       statusBadge.textContent = 'Half Time';
     }
     if (elapsedTimeElement) {
-      elapsedTimeElement.textContent = '45:00'; // Bekukan waktu di 45:00
+      elapsedTimeElement.textContent = '45:00';
     }
     
     console.log("Manual Half Time reached. Resuming in 15 minutes.");
 
-    // Set timeout untuk melanjutkan timer setelah jeda 15 menit
     setTimeout(() => {
         console.log("Resuming from Half Time break.");
         
-        // Lanjutkan timer dari 45:00, dihitung sebagai 45 menit pertama + jeda 15 menit (total 60 menit)
         const resumedSeconds = (45 * 60) + (15 * 60); 
         
-        // Atur UI kembali ke LIVE
         if (statusBadge) {
             statusBadge.className = 'bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse';
             statusBadge.textContent = 'LIVE';
         }
         
-        // Mulai timer lagi
         startTimer(resumedSeconds);
 
-    }, HALF_TIME_BREAK_SECONDS * 1000); // 15 menit * 1000 ms
+    }, HALF_TIME_BREAK_SECONDS * 1000);
   }
 
 
@@ -188,7 +190,6 @@
       }
       if (topTimerContainer) topTimerContainer.remove(); 
     } else if (statusShort === 'HT') {
-      // API Half Time: Timer berhenti dan dibekukan
       currentStatus = 'Half Time';
       stopTimer(); 
       if (statusBadge) {
@@ -200,7 +201,6 @@
       }
 
     } else if (statusShort !== 'NS') {
-      // Ongoing (LIVE)
       currentStatus = 'Ongoing';
       if (statusBadge) {
         statusBadge.className = 'bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded animate-pulse';
@@ -211,7 +211,6 @@
         elapsedTimeElement.textContent = elapsed ? formatElapsed(elapsed) : '0:00';
       }
 
-      // Kalibrasi ulang timer dan mulai
       if (!timerInterval || (Math.abs(elapsedSeconds - elapsed) > 5)) {
           startTimer(elapsed);
       }
@@ -233,23 +232,19 @@
             
             if (localElapsedSeconds < 0) localElapsedSeconds = 0;
 
-            // Jika pertandingan manual sudah melewati 45 menit + 15 menit jeda,
-            // atur waktu awal agar langsung memasuki babak kedua.
             if (localElapsedSeconds > (45 * 60) && localElapsedSeconds < (45 * 60) + HALF_TIME_BREAK_SECONDS) {
-                // Berada di dalam jeda istirahat
-                localElapsedSeconds = 45 * 60; // Paksa 45:00
-                updateDom(null, null, 'HT', 'Half Time', localElapsedSeconds);
+                let statusTime = 45 * 60; 
+                updateDom(null, null, 'HT', 'Half Time', statusTime);
                 
-                // Panggil handleManualHalfTime untuk mengatur timeout lanjutan
-                handleManualHalfTime(); 
+                let timeSpentInBreak = localElapsedSeconds - (45 * 60);
+                
+                setTimeout(() => handleManualHalfTime(), (HALF_TIME_BREAK_SECONDS - timeSpentInBreak) * 1000);
                 return;
                 
             } else if (localElapsedSeconds >= (45 * 60) + HALF_TIME_BREAK_SECONDS) {
-                // Sudah selesai istirahat, lanjutkan hitungan
                 localElapsedSeconds -= HALF_TIME_BREAK_SECONDS; 
             }
             
-            // Lanjutkan atau mulai timer
             updateDom(null, null, 'LIVE', 'Ongoing', localElapsedSeconds);
         }, 1000);
         
@@ -270,7 +265,6 @@
       const data = JSON.parse(e.data);
       const message = data.message;
       
-      // Update untuk API
       updateDom(message.home_goals, message.away_goals, message.status_short, message.status_long, message.elapsed);
     };
 
@@ -288,7 +282,6 @@
     };
   }
 
-  // Mulai koneksi/timer segera
   if (currentStatus === 'Ongoing') {
     startWebSocket();
   }
