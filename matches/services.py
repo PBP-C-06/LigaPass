@@ -10,34 +10,71 @@ CACHE_TIMEOUT = 60 * 60 * 24
 
 # --- PEMETAAN NAMA TIM SECARA HARDCODE ---
 TEAM_NAME_STANDARDIZATION = {
+    # 1
     "arema": "Arema FC",
     "arema fc": "Arema FC",
+
+    # 2
     "bali united": "Bali United FC",
     "bali united fc": "Bali United FC",
+
+    # 3
     "bhayangkara": "Bhayangkara Presisi Lampung FC",
     "bhayangkara fc": "Bhayangkara Presisi Lampung FC",
     "bhayangkara presisi indonesia": "Bhayangkara Presisi Lampung FC",
     "bhayangkara presisi indonesia fc": "Bhayangkara Presisi Lampung FC",
+
+    #4
     "pusamania borneo": "Borneo Samarinda FC",
     "borneo samarinda": "Borneo Samarinda FC",
+    
+    # 5
     "dewa united": "Dewa United Banten FC",
     "dewa united fc": "Dewa United Banten FC",
+    
+    # 6
     "madura united": "Madura United FC",
     "persepam madura utd": "Madura United FC",
+    
+    # 7
     "malut united": "Malut United FC",
+    
+    # 8
     "persebaya surabaya": "Persebaya Surabaya",
+    
+    # 9
     "persib bandung": "Persib Bandung",
+
+    # 10
     "persija jakarta": "Persija Jakarta",
+
+    # 11
     "persijap jepara": "Persijap Jepara",
+
+    # 12
     "persik": "Persik Kediri",
     "persik kediri": "Persik Kediri",
+
+    # 13
     "persis solo": "Persis Solo",
+
+    # 14
     "persita": "Persita Tangerang",
+
+    # 15
     "psbs biak numfor": "PSBS Biak Numfor",
+    
+    # 16
     "psim yogyakarta": "PSIM Yogyakarta",
+    
+    # 17
     "psm makassar": "PSM Makassar",
+
+    # 18
     "semen padang": "Semen Padang FC",
     "semen padang fc": "Semen Padang FC",
+    
+    # Tim tidak bermain di liga super 2025
     "psis semarang": "PSIS Semarang",
     "pss sleman": "PSS Sleman",
     "cilegon united": "Cilegon United",
