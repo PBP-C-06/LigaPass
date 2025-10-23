@@ -1,43 +1,20 @@
-{% extends 'base.html' %}
 {% load static %}
 
-{% block content %}
-<div class="max-w-3xl mx-auto px-4 py-8">
-
-  <!-- Header dan Filter -->
-  <div class="flex items-center justify-between flex-wrap gap-4">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900">Review Pertandingan</h1>
-      <div class="text-gray-600">
-        {{ match.home_team.name }} vs {{ match.away_team.name }} • {{ match.date|date:"d M Y H:i" }}
-      </div>
-    </div>
-
-    <!-- Dropdown Filter -->
-    <form method="get" action="{% url 'reviews:user_review_entry' %}" class="flex items-center gap-2">
-      <select name="team" class="border rounded px-3 py-2">
-        <option value="">— Pilih Tim —</option>
-        {% for t in teams %}
-          <option value="{{ t.name }}" {% if selected_team == t.name %}selected{% endif %}>
-            {{ t.name }}
-          </option>
-        {% endfor %}
-      </select>
-      <button type="submit" class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Filter</button>
-    </form>
-  </div>
-
-  <!-- Tombol Aksi -->
-  <div class="mt-6 mb-4">
+<div class="bg-white p-6 rounded-2xl shadow mt-8">
+  <div class="flex items-center justify-between mb-4">
     {% if my_review %}
-      <button id="btn-edit" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Edit Review Saya</button>
+      <button id="btn-edit" class="border border-blue-500 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition">
+        Edit Review
+      </button>
     {% else %}
-      <button id="btn-add" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Tambah Review</button>
+      <button id="btn-add" class="border border-green-500 text-green-600 px-4 py-2 rounded-lg hover:bg-green-50 transition">
+        Review
+      </button>
     {% endif %}
   </div>
 
-  <!-- Daftar Review -->
-  <div id="reviews-list" class="bg-white rounded-xl shadow p-4 space-y-4">
+  <!-- Review List -->
+  <div id="reviews-list" class="space-y-4">
     {% for review in reviews %}
       {% include "reviews/_review_item.html" %}
     {% empty %}
@@ -46,92 +23,57 @@
   </div>
 </div>
 
-<!-- Modal Pop-up -->
-<div id="review-modal" class="fixed inset-0 hidden items-center justify-center z-40">
+<!-- Modal -->
+<div id="review-modal" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="absolute inset-0 bg-black/40" onclick="closeModal()"></div>
-  <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md p-5">
-    <h2 id="modal-title" class="text-lg font-semibold mb-3">Tambah/Edit Review</h2>
-
-    <form id="review-form" class="space-y-3">
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <h2 id="modal-title" class="text-lg font-semibold text-center mb-4">
+      {{ my_review|yesno:"Edit Your Review,Give Your Review" }}
+    </h2>
+    <form id="review-form" class="space-y-4">
       {% csrf_token %}
-      <label class="block">
-        <span class="text-sm font-medium">Rating (1–5)</span>
-        <input type="number" name="rating" id="rating" min="1" max="5" required
-               class="mt-1 w-full rounded border px-3 py-2 focus:ring focus:ring-blue-200" />
-      </label>
-
-      <label class="block">
-        <span class="text-sm font-medium">Komentar</span>
-        <textarea name="comment" id="comment" rows="4"
-                  class="mt-1 w-full rounded border px-3 py-2 focus:ring focus:ring-blue-200"
-                  placeholder="Tulis komentar (opsional)"></textarea>
-      </label>
-
-      <div class="flex items-center justify-end gap-2 pt-2">
-        <button type="button" class="px-4 py-2 rounded border" onclick="closeModal()">Batal</button>
-        <button type="submit" id="submit-btn" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">
-          Simpan
-        </button>
+      <div class="text-center">
+        <p class="text-gray-600 mb-2">How was your experience?</p>
+        <div id="star-container" class="flex justify-center space-x-2 text-3xl text-gray-300 cursor-pointer">
+          {% for i in "12345" %}
+            <span class="star" data-value="{{ forloop.counter }}">★</span>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="rating" id="rating" required>
       </div>
+
+      <textarea name="comment" id="comment" rows="4"
+                class="w-full border rounded-lg p-3 text-gray-700 focus:ring focus:ring-blue-200"
+                placeholder="Tulis pengalamanmu di pertandingan ini...">{{ my_review.comment|default_if_none:"" }}</textarea>
+
+      <button type="submit"
+              class="w-full py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition">
+        Send Now
+      </button>
     </form>
   </div>
 </div>
 
-<!-- Toast Manual -->
-<div id="toast-component"
-     class="fixed bottom-8 right-8 px-5 py-3 rounded-xl shadow-xl z-50 opacity-0 pointer-events-none bg-gray-900 text-white transition-opacity duration-300">
-  <div class="flex items-start gap-3">
-    <span id="toast-icon" class="text-xl">✅</span>
-    <div>
-      <h3 id="toast-title" class="font-bold">Berhasil</h3>
-      <p id="toast-message" class="text-sm opacity-90">Aksi berhasil dilakukan.</p>
-    </div>
-  </div>
-</div>
-
-<!-- JSON Data untuk JS -->
-{% if my_review %}
-  {{ my_review|json_script:"review-data" }}
-{% else %}
-  <script id="review-data" type="application/json">null</script>
-{% endif %}
-<script id="autopop-data" type="application/json">{{ autopop|yesno:"true,false" }}</script>
-{% endblock content %}
-
-{% block scripts %}
 <script>
-  // --- CSRF Helper ---
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-  }
-  const CSRF_TOKEN = getCookie('csrftoken');
-
-  // --- Toast ---
-  function showToast(title, message) {
-    const el = document.getElementById("toast-component");
-    document.getElementById("toast-title").innerText = title;
-    document.getElementById("toast-message").innerText = message;
-    el.classList.remove("opacity-0");
-    el.classList.add("opacity-100");
-    setTimeout(() => {
-      el.classList.remove("opacity-100");
-      el.classList.add("opacity-0");
-    }, 2500);
-  }
-
-  // --- Data JSON dari server ---
-  const MY_REVIEW = JSON.parse(document.getElementById("review-data").textContent);
-  const AUTOPOP = JSON.parse(document.getElementById("autopop-data").textContent);
-
-  // --- Modal Helpers ---
   const modal = document.getElementById("review-modal");
-  function openModal(mode, current) {
-    document.getElementById("modal-title").innerText =
-      mode === "edit" ? "Edit Review Saya" : "Tambah Review";
-    document.getElementById("rating").value = current?.rating || "";
-    document.getElementById("comment").value = current?.comment || "";
+  const stars = document.querySelectorAll(".star");
+  let selectedRating = {{ my_review.rating|default:0 }};
+
+  function highlightStars(r) {
+    stars.forEach((s, i) => {
+      s.classList.toggle("text-yellow-400", i < r);
+      s.classList.toggle("text-gray-300", i >= r);
+    });
+    document.getElementById("rating").value = r;
+  }
+  highlightStars(selectedRating);
+
+  stars.forEach(star => star.addEventListener("click", () => {
+    selectedRating = parseInt(star.dataset.value);
+    highlightStars(selectedRating);
+  }));
+
+  function openModal() {
     modal.classList.remove("hidden");
     modal.classList.add("flex");
   }
@@ -140,57 +82,36 @@
     modal.classList.remove("flex");
   }
 
-  // --- Tombol Add/Edit ---
+  // tombol add/edit
   const btnAdd = document.getElementById("btn-add");
   const btnEdit = document.getElementById("btn-edit");
-  if (btnAdd) btnAdd.addEventListener("click", () => openModal("add", null));
-  if (btnEdit) btnEdit.addEventListener("click", () => openModal("edit", MY_REVIEW));
+  if (btnAdd) btnAdd.addEventListener("click", openModal);
+  if (btnEdit) btnEdit.addEventListener("click", openModal);
 
-  // --- Auto Pop Modal (kalau diarahkan & belum review) ---
-  if (AUTOPOP) openModal("add", null);
-
-  // --- Submit AJAX ---
-  const form = document.getElementById("review-form");
-  form.addEventListener("submit", async (e) => {
+  // submit form
+  document.getElementById("review-form").addEventListener("submit", async e => {
     e.preventDefault();
-
     const rating = document.getElementById("rating").value;
     const comment = document.getElementById("comment").value;
-    const isEdit = !!MY_REVIEW;
 
-    const endpoint = isEdit
-      ? "{% url 'reviews:api_update_review' match.id %}"
-      : "{% url 'reviews:api_create_review' match.id %}";
-
+    const endpoint = "{% if my_review %}{% url 'reviews:api_update_review' match.id %}{% else %}{% url 'reviews:api_create_review' match.id %}{% endif %}";
     const formData = new FormData();
     formData.append("rating", rating);
     formData.append("comment", comment);
 
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: { "X-CSRFToken": CSRF_TOKEN },
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
       body: formData
     });
 
     const data = await res.json();
-    if (!data.ok) {
-      showToast("Gagal", data.message || "Terjadi kesalahan.");
-      return;
-    }
-
-    const list = document.getElementById("reviews-list");
-    const existing = document.getElementById(`review-${data.review_id}`);
-    if (existing) {
-      existing.outerHTML = data.item_html;
+    if (data.ok) {
+      closeModal();
+      document.getElementById("reviews-list").insertAdjacentHTML("afterbegin", data.item_html);
+      alert("Review berhasil disimpan!");
     } else {
-      list.insertAdjacentHTML("afterbegin", data.item_html);
-      if (btnAdd) {
-        btnAdd.outerHTML = '<button id="btn-edit" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Edit Review Saya</button>';
-      }
+      alert(data.message || "Gagal menyimpan review.");
     }
-
-    closeModal();
-    showToast("Berhasil", data.message || (isEdit ? "Review diperbarui" : "Review ditambahkan"));
   });
 </script>
-{% endblock scripts %}
