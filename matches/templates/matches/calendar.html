@@ -3,63 +3,429 @@
 {% block content %}
 <div class="max-w-4xl mx-auto">
   <h1 class="text-3xl font-bold text-center mb-6 text-slate-800">Kalender Pertandingan</h1>
-  <form method="GET" action="{% url 'matches:calendar' %}" class="mb-8 mt-6">
+  
+  <form id="search-filter-form" method="GET" action="{% url 'matches:calendar' %}" class="mb-8 mt-6 space-y-4">
     <div class="flex">
-      <input type="text" name="q" placeholder="Cari nama tim..." value="{{ request.GET.q }}"
-        class="w-full p-3 rounded-l-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400">
-      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-r-lg transition">
-        Cari
-      </button>
+      <input type="text" name="q" id="search-input" placeholder="Cari nama tim..." value="{{ search_query|default:'' }}"
+        class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400">
     </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <select id="date-mode-filter" class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <option value="single">Tanggal Tertentu</option>
+          <option value="range">Rentang Tanggal</option>
+      </select>
+
+      <input type="date" name="date_start" id="date-start-filter" 
+        class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400"
+        placeholder="Tanggal Mulai">
+      
+      <input type="date" name="date_end" id="date-end-filter" 
+        class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400 hidden"
+        placeholder="Tanggal Akhir">
+    </div>
+
+    <div class="grid grid-cols-1">
+        <select name="venue" id="venue-filter"
+          class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <option value="">Semua Tempat</option>
+          {% for venue in venues %}
+              <option value="{{ venue.id }}">{{ venue.name }}, {{ venue.city }}</option>
+          {% endfor %}
+        </select>
+    </div>
+
   </form>
 
   {% if user.is_authenticated and user.role == 'admin' %}
     <div class="text-center mb-4">
-      <a href="{% url 'matches:update_from_api' %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition">
+      <button id="update-api-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition">
         Update Data dari API
-      </a>
+      </button>
     </div>
   {% endif %}
 
-  {% if messages %}
-    {% for message in messages %}
-      <div class="bg-green-100 border border-green-300 text-green-800 p-3 rounded-lg mb-4 text-center">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
-
-  {% if not grouped_matches.Upcoming and not grouped_matches.Ongoing and not grouped_matches.Past %}
-    <div class="bg-slate-50 border border-slate-200 p-6 rounded-lg text-center">
-      <p class="text-slate-600">Tidak ada pertandingan yang ditemukan.</p>
-    </div>
-  {% endif %}
-
-  {% if grouped_matches.Upcoming %}
-    <h2 class="text-2xl font-semibold border-b-2 border-slate-200 pb-2 mb-4 text-slate-800">Upcoming</h2>
-    <div class="space-y-4">
-      {% for match in grouped_matches.Upcoming %}
-        {% include 'matches/match_card.html' with match=match %}
+  <div id="messages-container">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="bg-green-100 border border-green-300 text-green-800 p-3 rounded-lg mb-4 text-center">
+          {{ message }}
+        </div>
       {% endfor %}
-    </div>
-  {% endif %}
+    {% endif %}
+  </div>
 
-  {% if grouped_matches.Ongoing %}
-    <h2 class="text-2xl font-semibold border-b-2 border-slate-200 pb-2 mb-4 mt-8 text-slate-800">Ongoing</h2>
-    <div class="space-y-4">
-      {% for match in grouped_matches.Ongoing %}
-        {% include 'matches/match_card.html' with match=match %}
-      {% endfor %}
-    </div>
-  {% endif %}
+  <div class="flex border-b border-slate-300 mb-6">
+    <button data-status="Upcoming" class="tab-button px-4 py-2 text-lg font-semibold border-b-2 border-transparent transition duration-150 hover:text-blue-600" data-active="true">Upcoming</button>
+    <button data-status="Ongoing" class="tab-button px-4 py-2 text-lg font-semibold border-b-2 border-transparent transition duration-150 hover:text-blue-600">Ongoing</button>
+    <button data-status="Past" class="tab-button px-4 py-2 text-lg font-semibold border-b-2 border-transparent transition duration-150 hover:text-blue-600">Past</button>
+  </div>
+  
+  <div id="matches-container">
+    <div class="text-center py-8 text-gray-500">Memuat data pertandingan...</div>
+  </div>
 
-  {% if grouped_matches.Past %}
-    <h2 class="text-2xl font-semibold border-b-2 border-slate-200 pb-2 mb-4 mt-8 text-slate-800">Past</h2>
-    <div class="space-y-4">
-      {% for match in grouped_matches.Past %}
-        {% include 'matches/match_card.html' with match=match %}
-      {% endfor %}
-    </div>
-  {% endif %}
+  <div class="bg-slate-50 border border-slate-200 p-6 rounded-lg text-center hidden" id="no-matches-found">
+    <p class="text-slate-600">Tidak ada pertandingan yang ditemukan.</p>
+  </div>
+
+  <div id="loading-overlay" class="fixed inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 opacity-0 z-10">
+    <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+const CSRF_TOKEN = getCookie('csrftoken');
+
+function renderMatchCard(match) {
+  const isPast = match.status_key === 'Past';
+  const dateParts = match.date.split(' @ ');
+  const matchTime = dateParts[1] || '';
+  const matchDate = dateParts[0] || '';
+
+  const scoreDisplay = isPast 
+    ? `${match.home_goals != null ? match.home_goals : '0'} - ${match.away_goals != null ? match.away_goals : '0'}` 
+    : 'VS';
+
+  return `
+    <a href="${match.details_url}" class="relative block bg-white border border-slate-200 p-4 rounded-lg hover:shadow-md hover:scale-[1.01] transition">
+      <div class="flex items-center justify-center">
+        <div class="flex-1 text-right text-slate-800 font-semibold">${match.home_team_name}</div>
+        <img src="${match.home_logo_url}" alt="${match.home_team_name} logo" class="w-8 h-8 mx-2">
+        <div class="text-xl font-bold text-slate-900">${scoreDisplay}</div>
+        <img src="${match.away_logo_url}" alt="${match.away_team_name} logo" class="w-8 h-8 mx-2">
+        <div class="flex-1 text-left text-slate-800 font-semibold">${match.away_team_name}</div>
+      </div>
+      <div class="absolute top-3 right-4 text-right text-xs text-slate-500">
+        <p>${matchDate}</p>
+        <p>${matchTime}</p>
+      </div>
+    </a>
+  `;
+}
+
+const STATUS_MESSAGES = {
+  'Upcoming': 'Tidak ada pertandingan yang dijadwalkan dalam waktu dekat.',
+  'Ongoing': 'Tidak ada pertandingan yang sedang berlangsung saat ini.',
+  'Past': 'Belum ada riwayat pertandingan yang tercatat.',
+};
+
+let activeStatus = 'Upcoming'; 
+const STATUS_ORDER = ['Upcoming', 'Ongoing', 'Past'];
+
+function renderFilteredMatches(data) {
+  const container = document.getElementById('matches-container');
+  const noMatchesEl = document.getElementById('no-matches-found');
+  
+  let totalMatchesRendered = 0;
+  container.innerHTML = ''; 
+
+  const matchesToRender = data.grouped_matches[activeStatus] || [];
+
+  if (matchesToRender.length > 0) {
+    let listHtml = `<div class="space-y-4">`;
+    matchesToRender.forEach(match => {
+      listHtml += renderMatchCard(match);
+    });
+    listHtml += `</div>`;
+    
+    container.innerHTML += listHtml;
+    totalMatchesRendered = matchesToRender.length;
+    noMatchesEl.classList.add('hidden');
+
+  } else {
+    const emptyHtml = `
+      <div class="bg-slate-50 border border-slate-200 p-6 rounded-lg text-center mb-8">
+        <p class="text-slate-600">${STATUS_MESSAGES[activeStatus]}</p>
+      </div>`;
+    container.innerHTML += emptyHtml;
+    noMatchesEl.classList.add('hidden');
+  }
+
+  const totalMatchesInDatabase = data.grouped_matches.Upcoming.length + data.grouped_matches.Ongoing.length + data.grouped_matches.Past.length;
+  
+  if (totalMatchesInDatabase === 0 && (document.getElementById('search-input').value || document.getElementById('date-start-filter').value || document.getElementById('venue-filter').value)) {
+    container.innerHTML = `<p class='text-center text-red-500 py-8'>Tidak ditemukan pertandingan dengan filter tersebut.</p>`;
+  }
+}
+
+let debounceTimer;
+let isFetching = false;
+
+function setLoadingState(isLoading) {
+  const matchesContainer = document.getElementById('matches-container');
+  const overlay = document.getElementById('loading-overlay');
+
+  if (isLoading) {
+    isFetching = true;
+    matchesContainer.classList.add('opacity-50', 'pointer-events-none');
+    overlay.classList.remove('opacity-0');
+    overlay.classList.add('opacity-100');
+  } else {
+    isFetching = false;
+    matchesContainer.classList.remove('opacity-50', 'pointer-events-none');
+    overlay.classList.add('opacity-0');
+    overlay.classList.remove('opacity-100');
+  }
+}
+
+async function fetchFilteredMatches() {
+  clearTimeout(debounceTimer);
+  
+  if (isFetching) return;
+
+  const searchInput = document.getElementById('search-input');
+  const dateModeFilter = document.getElementById('date-mode-filter');
+  const dateStartFilter = document.getElementById('date-start-filter');
+  const dateEndFilter = document.getElementById('date-end-filter');
+  const venueFilter = document.getElementById('venue-filter');
+  
+  const query = searchInput.value.trim();
+  const dateMode = dateModeFilter.value;
+  const dateStart = dateStartFilter.value;
+  const dateEnd = dateEndFilter.value;
+  const venue = venueFilter.value;
+
+  // Cek apakah ada filter yang aktif
+  const hasFilterInput = query.length >= 1 || dateStart || dateEnd || venue;
+
+  // Panggil fetch jika query kosong (untuk load awal) atau jika ada input filter
+  if (query.length === 0 || hasFilterInput) { 
+    
+    debounceTimer = setTimeout(async () => {
+      const url = "{% url 'matches:api_calendar' %}"; 
+      
+      const params = new URLSearchParams();
+      if (query) params.append('q', query);
+      
+      // Logika Penentuan Filter Tanggal
+      if (dateStart) {
+          params.append('date_start', dateStart);
+          if (dateMode === 'range' && dateEnd) {
+              params.append('date_end', dateEnd);
+          }
+      }
+
+      if (venue) params.append('venue', venue);
+
+      setLoadingState(true);
+      
+      try {
+        const response = await fetch(`${url}?${params.toString()}`, {
+          method: 'GET',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest' 
+          },
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          renderFilteredMatches(data);
+          // Update URL
+          const newQueryString = params.toString() ? `?${params.toString()}` : `{% url 'matches:calendar' %}`;
+          history.replaceState(null, '', newQueryString);
+        } else {
+          document.getElementById('matches-container').innerHTML = `<p class='text-center text-red-500 py-8'>Gagal memuat hasil pencarian.</p>`;
+        }
+
+      } catch (error) {
+        console.error("AJAX Search/Filter Error:", error);
+        document.getElementById('matches-container').innerHTML = `<p class='text-center text-red-500 py-8'>Error jaringan saat mencari.</p>`;
+      } finally {
+        setLoadingState(false);
+      }
+    }, 300);
+  }
+}
+
+
+// --- Fungsi untuk menangani Tab Click ---
+function handleTabClick(event) {
+    const newStatus = event.currentTarget.dataset.status;
+    
+    activeStatus = newStatus;
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('text-blue-600', 'border-blue-600');
+        btn.classList.add('border-transparent');
+    });
+    event.currentTarget.classList.add('text-blue-600', 'border-blue-600');
+    
+    fetchFilteredMatches();
+}
+
+// --- Fungsi untuk menampilkan/menyembunyikan input tanggal akhir ---
+function toggleDateEndInput() {
+    const dateModeFilter = document.getElementById('date-mode-filter');
+    const dateEndFilter = document.getElementById('date-end-filter');
+    
+    if (dateModeFilter.value === 'range') {
+        dateEndFilter.classList.remove('hidden');
+        // Ubah grid untuk menampung 3 kolom
+        document.querySelector('#search-filter-form > div:nth-child(2)').classList.remove('md:grid-cols-2');
+        document.querySelector('#search-filter-form > div:nth-child(2)').classList.add('md:grid-cols-3');
+    } else {
+        dateEndFilter.classList.add('hidden');
+        dateEndFilter.value = ''; // Hapus nilai jika beralih ke single date
+        // Ubah grid kembali ke 2 kolom
+        document.querySelector('#search-filter-form > div:nth-child(2)').classList.remove('md:grid-cols-3');
+        document.querySelector('#search-filter-form > div:nth-child(2)').classList.add('md:grid-cols-2');
+    }
+    
+    // Panggil fetch setiap kali mode berubah
+    fetchFilteredMatches();
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  const updateApiBtn = document.getElementById('update-api-btn');
+  const messagesContainer = document.getElementById('messages-container');
+  const searchInput = document.getElementById('search-input');
+  const dateModeFilter = document.getElementById('date-mode-filter');
+  const dateStartFilter = document.getElementById('date-start-filter');
+  const dateEndFilter = document.getElementById('date-end-filter');
+  const venueFilter = document.getElementById('venue-filter');
+  const tabButtons = document.querySelectorAll('.tab-button');
+  
+  // --- Inisialisasi State Awal dari URL ---
+  const params = new URLSearchParams(window.location.search);
+  const initialQuery = params.get('q') || '';
+  const initialDateStart = params.get('date_start') || '';
+  const initialDateEnd = params.get('date_end') || '';
+  const initialVenue = params.get('venue') || '';
+
+  // Tentukan mode awal berdasarkan parameter URL
+  let initialMode = 'single';
+  if (initialDateEnd) {
+      initialMode = 'range';
+  }
+  
+  // Set nilai input dari URL
+  searchInput.value = initialQuery;
+  dateStartFilter.value = initialDateStart;
+  venueFilter.value = initialVenue;
+  
+  // Atur mode dan tampilkan/sembunyikan input end date
+  dateModeFilter.value = initialMode;
+  dateEndFilter.value = initialDateEnd;
+  toggleDateEndInput(); // Panggil ini untuk mengatur visibility & grid awal
+
+  // Inisialisasi Tab Aktif Pertama Kali
+  const urlStatus = params.get('status');
+  if (urlStatus && STATUS_ORDER.includes(urlStatus)) {
+      activeStatus = urlStatus;
+  }
+  const activeTab = document.querySelector(`.tab-button[data-status="${activeStatus}"]`);
+  if (activeTab) {
+      activeTab.classList.add('text-blue-600', 'border-blue-600');
+  } else {
+      // Pastikan Upcoming aktif jika tidak ada status di URL
+      document.querySelector(`.tab-button[data-status="Upcoming"]`).classList.add('text-blue-600', 'border-blue-600');
+  }
+  
+
+
+  // --- Logika Admin API Update (Tidak Berubah) ---
+  if (updateApiBtn) {
+    updateApiBtn.addEventListener('click', async function() {
+      const url = "{% url 'matches:update_from_api' %}";
+      
+      updateApiBtn.disabled = true;
+      const originalText = updateApiBtn.textContent;
+      
+      messagesContainer.innerHTML = '';
+      const statusDiv = document.createElement('div');
+      statusDiv.className = 'bg-yellow-100 border border-yellow-300 text-yellow-800 p-3 rounded-lg mb-4 text-center flex items-center justify-center space-x-2';
+      statusDiv.innerHTML = `
+        <svg class="animate-spin h-5 w-5 text-yellow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        <span>Sedang menjalankan sinkronisasi data dari API.</span>`;
+      messagesContainer.appendChild(statusDiv);
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': CSRF_TOKEN,
+            'X-Requested-With': 'XMLHttpRequest' 
+          },
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'success') {
+          statusDiv.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
+          statusDiv.classList.add('bg-green-100', 'border-green-300', 'text-green-800');
+          statusDiv.innerHTML = data.message || 'Sinkronisasi berhasil! Memuat ulang halaman...';
+          
+          setTimeout(() => {
+            window.location.reload(); 
+          }, 1500); 
+
+        } else {
+          statusDiv.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
+          statusDiv.classList.add('bg-red-100', 'border-red-300', 'text-red-800');
+          statusDiv.innerHTML = data.message || `Error (${response.status}): Sinkronisasi gagal.`;
+          updateApiBtn.disabled = false;
+          updateApiBtn.textContent = originalText;
+        }
+        
+      } catch (error) {
+        console.error("API Update Error:", error);
+        statusDiv.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
+        statusDiv.classList.add('bg-red-100', 'border-red-300', 'text-red-800');
+        statusDiv.innerHTML = `Error Jaringan. Coba lagi.`;
+        updateApiBtn.disabled = false;
+        updateApiBtn.textContent = originalText;
+      }
+    });
+  }
+  
+  // Event Listeners untuk Filter (Search, Date, Venue) dan Tabs
+  searchInput.addEventListener('input', function() {
+    fetchFilteredMatches();
+  });
+  dateModeFilter.addEventListener('change', toggleDateEndInput);
+  dateStartFilter.addEventListener('change', fetchFilteredMatches);
+  dateEndFilter.addEventListener('change', fetchFilteredMatches);
+  venueFilter.addEventListener('change', fetchFilteredMatches);
+
+  // Event Listeners untuk Tabs
+  tabButtons.forEach(btn => btn.addEventListener('click', handleTabClick));
+
+
+  // Pemicu saat tombol 'back' ditekan (untuk memuat hasil filter yang benar)
+  window.addEventListener('popstate', function(event) {
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('q') || '';
+    const dateStart = params.get('date_start') || '';
+    const dateEnd = params.get('date_end') || '';
+    const venue = params.get('venue') || '';
+    
+    // Tentukan mode berdasarkan data URL
+    let mode = 'single';
+    if (dateEnd) mode = 'range';
+    
+    // Update input field
+    searchInput.value = query; 
+    dateStartFilter.value = dateStart;
+    dateEndFilter.value = dateEnd;
+    venueFilter.value = venue;
+    dateModeFilter.value = mode;
+    
+    // Panggil fetch segera tanpa debounce saat popstate
+    fetchFilteredMatches();
+  });
+  
+  // Pemuatan awal - SELALU panggil
+  fetchFilteredMatches();
+});
+</script>
 {% endblock %}

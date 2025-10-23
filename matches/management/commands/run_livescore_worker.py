@@ -1,4 +1,3 @@
-import asyncio
 import time
 from datetime import timedelta
 import requests
@@ -19,66 +18,83 @@ class Command(BaseCommand):
         while True:
             try:
                 now = timezone.now()
-                # Menggunakan margin aman 4 jam untuk mencakup pertandingan yang:
-                # 1. Sedang berlangsung (Ongoing) sesuai definisi 2.5 jam di views.
-                # 2. Baru saja selesai tetapi API belum mengirim status FT atau status FT belum terkirim ke DB.
                 safe_past_time = now - timedelta(hours=4) 
                 
-                ongoing_matches = Match.objects.filter(
-                    date__lte=now,                   # Match harus sudah dimulai
-                    date__gte=safe_past_time         # Dimulai dalam 4 jam terakhir
-                ).exclude(status_short='FT').order_by('date')
+                ongoing_matches_qs = Match.objects.filter(
+                    date__lte=now,
+                    date__gte=safe_past_time
+                ).exclude(status_short='FT')
                 
-                if ongoing_matches.exists():
-                    self.stdout.write(f"Menemukan {ongoing_matches.count()} pertandingan berlangsung. Mengambil data live...")
-                    
-                    for match in ongoing_matches:
-                        # Panggil API untuk mendapatkan data live
-                        url = f"https://v3.football.api-sports.io/fixtures?id={match.api_id}"
-                        headers = {
-                            'x-rapidapi-key': settings.API_FOOTBALL_KEY,
-                            'x-rapidapi-host': 'v3.football.api-sports.io'
-                        }
-                        
-                        try:
-                            response = requests.get(url, headers=headers, timeout=10)
-                            response.raise_for_status()
-                            api_data = response.json()['response'][0]
-
-                            # Data yang akan dikirim ke frontend
-                            live_data = {
-                                'home_goals': api_data['goals']['home'],
-                                'away_goals': api_data['goals']['away'],
-                                'status_short': api_data['fixture']['status']['short'],
-                                'elapsed': api_data['fixture']['status']['elapsed'],
-                            }
-
-                            # Update database lokal (menggunakan data yang benar dari API, termasuk status FT)
-                            match.home_goals = live_data['home_goals']
-                            match.away_goals = live_data['away_goals']
-                            match.status_short = live_data['status_short']
-                            match.status_long = api_data['fixture']['status']['long']
-                            match.save()
-
-                            # Kirim update ke grup channel yang sesuai
-                            async_to_sync(channel_layer.group_send)(
-                                f'match_{match.api_id}',
-                                {
-                                    'type': 'match_update',
-                                    'message': live_data
-                                }
-                            )
-                            self.stdout.write(f"Update dikirim untuk match {match.api_id}")
-
-                        except Exception as e:
-                            self.stderr.write(f"Gagal mengambil atau memproses data untuk match {match.api_id}: {e}")
-
-                else:
+                if not ongoing_matches_qs.exists():
                     self.stdout.write("Tidak ada pertandingan berlangsung. Worker tidur...")
+                    time.sleep(180)
+                    continue
                 
-                # Worker akan tidur selama 3 menit sebelum cek lagi
+                self.stdout.write("Mengambil data live dari Free API...")
+                
+                url = "https://free-api-live-football-data.p.rapidapi.com/football-current-live"
+                headers = {
+                    "x-rapidapi-host": "free-api-live-football-data.p.rapidapi.com",
+                    "x-rapidapi-key": settings.RAPID_API_KEY
+                }
+                
+                try:
+                    response = requests.get(url, headers=headers, timeout=10)
+                    response.raise_for_status()
+                    api_data = response.json().get('response', {}).get('live', [])
+                except Exception as e:
+                    self.stderr.write(f"Gagal mengambil data dari Free API: {e}")
+                    time.sleep(60)
+                    continue
+
+                if not api_data:
+                    self.stdout.write("Tidak ada pertandingan live yang ditemukan di Free API. Worker tidur...")
+                    time.sleep(180)
+                    continue
+
+                api_id_map = {match['id']: match for match in api_data}
+                updated_count = 0
+
+                for match in ongoing_matches_qs:
+                    match_api_id = match.api_id
+                    
+                    if match_api_id in api_id_map:
+                        live_match = api_id_map[match_api_id]
+                        
+                        status_str = live_match['status'].get('short', '')
+                        home_goals = live_match['home']['score']
+                        away_goals = live_match['away']['score']
+
+                        elapsed_time_str = live_match['status']['liveTime'].get('long', '0:00') if live_match['status'].get('liveTime') else '0:00'
+
+                        live_data = {
+                            'home_goals': home_goals,
+                            'away_goals': away_goals,
+                            'status_short': status_str,
+                            'elapsed': elapsed_time_str,
+                            'status_long': live_match['status'].get('long', 'Ongoing')
+                        }
+
+                        match.home_goals = home_goals
+                        match.away_goals = away_goals
+                        match.status_short = live_data['status_short']
+                        match.status_long = live_match['status']['long']
+                        match.save()
+                        updated_count += 1
+                                        
+                        async_to_sync(channel_layer.group_send)(
+                            f'match_{match_api_id}',
+                            {
+                                'type': 'match_update',
+                                'message': live_data
+                            }
+                        )
+                        self.stdout.write(f"Update dikirim untuk match {match_api_id}")
+
+                self.stdout.write(f"Total {updated_count} pertandingan diperbarui dan dikirim. Worker tidur...")
+                
                 time.sleep(180)
 
             except Exception as e:
                 self.stderr.write(f"Terjadi error pada worker: {e}")
-                time.sleep(60) # Tunggu 1 menit sebelum mencoba lagi jika ada error besar
+                time.sleep(60)

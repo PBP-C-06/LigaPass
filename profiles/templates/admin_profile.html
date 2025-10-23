@@ -1,38 +1,128 @@
-<!-- Menampilkan admin profile -->
-
+{% extends "base.html" %}
 {% load static %}
 
 {% block content %}
-    <div id="profile-container">
-        <!-- Profile picture -->
-        <p>
-            <img id="profile-picture" src="" alt="Profile Picture" width="150">
-        </p>
-        <!-- Username -->
-        <h2>
-            <b><span id="username"></span></b>
-        </h2>
+<div class="bg-white p-8 md:p-10 rounded-xl shadow-xl max-w-6xl mx-auto">
+
+    <!-- Admin Profile Section -->
+    <div class="mb-10 border-b pb-6">
+        <div class="flex items-center gap-6">
+            <img id="profile-picture" src="" alt="Profile Picture" class="h-24 w-24 rounded-full object-cover shadow">
+            <div>
+                <h2 class="text-3xl font-semibold text-gray-800 mb-1">
+                    <span id="username"></span>
+                </h2>
+            </div>
+        </div>
     </div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", async function () {
-            try {
-                const url = `/profiles/adminJournalistJson/`;
-                const STATIC_URL = "{% static '' %}";
-    
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error("Failed to fetch profile data from server");
-                }
-    
-                const data = await response.json();
-    
-                document.getElementById("username").textContent = data.username;
-                document.getElementById("profile-picture").src = STATIC_URL + data.profile_picture;
-                document.getElementById("profile-picture").alt = "Admin Picture";
-            } catch (error) {
-                alert("Error: " + error.message);
+    <!-- Manage User Profiles -->
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Manage User Profiles</h2>
+
+    <!-- Search & Filter -->
+    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+        <div class="relative flex-grow">
+            <input id="searchInput" type="text" placeholder="Search username..." 
+                class="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+        </div>
+
+        <select id="filterSelect" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:w-40">
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="banned">Banned</option>
+        </select>
+    </div>
+
+    <!-- Profiles Container -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2" id="profilesContainer"></div>
+
+</div>
+{% endblock content %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener("DOMContentLoaded", async function () {
+    const STATIC_URL = "{% static '' %}";
+    const MEDIA_URL = "{{ MEDIA_URL }}";
+    const DUMMY_USER_IMAGE = STATIC_URL + 'images/default-profile-picture.png';
+
+    const profilePicture = document.getElementById("profile-picture");
+    const usernameEl = document.getElementById("username");
+    const searchInput = document.getElementById('searchInput');
+    const filterSelect = document.getElementById('filterSelect');
+    const profilesContainer = document.getElementById('profilesContainer');
+
+    // --- Fetch Admin Profile ---
+    try {
+        const response = await fetch(`/profiles/adminJournalistJson/`);
+        if (!response.ok) throw new Error("Failed to fetch admin profile data");
+        const data = await response.json();
+
+        usernameEl.textContent = data.username;
+        profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
+        profilePicture.alt = "Admin Picture";
+    } catch (error) {
+        console.error("Error loading admin profile:", error);
+    }
+
+    // --- Fetch User Profiles ---
+    async function fetchProfiles() {
+        const search = searchInput.value;
+        const filter = filterSelect.value;
+
+        try {
+            const response = await fetch(`{% url 'profiles:admin_view_json' %}?search=${search}&filter=${filter}`);
+            if (!response.ok) throw new Error("Failed to fetch user profiles");
+
+            const profiles = await response.json();
+            profilesContainer.innerHTML = "";
+
+            if (profiles.length > 0) {
+                profiles.forEach(p => {
+                    const card = document.createElement("div");
+                    card.className = "flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm hover:border-blue-300 transition duration-150 ease-in-out";
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <img src="${p.profile_picture ? MEDIA_URL + p.profile_picture : DUMMY_USER_IMAGE}" 
+                                alt="${p.username}'s profile" class="h-12 w-12 rounded-full object-cover">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900">${p.username}</p>
+                                <p class="text-xs text-gray-500">${p.email || 'username@gmail.com'}</p>
+                            </div>
+                        </div>
+                        <button class="details-btn text-blue-600 hover:text-blue-800 font-medium text-xs flex items-center p-1.5" data-id="${p.id}">
+                            Details
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    `;
+                    profilesContainer.appendChild(card);
+                });
+
+                document.querySelectorAll(".details-btn").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        window.location.href = `/profiles/user/${btn.dataset.id}/`;
+                    });
+                });
+
+            } else {
+                profilesContainer.innerHTML = `<p class='col-span-2 text-center text-gray-500'>No profiles found for "${search}" and filter "${filter}".</p>`;
             }
-        });
-    </script> 
-{% endblock %}
+        } catch (error) {
+            console.error("Error loading profiles:", error);
+            profilesContainer.innerHTML = "<p class='col-span-2 text-center text-red-500'>Failed to load profiles.</p>";
+        }
+    }
+
+    fetchProfiles();
+    searchInput.addEventListener('input', fetchProfiles);
+    filterSelect.addEventListener('change', fetchProfiles);
+});
+</script>
+{% endblock scripts %}
