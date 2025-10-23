@@ -82,6 +82,7 @@ def show_json_by_id(request, id):
                 "username": user.username,
                 "email": user.email,
                 "phone": str(user.phone) if user.phone else None,
+                "status": profile.status,
                 "date_of_birth": profile.date_of_birth.strftime('%Y-%m-%d') if profile and profile.date_of_birth else None,
                 "profile_picture": profile.profile_picture.url if profile and profile.profile_picture else None,
             })
