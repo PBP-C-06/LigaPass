@@ -32,12 +32,12 @@
                     Profil
                 </a>
 
-                <a href="#" id="link-my-bookings" class="flex items-center p-3 text-base font-medium rounded-lg">
+                <a href="#" id="link-my-tickets" class="flex items-center p-3 text-base font-medium rounded-lg">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                             d="M8 7V3m8 4V3m-9 8h6m-3 0h3m-6 4h6m-3 0h3M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
-                    Pemesanan Saya
+                    Tiket Saya
                 </a>
 
                 <a href="#" id="link-analytics" class="flex items-center p-3 text-base font-medium rounded-lg">
@@ -64,7 +64,7 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    fetch("{% url 'main:current_user_json' %}")
+    fetch("{% url 'profiles:current_user_json' %}")
         .then(response => response.json())
         .then(data => {
             if(data.authenticated){
@@ -75,20 +75,20 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 // Url links
                 document.getElementById("link-profile").href = data.my_profile_url;
-                document.getElementById("link-my-bookings").href = data.my_bookings_url;
+                document.getElementById("link-my-tickets").href = data.my_tickets_url;
                 document.getElementById("link-analytics").href = data.my_analytics_url;
 
                 // Highlight menu yang sedang aktif
                 const path = window.location.pathname;
                 if(path === new URL(data.my_profile_url, window.location.origin).pathname){
                     document.getElementById("link-profile").classList.add("bg-red-50", "text-red-600");
-                } else if(path === new URL(data.my_bookings_url, window.location.origin).pathname){
-                    document.getElementById("link-my-bookings").classList.add("bg-red-50", "text-red-600");
+                } else if(path === new URL(data.my_tickets_url, window.location.origin).pathname){
+                    document.getElementById("link-my-tickets").classList.add("bg-red-50", "text-red-600");
                 } else if(path === new URL(data.my_analytics_url, window.location.origin).pathname){
                     document.getElementById("link-analytics").classList.add("bg-red-50", "text-red-600");
                 } else {
                     // default style
-                    ["link-profile","link-my-bookings","link-analytics"].forEach(id => {
+                    ["link-profile","link-my-tickets","link-analytics"].forEach(id => {
                         document.getElementById(id).classList.add("text-gray-600","hover:bg-gray-50","hover:text-gray-800");
                     });
                 }

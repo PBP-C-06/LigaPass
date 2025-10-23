@@ -1,0 +1,98 @@
+{% extends "components/base_profiles.html" %}
+{% load static %}
+
+{% block profile_content %}
+<div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+  <h2 class="text-2xl font-bold text-gray-800 mb-4">Tiket Saya</h2>
+  <p class="text-gray-500 mb-6">Tiket berikut adalah hasil dari pemesanan yang sudah dibayar dan dikonfirmasi.</p>
+
+  <div id="tickets-container" class="grid md:grid-cols-2 gap-6">
+    <div id="tickets-loading" class="text-gray-500">Memuat tiket...</div>
+  </div>
+</div>
+
+<template id="ticket-card-template">
+  <div class="ticket-card bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition p-4 flex flex-col justify-between">
+    <div>
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-800 match-title">Match Title</h3>
+        <span class="text-sm text-green-600 font-medium">✔️ Aktif</span>
+      </div>
+      <p class="text-sm text-gray-500 match-meta">Venue • Date</p>
+    </div>
+
+    <div class="mt-4 text-sm text-gray-600">
+      <p><strong>Kategori:</strong> <span class="seat-category"></span></p>
+      <p><strong>Status:</strong> <span class="used-status"></span></p>
+    </div>
+
+    <canvas class="barcode mt-4 w-full h-16 bg-white border rounded"></canvas>
+
+    <button class="download-btn mt-3 px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700">Download Tiket</button>
+  </div>
+</template>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const url = "{% url 'profiles:user_tickets_json' request.user.id %}";
+  const container = document.getElementById("tickets-container");
+  const loading = document.getElementById("tickets-loading");
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      loading.remove();
+      const tickets = data.tickets || [];
+      if (!tickets.length) {
+        container.innerHTML = `<p class='text-gray-600'>Belum ada tiket aktif.</p>`;
+        return;
+      }
+
+      const tpl = document.getElementById("ticket-card-template");
+      tickets.forEach(t => {
+        const node = tpl.content.cloneNode(true);
+        const card = node.querySelector(".ticket-card");
+
+        card.querySelector(".match-title").textContent = `${t.match_home} vs ${t.match_away}`;
+        card.querySelector(".match-meta").textContent = `${t.venue} • ${t.date}`;
+        card.querySelector(".seat-category").textContent = t.seat_category;
+        card.querySelector(".used-status").textContent = t.is_used ? "Telah digunakan" : "Belum digunakan";
+
+        // generate barcode
+        const canvas = card.querySelector(".barcode");
+        drawFakeBarcode(canvas, t.barcode_code);
+
+        // download button
+        card.querySelector(".download-btn").addEventListener("click", () => {
+          const a = document.createElement("a");
+          a.download = `ticket-${t.ticket_id}.png`;
+          a.href = canvas.toDataURL("image/png");
+          a.click();
+        });
+
+        container.appendChild(node);
+      });
+    })
+    .catch(err => {
+      console.error(err);
+      loading.textContent = "Gagal memuat tiket.";
+    });
+
+  function drawFakeBarcode(canvas, code) {
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width = 260;
+    const h = canvas.height = 60;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#111";
+    for (let i = 0; i < code.length; i++) {
+      const x = i * 6;
+      const barHeight = (code.charCodeAt(i) % 40) + 10;
+      ctx.fillRect(x, h - barHeight, 2, barHeight);
+    }
+    ctx.font = "10px monospace";
+    ctx.fillText(code, 10, h - 5);
+  }
+});
+</script>
+{% endblock profile_content %}

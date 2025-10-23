@@ -6,43 +6,6 @@ from django.utils import timezone
 from matches.models import Match
 from news.models import News
 
-def current_user_json(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({"authenticated": False})
-
-    user = request.user
-    profile = getattr(user, "profile", None)
-
-    # Tentukan url profile picture berdasarkan role
-    if user.role == "admin":
-        profile_picture_url = static("images/Admin.png")
-        my_profile_url = reverse("profiles:admin_view")
-    elif user.role == "journalist":
-        profile_picture_url = static("images/Journalist.png")
-        my_profile_url = reverse("profiles:journalist_view")
-    else:
-        if profile and profile.profile_picture:
-            profile_picture_url = profile.profile_picture.url
-        else:
-            profile_picture_url = static("images/default-profile-picture.png")
-        my_profile_url = reverse("profiles:user_view", args=[user.id])
-
-    my_bookings_url = reverse("profiles:user_view", args=[user.id]) # GUYS JGN LUPA DIGANTI!!!!
-    my_analytics_url = reverse("profiles:user_view", args=[user.id]) # GUYS JGN LUPA DIGANTI!!!!
-
-    return JsonResponse({
-        "authenticated": True,
-        "username": user.username,
-        "email": user.email,
-        "role": user.role,
-        "id": str(user.id),
-        "profile_picture": profile_picture_url,
-        "my_profile_url": my_profile_url,
-        "my_bookings_url": my_bookings_url,
-        "my_analytics_url": my_analytics_url,
-    })
-
-
 def home(request):
     now = timezone.now()
     upcoming_threshold = now
