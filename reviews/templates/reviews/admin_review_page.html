@@ -23,17 +23,19 @@
             <option value="buruk" {% if sentiment == "buruk" %}selected{% endif %}>Buruk (1-2 ★)</option>
         </select>
 
-        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Terapkan</button>
+        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+            Terapkan
+        </button>
     </form>
 
     <!-- Daftar Review -->
     {% if reviews %}
         <div class="space-y-6">
             {% for review in reviews %}
-                <div class="border rounded-lg p-4 bg-white shadow">
+                <div class="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="font-semibold">{{ review.user.username }}</p>
+                            <p class="font-semibold text-gray-800">{{ review.user.username }}</p>
                             <p class="text-sm text-gray-500">
                                 {{ review.match.home_team.name }} vs {{ review.match.away_team.name }}
                             </p>
@@ -52,12 +54,15 @@
                             <strong>Admin ({{ review.reply.admin.username }})</strong>:
                             <p class="text-gray-700">{{ review.reply.reply_text }}</p>
                         </div>
-                        <button class="mt-2 bg-gray-300 text-gray-600 cursor-not-allowed px-3 py-1 rounded text-sm" disabled>
+                        <button 
+                            class="mt-2 bg-gray-300 text-gray-600 cursor-not-allowed px-3 py-1 rounded text-sm"
+                            disabled>
                             Sudah Dibalas
                         </button>
                     {% else %}
-                        <button onclick="openReplyModal({{ review.id }})"
-                                class="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                        <button 
+                            onclick="openReplyModal('{{ review.id }}')"
+                            class="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
                             Balas Review
                         </button>
                     {% endif %}
@@ -65,7 +70,9 @@
             {% endfor %}
         </div>
     {% else %}
-        <p class="text-gray-500 italic mt-8 text-center">Belum ada review untuk pertandingan ini.</p>
+        <p class="text-gray-500 italic mt-8 text-center">
+            Belum ada review untuk pertandingan ini.
+        </p>
     {% endif %}
 </div>
 
@@ -73,10 +80,14 @@
 <div id="replyModal" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
     <div class="bg-white p-6 rounded-lg shadow-lg w-96">
         <h2 class="text-xl font-bold mb-4">Balas Review</h2>
-        <textarea id="replyText" rows="4" class="w-full border rounded p-2" placeholder="Tulis balasan..."></textarea>
+        <textarea 
+            id="replyText" 
+            rows="4" 
+            class="w-full border rounded p-2 focus:ring focus:ring-blue-200" 
+            placeholder="Tulis balasan..."></textarea>
         <div class="flex justify-end gap-2 mt-4">
-            <button onclick="closeReplyModal()" class="px-4 py-2 bg-gray-300 rounded">Batal</button>
-            <button id="sendReply" class="px-4 py-2 bg-blue-500 text-white rounded">Kirim</button>
+            <button onclick="closeReplyModal()" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded">Batal</button>
+            <button id="sendReply" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">Kirim</button>
         </div>
     </div>
 </div>
@@ -99,24 +110,29 @@ function closeReplyModal() {
     document.getElementById("replyText").value = '';
 }
 
-// AJAX Kirim balasan
 document.getElementById("sendReply").addEventListener("click", async () => {
-    const text = document.getElementById("replyText").value;
-    if (!text.trim()) return alert("Balasan tidak boleh kosong!");
+    const text = document.getElementById("replyText").value.trim();
+    if (!text) return alert("Balasan tidak boleh kosong!");
 
-    const res = await fetch(`/reviews/api/reply/${currentReviewId}/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reply_text: text }),
-    });
-    const data = await res.json();
+    try {
+        const res = await fetch(`/reviews/api/reply/${currentReviewId}/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reply_text: text }),
+        });
 
-    if (data.status === "success") {
-        showToast(data.message);
-        closeReplyModal();
-        setTimeout(() => location.reload(), 1000);
-    } else {
-        alert("Gagal mengirim balasan!");
+        const data = await res.json();
+
+        if (data.status === "success") {
+            showToast(data.message);
+            closeReplyModal();
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            alert(data.message || "Gagal mengirim balasan!");
+        }
+    } catch (err) {
+        console.error("Error:", err);
+        alert("Terjadi kesalahan pada server!");
     }
 });
 
@@ -124,7 +140,7 @@ function showToast(message) {
     const toast = document.getElementById("toast");
     toast.textContent = message;
     toast.classList.remove("hidden");
-    setTimeout(() => toast.classList.add("hidden"), 2000);
+    setTimeout(() => toast.classList.add("hidden"), 2500);
 }
 </script>
 {% endblock %}
