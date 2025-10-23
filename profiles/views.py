@@ -243,3 +243,4 @@ def admin_change_status(request, id):
         return JsonResponse({"status": profile.status})
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
+
