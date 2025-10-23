@@ -24,7 +24,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('authentication.urls')),
-    path('', include('matches.urls')),
+    path('', include('main.urls')),
     path(
         "auth/reset-password/",
         auth_views.PasswordResetView.as_view(
@@ -59,11 +59,10 @@ urlpatterns = [
         name="password_reset_complete",
     ),
     path('bookings/', include('bookings.urls')),
-    # path('matches/', include('matches.urls')),
+    path('matches/', include('matches.urls')),
     path('profiles/', include('profiles.urls')),
     path('news/', include('news.urls')),
     path("reviews/", include("reviews.urls")),
-    
 ]
 
 # Supaya media dapat di akses di lokal 

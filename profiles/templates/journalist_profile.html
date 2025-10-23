@@ -1,38 +1,52 @@
 <!-- Menampilkan journalist profile -->
 
+{% extends "base.html" %}
 {% load static %}
 
 {% block content %}
-    <div id="profile-container">
-        <!-- Profile picture -->
-        <p>
-            <img id="profile-picture" src="" alt="Profile Picture" width="150">
-        </p>
-        <!-- Username -->
-        <h2>
-            <b><span id="username"></span></b>
-        </h2>
-    </div>
+<div class="bg-white p-8 md:p-10 rounded-xl shadow-xl max-w-6xl mx-auto">
 
-    <script>
-        document.addEventListener("DOMContentLoaded", async function () {
-            try {
-                const url = `/profiles/adminJournalistJson/`;
-                const STATIC_URL = "{% static '' %}";
-    
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error("Failed to fetch profile data from server");
-                }
-    
-                const data = await response.json();
-    
-                document.getElementById("username").textContent = data.username;
-                document.getElementById("profile-picture").src = STATIC_URL + data.profile_picture;
-                document.getElementById("profile-picture").alt = "Admin Picture";
-            } catch (error) {
-                alert("Error: " + error.message);
-            }
-        });
-    </script> 
-{% endblock %}
+    <!-- Journalist Profile Section -->
+    <div class="mb-10 border-b pb-6">
+        <div class="flex items-center gap-6">
+            <div class="relative">
+                <img id="profile-picture" src="" alt="Profile Picture"
+                    class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md ring-2 ring-gray-200">
+                <div class="absolute inset-0 rounded-full shadow-inner"></div>
+            </div>
+            <div>
+                <h2 class="text-3xl font-semibold text-gray-800 mb-1">
+                    <span id="username"></span>
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener("DOMContentLoaded", async function () {
+    const STATIC_URL = "{% static '' %}";
+    const DUMMY_USER_IMAGE = STATIC_URL + 'images/default-profile-picture.png';
+
+    const profilePicture = document.getElementById("profile-picture");
+    const usernameEl = document.getElementById("username");
+
+    // --- Fetch Journalist Profile ---
+    try {
+        const response = await fetch(`/profiles/json/adminjournalist/`);
+        if (!response.ok) throw new Error("Failed to fetch journalist profile data");
+        const data = await response.json();
+
+        usernameEl.textContent = data.username;
+        profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
+        profilePicture.alt = "Journalist Picture";
+    } catch (error) {
+        console.error("Error loading journalist profile:", error);
+    }
+});
+</script>
+{% endblock scripts %}
+

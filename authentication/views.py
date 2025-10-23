@@ -11,6 +11,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 from authentication.models import User
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 def register_user(request):
     
@@ -93,21 +94,19 @@ def login_user(request):
     form = AuthenticationForm()
     return render(request, "login.html", {"form": form})
 
+@require_POST
 def logout_user(request):
     logout(request)
-    redirect_url = reverse("matches:calendar")
-
-    if request.method == "POST":
-        response = JsonResponse({
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({
             "status": "success",
-            "message": "You have been logged out successfully.",
-            "redirect_url": redirect_url,
+            "message": "Berhasil logout!",
+            "redirect_url": "/"
         })
-    else:
-        response = HttpResponseRedirect(redirect_url)
-
-    response.delete_cookie("last_login")
-    return response
+    return JsonResponse({
+        "status": "success",
+        "redirect_url": "/"
+    })
 
 @csrf_exempt
 def google_login(request):
