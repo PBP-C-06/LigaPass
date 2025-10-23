@@ -123,11 +123,9 @@ def payment(request, booking_id):
             if cached:
                 return JsonResponse(cached)
             else:
-                check_res = requests.get(
-                    f"https://api.sandbox.midtrans.com/v2/{booking.midtrans_order_id}/status",
-                    headers=headers
-                )
-                return JsonResponse(check_res.json(), status=check_res.status_code)
+                return JsonResponse({
+                    "error": "Sesi pembayaran Anda telah berakhir. Silakan buat booking baru."
+                }, status=410)
 
         if booking.status != 'PENDING':
             return JsonResponse({"error": "Booking already processed"}, status=400)
