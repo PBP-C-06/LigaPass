@@ -1,18 +1,17 @@
 <!-- Menampilkan journalist profile -->
 
-{% extends "base.html" %}
+{% extends "base_profiles.html" %}
 {% load static %}
 
-{% block content %}
+{% block profile_content %}
 <div class="bg-white p-8 md:p-10 rounded-xl shadow-xl max-w-6xl mx-auto">
 
     <!-- Journalist Profile Section -->
     <div class="mb-10 border-b pb-6">
         <div class="flex items-center gap-6">
             <div class="relative">
-                <img id="profile-picture" src="" alt="Profile Picture"
-                    class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md ring-2 ring-gray-200">
-                <div class="absolute inset-0 rounded-full shadow-inner"></div>
+                <img id="profile-picture" src="" alt="Foto Profil Journalist"
+                    class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md">
             </div>
             <div>
                 <h2 class="text-3xl font-semibold text-gray-800 mb-1">
@@ -22,7 +21,7 @@
         </div>
     </div>
 </div>
-{% endblock content %}
+{% endblock profile_content %}
 
 {% block scripts %}
 {{ block.super }}
@@ -37,14 +36,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     // --- Fetch Journalist Profile ---
     try {
         const response = await fetch(`/profiles/json/adminjournalist/`);
-        if (!response.ok) throw new Error("Failed to fetch journalist profile data");
+        if (!response.ok) throw new Error("Gagal mengambil data journalist dari server.");
         const data = await response.json();
 
         usernameEl.textContent = data.username;
         profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
-        profilePicture.alt = "Journalist Picture";
+        profilePicture.alt = "Foto Profil journalist";
     } catch (error) {
-        console.error("Error loading journalist profile:", error);
+        console.error("Terjadi kesalahan saat memuat profil journalist:", error);
+        showToast("Terjadi kesalahan saat memuat profil journalist.", "error");
     }
 });
 </script>
