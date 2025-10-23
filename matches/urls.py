@@ -4,6 +4,7 @@ from .views import (
     MatchDeleteView,
     MatchListView,
     MatchUpdateView,
+    api_match_list,
     live_score_api,
     match_calendar_view, 
     match_details_view,
@@ -18,11 +19,15 @@ urlpatterns = [
     path('', match_calendar_view, name='calendar'),
     path('details/<uuid:match_id>/', match_details_view, name='details'),
 
+    # APIs
     # URL untuk admin memicu update
     path('update-from-api/', update_matches_view, name='update_from_api'),
 
     # URL untuk live score update
     path('api/live-score/<int:match_api_id>/', live_score_api, name='live_score_api'),
+
+    # Read match list ajax
+    path('api/calendar/', api_match_list, name='api_calendar'),
 
     # URL untuk Manajemen Admin (CUD)
     # Teams
