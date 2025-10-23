@@ -6,75 +6,73 @@
       LigaPass
     </a>
 
+    <div class="flex space-x-14">
+      <a href="/" class="font-semibold text-slate-800 hover:text-blue-600 transition">HOME</a>
+      <a href="/matches/" class="font-semibold text-slate-800 hover:text-blue-600 transition">MATCHES</a>
+      <a href="/news/" class="font-semibold text-slate-800 hover:text-blue-600 transition">NEWS</a>
+    </div>
+
     <div id="navbar-user-section" class="flex items-center space-x-6">
-      <a href="{% url 'authentication:login' %}" 
-          class="text-blue-600 hover:text-blue-700 font-medium transition hidden" 
-          id="navbar-login-link">
-          Login
-      </a>
-      <a href="{% url 'authentication:register' %}" 
-          class="text-green-600 hover:text-green-700 font-medium transition hidden" 
-          id="navbar-register-link">
-          Register
-      </a>
+      <a href="{% url 'authentication:login' %}" class="text-blue-600 hover:text-blue-700 font-medium transition hidden" id="navbar-login-link">Login</a>
+      <a href="{% url 'authentication:register' %}" class="text-green-600 hover:text-green-700 font-medium transition hidden" id="navbar-register-link">Register</a>
 
       <div id="navbar-user-info" class="hidden flex items-center gap-4">
         <a id="navbar-profile-link" href="#">
           <div class="flex items-center gap-3">
-            <h2 class="text-lg font-medium text-gray-800">
-              Hi, <span id="navbar-username"></span>
-            </h2>
+            <h2 class="text-lg font-medium text-gray-800">Hi, <span id="navbar-username"></span></h2>
             <img id="navbar-profile-picture" src="" alt="Profile Picture"
-              class="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md">
+                 class="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md">
           </div>
         </a>
-        <form id="logoutForm" method="POST" 
-              action="{% url 'authentication:logout' %}" class="inline">
-          {% csrf_token %}
-          <button type="submit" 
-            class="text-red-500 hover:text-red-600 font-medium transition">
-            Logout
-          </button>
-        </form>
+        <button id="logoutButton" class="text-red-500 hover:text-red-600 font-medium transition">
+          Logout
+        </button>
       </div>
     </div>
   </div>
 </nav>
 
+<div id="toast" class="fixed bottom-6 right-6 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-md hidden transition-opacity duration-300"></div>
+
 {% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", async () => {
-  const STATIC_URL = "{% static '' %}";
-  const DUMMY_USER_IMAGE = STATIC_URL + "images/default-profile-picture.png";
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + "=")) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
 
+document.addEventListener("DOMContentLoaded", async () => {
+  const DUMMY_USER_IMAGE = "{% static 'images/default-profile-picture.png' %}";
   const userInfo = document.getElementById("navbar-user-info");
   const usernameEl = document.getElementById("navbar-username");
   const profilePic = document.getElementById("navbar-profile-picture");
   const loginLink = document.getElementById("navbar-login-link");
   const registerLink = document.getElementById("navbar-register-link");
   const profileLink = document.getElementById("navbar-profile-link");
+  const logoutBtn = document.getElementById("logoutButton");
 
   try {
-    const response = await fetch("/main/current_user_json/");
+    const response = await fetch("{% url 'main:current_user_json' %}");
     const data = await response.json();
 
     if (data.authenticated) {
-      // Tampilkan section user
       userInfo.classList.remove("hidden");
-
       usernameEl.textContent = data.username;
-      profilePic.src = data.profile_picture ? data.profile_picture : DUMMY_USER_IMAGE;
-
-      // Tentukan redirect berdasarkan role
-      if (data.role === "user") {
-        profileLink.href = `/profiles/user/${data.id}/`;
-      } else if (data.role === "admin") {
-        profileLink.href = `/profiles/admin/`;
-      } else if (data.role === "journalist") {
-        profileLink.href = `/profiles/journalist/`;
-      }
+      profilePic.src = data.profile_picture || DUMMY_USER_IMAGE;
+      if (data.role === "user") profileLink.href = `/profiles/user/${data.id}/`;
+      else if (data.role === "admin") profileLink.href = `/profiles/admin/`;
+      else if (data.role === "journalist") profileLink.href = `/profiles/journalist/`;
     } else {
-      // Jika user belum login maka tampilkan login dan register
       loginLink.classList.remove("hidden");
       registerLink.classList.remove("hidden");
     }
@@ -83,6 +81,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     loginLink.classList.remove("hidden");
     registerLink.classList.remove("hidden");
   }
+
+  logoutBtn?.addEventListener("click", async () => {
+    const csrfToken = getCookie("csrftoken");
+    const response = await fetch("{% url 'authentication:logout' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrfToken,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      showToast(data.message || "Berhasil logout!", "success");
+      setTimeout(() => window.location.href = data.redirect_url || "/", 1000);
+    } else {
+      showToast("Gagal logout!", "error");
+    }
+  });
 });
+
 </script>
-{% endblock scripts %}
+{% endblock %}
