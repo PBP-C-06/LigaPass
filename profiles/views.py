@@ -1,10 +1,14 @@
+import hashlib
+from django.urls import reverse
 from django.middleware.csrf import get_token
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 from dotenv import get_key
+from django.templatetags.static import static
 from authentication.models import User
 from profiles.models import AdminJournalistProfile, Profile
+from bookings.models import Booking, Ticket
 
 # Create profile untuk user yang baru registrasi
 @login_required
@@ -243,4 +247,79 @@ def admin_change_status(request, id):
         return JsonResponse({"status": profile.status})
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
+    
+def current_user_json(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"authenticated": False})
+
+    user = request.user
+    profile = getattr(user, "profile", None)
+
+    # Tentukan url profile picture berdasarkan role
+    if user.role == "admin":
+        profile_picture_url = static("images/Admin.png")
+        my_profile_url = reverse("profiles:admin_view")
+    elif user.role == "journalist":
+        profile_picture_url = static("images/Journalist.png")
+        my_profile_url = reverse("profiles:journalist_view")
+    else:
+        if profile and profile.profile_picture:
+            profile_picture_url = profile.profile_picture.url
+        else:
+            profile_picture_url = static("images/default-profile-picture.png")
+        my_profile_url = reverse("profiles:user_view", args=[user.id])
+
+    my_tickets_url = reverse("profiles:user_tickets_page", args=[user.id]) # GUYS JGN LUPA DIGANTI!!!!
+    my_analytics_url = reverse("profiles:user_view", args=[user.id]) # GUYS JGN LUPA DIGANTI!!!!
+
+    return JsonResponse({
+        "authenticated": True,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role,
+        "id": str(user.id),
+        "profile_picture": profile_picture_url,
+        "my_profile_url": my_profile_url,
+        "my_tickets_url": my_tickets_url,
+        "my_analytics_url": my_analytics_url,
+    })
+
+@login_required
+def user_tickets_page(request, id):
+    return render(request, "tickets.html", {})
+
+
+@login_required
+def user_tickets_json(request, id):
+    """Ambil semua tiket user yang sudah dibayar (CONFIRMED)."""
+    if request.user.role != "user" or request.user.id != id:
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    tickets = (
+        Ticket.objects
+        .select_related("booking", "ticket_type__match", "ticket_type__match__home_team", "ticket_type__match__away_team")
+        .filter(booking__user_id=id, booking__status="CONFIRMED")
+        .order_by("-generated_at")
+    )
+
+    results = []
+    for t in tickets:
+        tt = t.ticket_type
+        match = tt.match
+        raw = f"{t.ticket_id}:{t.generated_at.timestamp()}"
+        barcode_code = hashlib.sha1(raw.encode()).hexdigest()[:16].upper()
+
+        results.append({
+            "ticket_id": str(t.ticket_id),
+            "seat_category": tt.seat_category,
+            "match_home": getattr(match.home_team, "name", "-"),
+            "match_away": getattr(match.away_team, "name", "-"),
+            "venue": getattr(match.venue, "name", "-"),
+            "date": match.date.strftime("%d %b %Y, %H:%M") if match.date else "-",
+            "barcode_code": barcode_code,
+            "is_used": t.is_used,
+            "generated_at": t.generated_at.strftime("%Y-%m-%d %H:%M"),
+        })
+
+    return JsonResponse({"tickets": results})
 

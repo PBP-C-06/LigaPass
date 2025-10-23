@@ -133,7 +133,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Logika fetch user (sekarang mempopulasi kedua menu)
   try {
-    const response = await fetch("{% url 'main:current_user_json' %}");
+    const response = await fetch("{% url 'profiles:current_user_json' %}");
     const data = await response.json();
 
     if (data.authenticated) {

@@ -151,11 +151,11 @@ def google_login(request):
 
             if user.role == "user":
                 if hasattr(user, 'profile'):
-                    redirect_url = reverse("matches:calendar")
+                    redirect_url = reverse("main:home")
                 else:
                     redirect_url = reverse("profiles:create_profile")
             else:
-                redirect_url = reverse("matches:calendar")
+                redirect_url = reverse("main:home")
 
             response = JsonResponse({
                 "status": "success",
