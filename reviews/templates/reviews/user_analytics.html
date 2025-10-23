@@ -1,91 +1,101 @@
-{% extends 'base.html' %}
+{% extends "profile_base.html" %}
 {% load static %}
 
-{% block content %}
-<div class="max-w-6xl mx-auto py-10 px-6">
-    <h1 class="text-3xl font-bold mb-8">User Analytics</h1>
+{% block profile_content %}
+<h2 class="text-2xl font-bold mb-6">Analytics</h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-2xl p-6 shadow-md">
-            <h2 class="text-lg font-semibold mb-4">Total Pengeluaran per Bulan</h2>
-            <canvas id="spendingChart" width="400" height="250"></canvas>
-        </div>
-
-        <div class="bg-white rounded-2xl p-6 shadow-md">
-            <h2 class="text-lg font-semibold mb-4">Distribusi Kategori Tiket Dibeli</h2>
-            <canvas id="seatChart" width="400" height="250"></canvas>
-        </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <!-- PIE: Kehadiran berdasarkan review -->
+  <div class="bg-white rounded-2xl p-6 shadow-md">
+    <h2 class="text-lg font-semibold mb-4">Your Matches</h2>
+    <div class="flex flex-col items-center justify-center">
+      <canvas id="attendanceChart" width="250" height="250"></canvas>
+      <div class="mt-4 space-y-1 text-center text-sm text-gray-700">
+        <p><span class="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>Hadir</p>
+        <p><span class="inline-block w-3 h-3 bg-gray-300 rounded-full mr-2"></span>Tidak Hadir</p>
+      </div>
     </div>
+  </div>
+
+  <!-- BAR: Pengeluaran harian -->
+  <div class="bg-white rounded-2xl p-6 shadow-md">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-lg font-semibold">Purchasing Graphics</h2>
+      <select id="periodSelector" class="border rounded px-2 py-1 text-sm">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+    <canvas id="spendingChart" height="220"></canvas>
+  </div>
 </div>
 
-<!-- Tambahkan Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
-    try {
-        // Ambil data dari API kamu
-        const res = await fetch("/reviews/analytics/user/data/");
-        const data = await res.json();
+  try {
+    const res = await fetch("/reviews/analytics/user/data/");
+    const data = await res.json();
+    console.log("✅ Data Analytics:", data);
 
-        console.log("✅ Data Analytics:", data);
+    // ========== PIE CHART: Kehadiran ==========
+    // Asumsinya backend mengirim data tambahan:
+    // data.attendance = { hadir: X, tidak_hadir: Y }
+    const hadir = data.attendance?.hadir || 0;
+    const tidakHadir = data.attendance?.tidak_hadir || 0;
 
-        // =======================
-        // 📊 Chart 1 - Spending
-        // =======================
-        const spendingLabels = data.spendingData.map(item => {
-            const monthNames = [
-                "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", 
-                "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
-            ];
-            return monthNames[item.month - 1] + " " + item.year;
-        });
-        const spendingValues = data.spendingData.map(item => parseFloat(item.total_spent));
+    new Chart(document.getElementById("attendanceChart"), {
+      type: "doughnut",
+      data: {
+        labels: ["Hadir", "Tidak Hadir"],
+        datasets: [{
+          data: [hadir, tidakHadir],
+          backgroundColor: ["#3B82F6", "#E5E7EB"],
+          hoverOffset: 10,
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}` } }
+        },
+        cutout: "70%"
+      }
+    });
 
-        new Chart(document.getElementById("spendingChart"), {
-            type: "bar",
-            data: {
-                labels: spendingLabels,
-                datasets: [{
-                    label: "Total Pengeluaran (Rp)",
-                    data: spendingValues,
-                    backgroundColor: "#2563EB",
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true, ticks: { callback: v => "Rp " + v.toLocaleString() } }
-                }
-            }
-        });
+    // ========== BAR CHART: Pengeluaran Harian ==========
+    const spendingLabels = data.spendingData.map(item => item.date);
+    const spendingValues = data.spendingData.map(item => parseFloat(item.total_spent));
 
-        // =======================
-        // 🍰 Chart 2 - Seat Count
-        // =======================
-        const seatLabels = data.seatCount.map(item => item.ticket_type__seat_category);
-        const seatValues = data.seatCount.map(item => item.count);
+    const ctx = document.getElementById("spendingChart");
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: spendingLabels,
+        datasets: [{
+          label: "Total Pengeluaran (Rp)",
+          data: spendingValues,
+          backgroundColor: "#F59E0B",
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: v => "Rp " + v.toLocaleString() } },
+          x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+        }
+      }
+    });
 
-        new Chart(document.getElementById("seatChart"), {
-            type: "pie",
-            data: {
-                labels: seatLabels,
-                datasets: [{
-                    data: seatValues,
-                    backgroundColor: ["#2563EB", "#F59E0B", "#10B981", "#EF4444"],
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: "bottom" } }
-            }
-        });
-
-    } catch (err) {
-        console.error("❌ Gagal memuat data analytics:", err);
-    }
+  } catch (err) {
+    console.error("❌ Gagal memuat data analytics:", err);
+  }
 });
 </script>
-{% endblock %}
+{% endblock profile_content %}
