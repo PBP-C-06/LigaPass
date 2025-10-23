@@ -153,39 +153,39 @@ def update_matches_view(request):
     return redirect('matches:calendar') 
 
 def live_score_api(request, match_api_id):
-    cache_key = f"live_score_{match_api_id}"
+    cache_key = f"live_score_single_{match_api_id}"
     cached_data = cache.get(cache_key)
 
     if cached_data:
         print(f"Mengambil live score untuk match {match_api_id} dari CACHE.")
         return JsonResponse(cached_data)
 
-    print(f"Mengambil live score untuk match {match_api_id} dari API.")
+    print(f"Mengambil live score untuk match {match_api_id} dari Free API (Single Match).")
     
-    url = f"https://v3.football.api-sports.io/fixtures?id={match_api_id}"
+    url = "https://free-api-live-football-data.p.rapidapi.com/football-get-match"
     headers = {
-        'x-rapidapi-key': settings.API_FOOTBALL_KEY,
-        'x-rapidapi-host': 'v3.football.api-sports.io'
+        'x-rapidapi-key': settings.RAPID_API_KEY,
+        'x-rapidapi-host': 'free-api-live-football-data.p.rapidapi.com'
     }
+    params = {'matchid': match_api_id}
     
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, params=params, timeout=10)
         response.raise_for_status()
-        api_data = response.json().get('response', [])
+        api_data = response.json().get('response', {}).get('match', None)
         
         if not api_data:
             return JsonResponse({'error': 'Match not found in API'}, status=404)
-
-        match_data = api_data[0]
+        
         live_data = {
-            'home_goals': match_data['goals']['home'],
-            'away_goals': match_data['goals']['away'],
-            'status_short': match_data['fixture']['status']['short'],
-            'status_long': match_data['fixture']['status']['long'],
-            'elapsed': match_data['fixture']['status']['elapsed'],
+            'home_goals': api_data['home']['score'],
+            'away_goals': api_data['away']['score'],
+            'status_short': api_data['status']['short'],
+            'status_long': api_data['status']['long'],
+            'elapsed': api_data['status']['liveTime'].get('long', '0:00') if api_data['status'].get('liveTime') else '0:00',
         }
         
-        cache.set(cache_key, live_data, timeout=55)
+        cache.set(cache_key, live_data, timeout=10)
         return JsonResponse(live_data)
 
     except Exception as e:
