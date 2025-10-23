@@ -46,7 +46,6 @@ TEAM_NAME_STANDARDIZATION = {
     "barito putera": "PS Barito Putera",
 }
 
-# -------------------------- DEFINISI TIM LIGA 1 --------------------------
 LIGA_1_TEAMS = {
     "Arema FC", "Bali United FC", "Bhayangkara Presisi Lampung FC", 
     "Borneo Samarinda FC", "Dewa United Banten FC", "Madura United FC", 
