@@ -84,7 +84,7 @@
                 showToast("Profil berhasil disimpan!", "success");
                 
                 setTimeout(() => {
-                    window.location.href = "{% url 'matches:calendar' %}";
+                    window.location.href = "{% url 'main:home' %}";
                 }, 800);
             } else {
                 const errorData = await response.json().catch(() => ({ message: "Terjadi kesalahan." }));
