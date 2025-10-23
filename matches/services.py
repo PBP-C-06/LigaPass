@@ -37,6 +37,8 @@ TEAM_NAME_STANDARDIZATION = {
     "psm makassar": "PSM Makassar",
     "semen padang": "Semen Padang FC",
     "semen padang fc": "Semen Padang FC",
+    
+    # Tim tidak bermain di liga super 2025
     "psis semarang": "PSIS Semarang",
     "pss sleman": "PSS Sleman",
     "cilegon united": "Cilegon United",
@@ -52,6 +54,7 @@ LIGA_1_TEAMS = {
     "Persita Tangerang", "PSBS Biak Numfor", "PSIM Yogyakarta", 
     "PSM Makassar", "Semen Padang FC", "Persijap Jepara"
 }
+# --------------------------------------------------------------------------
 
 def _fetch_freeapi_matches(league_id=8983):
     url = "https://free-api-live-football-data.p.rapidapi.com/football-get-all-matches-by-league"
@@ -64,7 +67,7 @@ def _fetch_freeapi_matches(league_id=8983):
         response = requests.get(url, headers=headers, params=params, timeout=30)
         response.raise_for_status() 
         data = response.json().get('response', {}).get('matches', [])
-        print(f"Berhasil mengambil {len(data)} pertandingan dari Free-API.")
+        print(f"-> API: Berhasil mengambil {len(data)} pertandingan.")
         return data
     except requests.exceptions.HTTPError as e:
         print(f"Error fetching data from FreeAPI: {e}")
@@ -104,11 +107,16 @@ def _normalize_match_data(raw_match):
         return None
 
 def sync_database_with_apis():
-    print("Memulai sinkronisasi database dengan API...")
+    print("\n=========================================")
+    print("Memulai sinkronisasi database dengan API/Cache...")
     
     cached_matches = cache.get(CACHE_KEY_SYNC)
     
     if not cached_matches:
+        print("-> STATUS: Cache Miss. Mengambil data dari API...")
+        # ==========================================================
+        # BLOK CACHE MISS (Mengambil dari API)
+        # ==========================================================
         raw_free_api_data = _fetch_freeapi_matches()
         all_matches = []
         processed_ids = set()
@@ -121,16 +129,21 @@ def sync_database_with_apis():
 
         if all_matches:
             cache.set(CACHE_KEY_SYNC, all_matches, timeout=CACHE_TIMEOUT)
-            print(f"Data {len(all_matches)} pertandingan baru berhasil disimpan ke cache.")
+            print(f"-> CACHE: Data {len(all_matches)} pertandingan BERHASIL DISIMPAN ke cache.")
             data_to_sync = all_matches
         else:
-             print("Sinkronisasi dihentikan: Cache kosong dan API gagal diakses.")
-             return 
+            print("Sinkronisasi dihentikan: Cache kosong dan API gagal diakses.")
+            return 
     else:
-        print(f"Menggunakan data {len(cached_matches)} pertandingan dari cache.")
+        # ==========================================================
+        # BLOK CACHE HIT (Mengambil dari Cache)
+        # ==========================================================
+        print(f"-> STATUS: Cache Hit. Menggunakan data {len(cached_matches)} pertandingan dari CACHE.")
         data_to_sync = cached_matches
     
     
+    # Proses Sync ke DB (menggunakan data_to_sync)
+    print("-> DB: Memulai pembaruan/pembuatan entri database...")
     for match_data in data_to_sync:
         if not all([match_data.get('home_team_api_id'), match_data.get('away_team_api_id'), match_data.get('id')]):
             continue
@@ -182,4 +195,6 @@ def sync_database_with_apis():
             TicketPrice.objects.create(match=match, seat_category='VIP', price=300000, quantity_available=200)
             TicketPrice.objects.create(match=match, seat_category='REGULAR', price=150000, quantity_available=1000)
 
+    print("=========================================")
     print("Sinkronisasi database selesai.")
+    print("=========================================\n")

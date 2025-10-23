@@ -11,3 +11,4 @@ google-auth
 Pillow
 channels
 channels-redis
+# django-redis
