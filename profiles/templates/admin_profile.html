@@ -1,15 +1,19 @@
-<!-- Menampilkan admin profile -->
-
 {% extends "base.html" %}
 {% load static %}
 
 {% block content %}
-<div class="bg-white p-6 md:p-8 rounded-xl shadow-xl max-w-7xl mx-auto">
+<div class="bg-white p-8 md:p-10 rounded-xl shadow-xl max-w-6xl mx-auto">
 
-    <!-- Admin Profile -->
-    <div id="profile-container" class="mb-8 flex items-center gap-6">
-        <img id="profile-picture" src="" alt="Profile Picture" class="h-20 w-20 rounded-full object-cover">
-        <h2 class="text-2xl font-semibold text-gray-800"><span id="username"></span></h2>
+    <!-- Admin Profile Section -->
+    <div class="mb-10 border-b pb-6">
+        <div class="flex items-center gap-6">
+            <img id="profile-picture" src="" alt="Profile Picture" class="h-24 w-24 rounded-full object-cover shadow">
+            <div>
+                <h2 class="text-3xl font-semibold text-gray-800 mb-1">
+                    <span id="username"></span>
+                </h2>
+            </div>
+        </div>
     </div>
 
     <!-- Manage User Profiles -->
@@ -60,7 +64,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         const data = await response.json();
 
         usernameEl.textContent = data.username;
-        // gunakan STATIC_URL jika admin upload, fallback ke default image
         profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
         profilePicture.alt = "Admin Picture";
     } catch (error) {
@@ -82,11 +85,11 @@ document.addEventListener("DOMContentLoaded", async function () {
             if (profiles.length > 0) {
                 profiles.forEach(p => {
                     const card = document.createElement("div");
-                    card.className = "flex items-center justify-between p-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-blue-300 transition duration-150 ease-in-out";
+                    card.className = "flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm hover:border-blue-300 transition duration-150 ease-in-out";
                     card.innerHTML = `
                         <div class="flex items-center space-x-3">
                             <img src="${p.profile_picture ? MEDIA_URL + p.profile_picture : DUMMY_USER_IMAGE}" 
-                                alt="${p.username}'s profile" class="h-10 w-10 rounded-full object-cover">
+                                alt="${p.username}'s profile" class="h-12 w-12 rounded-full object-cover">
                             <div>
                                 <p class="text-sm font-semibold text-gray-900">${p.username}</p>
                                 <p class="text-xs text-gray-500">${p.email || 'username@gmail.com'}</p>
@@ -102,7 +105,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                     profilesContainer.appendChild(card);
                 });
 
-                // Event listener untuk Details button
                 document.querySelectorAll(".details-btn").forEach(btn => {
                     btn.addEventListener("click", () => {
                         window.location.href = `/profiles/user/${btn.dataset.id}/`;
@@ -118,7 +120,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     }
 
-    // --- Event listeners ---
     fetchProfiles();
     searchInput.addEventListener('input', fetchProfiles);
     filterSelect.addEventListener('change', fetchProfiles);

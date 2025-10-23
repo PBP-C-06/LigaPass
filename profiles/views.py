@@ -1,6 +1,8 @@
+from django.middleware.csrf import get_token
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
+from dotenv import get_key
 from authentication.models import User
 from profiles.models import AdminJournalistProfile, Profile
 
@@ -53,14 +55,19 @@ def show_json(request):
     return JsonResponse(data, safe=False)
 
 # Menampilkan JSON by id
-@login_required
 def show_json_by_id(request, id):
     try:
         user = User.objects.get(pk=id)
-        data = {
-            "role": request.user.role,  # <-- role dari user yang login
-        }
 
+        # Cek apakah user sudah login atau belum
+        if request.user.is_authenticated:
+            user_role = request.user.role
+        else:
+            user_role = "anonymous"
+
+        data = {"role": user_role}
+
+        # Jika role adalah admin atau administrator maka data adalah username dan profile picture saja
         if user.role == 'admin' or user.role == 'journalist':
             profile = getattr(user, 'adminjournalistprofile', None)
             data.update ({
@@ -68,7 +75,7 @@ def show_json_by_id(request, id):
                 "profile_picture" : profile.profile_picture if profile and profile.profile_picture else None,
             })
             return JsonResponse(data)
-        else:
+        else: # Jika role bukan user / journalist (user) maka tampilkan data sebagai berikut
             profile = getattr(user, 'profile', None)
             data.update({
                 "full_name": profile.full_name,
@@ -111,7 +118,7 @@ def admin_view_json(request):
     if search:
         profiles = profiles.filter(user__username__icontains=search)
 
-    # Filtering by status 
+    # Filter by status 
     if filter_type != "all":
         profiles = profiles.filter(status=filter_type)
 
@@ -131,9 +138,28 @@ def admin_view_json(request):
     return JsonResponse(data, safe=False)
 
 # Untuk menampilkan user_profile.html
-@login_required
 def user_view(request, id):
-    return render(request, "user_profile.html", {"id":id})
+    # Cari profile berdasarkan UUID
+    try:
+        profile = Profile.objects.get(user__id=id)
+    except Profile.DoesNotExist:
+        profile = None
+
+    # Jika user sudah login maka ambil role dan id 
+    if request.user.is_authenticated:
+        role = request.user.role
+        viewer_id = str(request.user.id)
+    else: # Jika belum maka role adalah anonymous dan id none
+        role = "anonymous"
+        viewer_id = None
+    
+    context = {
+        "id": str(profile.user.id) if profile else None, 
+        "viewer_id": viewer_id or None,
+        "viewer_role": role,
+        "csrf_token": get_token(request) if request.user.is_authenticated else None,
+    }
+    return render(request, "user_profile.html", context)
 
 # Untuk menampilkan admin_profile.html
 @login_required
