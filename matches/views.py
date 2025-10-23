@@ -3,7 +3,6 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q, Min
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
 from django.http import JsonResponse
 from django.core.cache import cache
 import requests
@@ -11,8 +10,13 @@ from django.conf import settings
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from datetime import datetime as dt
+from django.db.models.functions import TruncDate
+from django.contrib.auth.decorators import user_passes_test
+from datetime import datetime
+from datetime import time
 
-from .models import Team, Match, TicketPrice
+from .models import Team, Match, Venue, TicketPrice
 from .forms import TeamForm, MatchForm, TicketPriceFormSet
 from .services import sync_database_with_apis
 
@@ -52,26 +56,22 @@ def _serialize_match(match):
         'away_team_name': match.away_team.name,
         'away_logo_url': match.away_team.display_logo_url,
         'date': match.date.strftime('%d %b %Y @ %H:%M WIB'),
-        'status_key': get_match_status(match.date), # Gunakan get_match_status() terbaru
+        'status_key': get_match_status(match.date),
         'home_goals': match.home_goals if match.home_goals is not None else 0,
         'away_goals': match.away_goals if match.away_goals is not None else 0,
         'details_url': reverse('matches:details', args=[match.id])
     }
 
-
 # --- FUNCTION-BASED VIEWS ---
 
 def match_calendar_view(request):
-    # Dapatkan query jika ada (untuk mengisi input)
     search_query = request.GET.get('q', '')
-
-    # Render template HTML tanpa filter logic di sini
+    
     context = {
         'messages_json': _get_cleaned_messages(request),
-        'search_query': search_query, # Untuk mengisi kembali input
+        'search_query': search_query,
+        'venues': Venue.objects.all().order_by('name'),
     }
-    # Perhatikan: grouped_matches dikirim KOSONG atau Anda bisa pre-load data
-    # Untuk menghindari flashing, kita akan memuat data di client-side melalui AJAX saat DOMContentLoaded
     return render(request, 'matches/calendar.html', context)
 
 
@@ -79,11 +79,34 @@ def api_match_list(request):
     queryset = Match.objects.select_related('home_team', 'away_team', 'venue').order_by('date')
     
     search_query = request.GET.get('q', '')
+    date_start_filter = request.GET.get('date_start', '')
+    date_end_filter = request.GET.get('date_end', '')
+    venue_filter = request.GET.get('venue', '')
+
     if search_query:
         queryset = queryset.filter(
             Q(home_team__name__icontains=search_query) |
             Q(away_team__name__icontains=search_query)
         )
+    
+    if venue_filter:
+        queryset = queryset.filter(venue__id=venue_filter)
+
+    if date_start_filter:
+        try:
+            start_date = dt.strptime(date_start_filter, '%Y-%m-%d').date()
+            start_datetime = timezone.make_aware(dt.combine(start_date, time.min))
+            
+            if date_end_filter:
+                end_date = dt.strptime(date_end_filter, '%Y-%m-%d').date()
+                end_datetime = timezone.make_aware(dt.combine(end_date, time.max))
+                queryset = queryset.filter(date__range=(start_datetime, end_datetime))
+            else:
+                end_datetime = timezone.make_aware(dt.combine(start_date, time.max))
+                queryset = queryset.filter(date__range=(start_datetime, end_datetime))
+                
+        except ValueError:
+            pass
 
     grouped_matches = {'Upcoming': [], 'Ongoing': [], 'Past': []}
     
