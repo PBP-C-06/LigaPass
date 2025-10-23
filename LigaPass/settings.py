@@ -35,7 +35,7 @@ RAPID_API_KEY = os.getenv("RAPID_API_KEY")
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1","jaysen-lestari-ligapass.pbp.cs.ui.ac.id","https://acd8d18053df.ngrok-free.app"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","jaysen-lestari-ligapass.pbp.cs.ui.ac.id"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://accounts.google.com",
