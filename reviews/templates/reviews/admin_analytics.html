@@ -1,49 +1,134 @@
-{% extends 'base.html' %}
+{% extends "profile_base.html" %}
 {% load static %}
 
-{% block content %}
-<div class="max-w-7xl mx-auto px-6 py-8">
-  <h1 class="text-3xl font-bold text-gray-800 mb-6">Admin Analytics</h1>
+{% block profile_content %}
+<div class="w-full">
+  <h2 class="text-2xl font-bold mb-6">Analytics</h2>
 
-  <!-- Filter Section -->
-  <div class="flex flex-wrap gap-4 mb-8">
-    <div>
-      <label class="block font-semibold mb-2">Pilih Pertandingan</label>
-      <select id="matchFilter" class="border rounded px-3 py-2">
-        <option value="">Semua Pertandingan</option>
-        {% for m in matches %}
-          <option value="{{ m.id }}">{{ m.home_team.name }} vs {{ m.away_team.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div>
-      <label class="block font-semibold mb-2">Kategori Kursi</label>
-      <select id="seatFilter" class="border rounded px-3 py-2">
-        {% for seat in seat_categories %}
-          <option value="{{ seat }}">{{ seat }}</option>
-        {% endfor %}
-      </select>
-    </div>
-  </div>
-
-  <!-- Charts Section -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <div class="bg-white p-6 rounded-2xl shadow">
-      <h2 class="font-semibold text-gray-700 mb-3">Total Pendapatan per Pertandingan</h2>
-      <canvas id="revenueChart"></canvas>
+    <!-- LEFT CHART: Total Tiket Terjual -->
+    <div class="bg-white p-6 rounded-2xl shadow-md">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-800">Total Tiket Terjual</h3>
+        <select id="ticketPeriod" class="border rounded px-2 py-1 text-sm">
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly" selected>Monthly</option>
+        </select>
+      </div>
+      <canvas id="ticketsChart" height="260"></canvas>
     </div>
 
-    <div class="bg-white p-6 rounded-2xl shadow">
-      <h2 class="font-semibold text-gray-700 mb-3">Seat Occupancy (%)</h2>
-      <canvas id="occupancyChart"></canvas>
+    <!-- RIGHT CHART: Total Pendapatan -->
+    <div class="bg-white p-6 rounded-2xl shadow-md">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-800">Total Pemasukkan</h3>
+        <select id="revenuePeriod" class="border rounded px-2 py-1 text-sm">
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly" selected>Monthly</option>
+        </select>
+      </div>
+      <canvas id="revenueChart" height="260"></canvas>
     </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{% static 'js/analytics.js' %}"></script>
+
 <script>
-  initAdminAnalytics();
+document.addEventListener("DOMContentLoaded", () => {
+  const ticketCtx = document.getElementById("ticketsChart");
+  const revenueCtx = document.getElementById("revenueChart");
+  const ticketPeriod = document.getElementById("ticketPeriod");
+  const revenuePeriod = document.getElementById("revenuePeriod");
+
+  let ticketsChart, revenueChart;
+
+  // Fetch data dari API
+  async function fetchData(period) {
+    const res = await fetch(`/reviews/analytics/admin/data/?period=${period}`);
+    return res.json();
+  }
+
+  // Render kedua chart bar
+  async function renderCharts(period = "monthly") {
+    const data = await fetchData(period);
+
+    const ticketLabels = data.ticketsData.map(i => i.date);
+    const ticketValues = data.ticketsData.map(i => i.tickets_sold);
+    const revenueLabels = data.revenueData.map(i => i.date);
+    const revenueValues = data.revenueData.map(i => i.total_revenue);
+
+    // === 1️⃣ Chart Tickets Sold ===
+    if (ticketsChart) ticketsChart.destroy();
+    ticketsChart = new Chart(ticketCtx, {
+      type: "bar",
+      data: {
+        labels: ticketLabels,
+        datasets: [{
+          label: "Tickets Sold",
+          data: ticketValues,
+          backgroundColor: "rgba(59, 130, 246, 0.8)",   // biru solid
+          hoverBackgroundColor: "rgba(59, 130, 246, 1)",
+          borderRadius: 8,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        animation: { duration: 700, easing: "easeOutQuart" },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            beginAtZero: true,
+            grid: { color: "#f0f0f0" },
+            ticks: { stepSize: 10 }
+          }
+        }
+      }
+    });
+
+    // === 2️⃣ Chart Revenue (bar juga) ===
+    if (revenueChart) revenueChart.destroy();
+    revenueChart = new Chart(revenueCtx, {
+      type: "bar",
+      data: {
+        labels: revenueLabels,
+        datasets: [{
+          label: "Total Revenue (Rp)",
+          data: revenueValues,
+          backgroundColor: "rgba(16, 185, 129, 0.8)",  // hijau solid
+          hoverBackgroundColor: "rgba(16, 185, 129, 1)",
+          borderRadius: 8,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        animation: { duration: 700, easing: "easeOutQuart" },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            beginAtZero: true,
+            grid: { color: "#f0f0f0" },
+            ticks: {
+              callback: v => "Rp " + v.toLocaleString("id-ID")
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // === Dropdown event listeners ===
+  ticketPeriod.addEventListener("change", () => renderCharts(ticketPeriod.value));
+  revenuePeriod.addEventListener("change", () => renderCharts(revenuePeriod.value));
+
+  // === Render pertama kali ===
+  renderCharts();
+});
 </script>
-{% endblock %}
+{% endblock profile_content %}

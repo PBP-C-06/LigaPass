@@ -30,15 +30,16 @@
       font-size: 0.9rem;
     }
 
-    /* --- Toast (biar tetep matching) --- */
+    /* --- Toast --- */
     #toast-container {
       position: fixed;
-      top: 1.5rem;
+      bottom: 1.5rem;
       right: 1.5rem;
       z-index: 9999;
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+      align-items: flex-end;
     }
 
     .toast {
@@ -74,8 +75,40 @@
     {% endblock %}
   </main>
 
-  <footer class="text-center py-4 mt-auto">
-    <p>© {% now "Y" %} LigaPass. All rights reserved.</p>
+  <footer class="bg-white/60 backdrop-blur-lg border-t border-slate-200 text-slate-700 py-6 mt-auto">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 text-sm">
+
+      <!-- Left section -->
+      <div class="flex flex-col">
+        <h2 class="text-xl font-semibold text-slate-900 mb-1">LigaPass</h2>
+        <div class="flex flex-wrap items-center gap-4 text-slate-600">
+          <a href="mailto:liga.pass@outlook.com" class="flex items-center gap-2 hover:text-blue-600 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l9 6 9-6M4 6h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" />
+            </svg>
+            liga.pass@outlook.com
+          </a>
+
+          <span class="text-slate-400">•</span>
+
+          <div class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5s-3 1.343-3 3 1.343 3 3 3z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 22s8-4.5 8-11a8 8 0 10-16 0c0 6.5 8 11 8 11z" />
+            </svg>
+            Depok, West Java
+          </div>
+        </div>
+      </div>
+
+      <!-- Right section -->
+      <p class="text-slate-500 text-center sm:text-right mt-2 sm:mt-0">
+        © 2025 LigaPass. All rights reserved.
+      </p>
+
+    </div>
   </footer>
 
   {% block scripts %}

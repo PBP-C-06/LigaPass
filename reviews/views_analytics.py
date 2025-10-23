@@ -1,90 +1,108 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
-from django.db.models import Sum, Count, F
+from django.db.models import Sum, Count
+from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, ExtractDay, ExtractMonth, ExtractYear
 from bookings.models import Booking, Ticket
 from matches.models import Match, TicketPrice
+from reviews.models import Review
+
 
 # === ROLE CHECKERS ===
 def is_admin(user):
-    return user.is_authenticated and user.role == "admin"
+    return user.is_authenticated and getattr(user, "role", None) == "admin"
+
 
 def is_user(user):
-    return user.is_authenticated and user.role == "user"
+    return user.is_authenticated and getattr(user, "role", None) == "user"
 
 
-# =====================================
-# ==== ADMIN ANALYTICS PAGE ===========
-# =====================================
+# ==============================
+#         ADMIN ANALYTICS
+# ==============================
 
 @login_required
 @user_passes_test(is_admin)
 def admin_analytics_page(request):
-    matches = Match.objects.all().order_by("-date")
-    seat_categories = ["ALL", "VVIP", "VIP", "REGULAR"]
-
-    return render(request, "reviews/admin_analytics.html", {
-        "matches": matches,
-        "seat_categories": seat_categories,
-    })
+    """
+    Halaman Analytics untuk Admin — menampilkan total tiket terjual dan total pendapatan kumulatif
+    (tidak dibedakan per pertandingan).
+    """
+    return render(request, "reviews/admin_analytics.html")
 
 
 @login_required
 @user_passes_test(is_admin)
 def api_admin_analytics_data(request):
     """
-    Return JSON for:
-    - total revenue per match
-    - tickets sold per match
-    - seat occupancy per category
+    API untuk admin analytics — mengembalikan:
+    - ticketsData: total tiket terjual per periode (daily/weekly/monthly)
+    - revenueData: total pendapatan per periode (daily/weekly/monthly)
     """
-    match_id = request.GET.get("match_id")
-    seat_filter = request.GET.get("seat")
+    period = request.GET.get("period", "monthly").lower()
 
-    tickets = Ticket.objects.select_related("ticket_type__match")
+    # Tentukan granularity
+    if period == "daily":
+        trunc = TruncDay("created_at")
+    elif period == "weekly":
+        trunc = TruncWeek("created_at")
+    else:
+        trunc = TruncMonth("created_at")
 
-    if match_id:
-        tickets = tickets.filter(ticket_type__match__id=match_id)
-    if seat_filter and seat_filter != "ALL":
-        tickets = tickets.filter(ticket_type__seat_category=seat_filter)
+    # Booking yang dikonfirmasi
+    confirmed_bookings = Booking.objects.filter(status="CONFIRMED")
 
-    # total revenue (sum of ticket_type.price)
+    # === Total Pendapatan ===
     revenue_data = (
-        tickets.values("ticket_type__match__id", "ticket_type__match__home_team__name", "ticket_type__match__away_team__name")
-        .annotate(
-            total_revenue=Sum("ticket_type__price"),
-            tickets_sold=Count("id"),
-        )
-        .order_by("ticket_type__match__id")
+        confirmed_bookings
+        .annotate(period=trunc)
+        .values("period")
+        .annotate(total_revenue=Sum("total_price"))
+        .order_by("period")
     )
 
-    # seat occupancy (sold / available)
-    occupancy_data = []
-    ticket_prices = TicketPrice.objects.all()
-    for tp in ticket_prices:
-        sold = tickets.filter(ticket_type=tp).count()
-        occupancy = 0
-        if tp.quantity_available > 0:
-            occupancy = (sold / tp.quantity_available) * 100
-        occupancy_data.append({
-            "match": str(tp.match.id),
-            "seat_category": tp.seat_category,
-            "occupancy": round(occupancy, 2)
-        })
+    # === Total Tiket Terjual ===
+    tickets_data = (
+        Ticket.objects.filter(booking__status="CONFIRMED")
+        .annotate(period=trunc)
+        .values("period")
+        .annotate(tickets_sold=Count("ticket_id"))
+        .order_by("period")
+    )
+
+    # Format ke JSON
+    revenue_list = [
+        {
+            "date": r["period"].strftime("%Y-%m-%d") if r["period"] else None,
+            "total_revenue": float(r["total_revenue"] or 0),
+        }
+        for r in revenue_data
+    ]
+
+    tickets_list = [
+        {
+            "date": t["period"].strftime("%Y-%m-%d") if t["period"] else None,
+            "tickets_sold": t["tickets_sold"],
+        }
+        for t in tickets_data
+    ]
 
     return JsonResponse({
-        "revenue_data": list(revenue_data),
-        "occupancy_data": occupancy_data,
+        "revenueData": revenue_list,
+        "ticketsData": tickets_list,
     })
 
 
-# =====================================
-# ==== USER ANALYTICS PAGE ============
-# =====================================
+# ==============================
+#          USER ANALYTICS
+# ==============================
 
 @login_required
 @user_passes_test(is_user)
 def user_analytics_page(request):
+    """
+    Halaman Analytics untuk User — menampilkan pengeluaran, seat category, dan kehadiran.
+    """
     return render(request, "reviews/user_analytics.html")
 
 
@@ -92,21 +110,39 @@ def user_analytics_page(request):
 @user_passes_test(is_user)
 def api_user_analytics_data(request):
     """
-    Return JSON for:
-    - total spending per month
-    - count of tickets by seat category
+    API untuk user analytics:
+    - spendingData: total pengeluaran per hari
+    - seatCount: jumlah tiket per kategori
+    - attendance: perbandingan match yang direview vs belum
     """
-    bookings = Booking.objects.filter(user=request.user, status="CONFIRMED").order_by("created_at")
+    bookings = Booking.objects.filter(
+        user=request.user,
+        status="CONFIRMED",
+        created_at__isnull=False
+    ).order_by("created_at")
 
-    # spending per month
+    # === Total Pengeluaran per Hari ===
     spending_data = (
-        bookings.annotate(month=F("created_at__month"))
-        .values("month")
+        bookings
+        .annotate(
+            day=ExtractDay("created_at"),
+            month=ExtractMonth("created_at"),
+            year=ExtractYear("created_at"),
+        )
+        .values("day", "month", "year")
         .annotate(total_spent=Sum("total_price"))
-        .order_by("month")
+        .order_by("year", "month", "day")
     )
 
-    # ticket distribution by category
+    spending_data = [
+        {
+            "date": f"{item['day']:02d}/{item['month']:02d}/{item['year']}",
+            "total_spent": float(item["total_spent"]),
+        }
+        for item in spending_data
+    ]
+
+    # === Jumlah Tiket per Kategori ===
     tickets = Ticket.objects.filter(booking__in=bookings).select_related("ticket_type")
     seat_count = (
         tickets.values("ticket_type__seat_category")
@@ -114,7 +150,19 @@ def api_user_analytics_data(request):
         .order_by("ticket_type__seat_category")
     )
 
+    # === Statistik Kehadiran (berdasarkan review) ===
+    total_matches = Match.objects.filter(
+        ticket_prices__ticket__booking__user=request.user
+    ).distinct().count()
+
+    reviewed_matches = Review.objects.filter(user=request.user).count()
+    attendance = {
+        "hadir": reviewed_matches,
+        "tidak_hadir": max(total_matches - reviewed_matches, 0)
+    }
+
     return JsonResponse({
-        "spending_data": list(spending_data),
-        "seat_count": list(seat_count),
+        "spendingData": spending_data,
+        "seatCount": list(seat_count),
+        "attendance": attendance,
     })

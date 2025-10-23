@@ -1,172 +1,110 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.csrf import csrf_exempt
 from django.template.loader import render_to_string
-from django.db.models import Q
-from django.urls import reverse
 
-from matches.models import Match, Team
+from matches.models import Match
 from reviews.models import Review, ReviewReply
 from bookings.models import Ticket
-from django.conf import settings
-
 import json
 
-# fungsi helper untuk cek role user
 def is_admin(user):
-    """Cek apakah user merupakan admin (berdasarkan role atau bawaan Django)."""
-    return user.is_authenticated and user.role == 'admin'
-
+    return user.is_authenticated and getattr(user, "role", None) == "admin"
 
 def is_user(user):
-    """Cek apakah user merupakan user biasa (bukan admin atau jurnalis)."""
-    return user.is_authenticated and user.role == 'user'
-
-@user_passes_test(is_user)
-@login_required
-def user_review_entry(request):
-    """
-    - Hanya menampilkan match yang SUDAH dibeli user (Booking.status='CONFIRMED')
-    - Jika ada ?team=... → filter match terakhir untuk tim itu.
-    - Jika tidak → pilih match terakhir yang pernah user beli.
-    - Jika belum ada match yang dibeli → tampilkan halaman 'user_no_match'.
-    - Jika sudah review → redirect ke /user/<match_id>/
-    - Jika belum review → redirect ke /user/<match_id>/?autopop=1
-    """
-
-    team_name = (request.GET.get("team") or "").strip()
-
-    # Ambil semua match yang user SUDAH beli tiketnya
-    qs = Match.objects.filter(
-        ticketprice__ticket__booking__user=request.user,
-        ticketprice__ticket__booking__status="CONFIRMED",
-    ).select_related("home_team", "away_team").distinct().order_by("-date")
-
-    # Filter tambahan berdasarkan tim home/away jika dipilih
-    if team_name:
-        qs = qs.filter(
-            Q(home_team__name=team_name) | Q(away_team__name=team_name)
-        )
-
-    match = qs.first()
-    if not match:
-        return render(request, "reviews/user_no_match.html", {
-            "message": "Kamu belum membeli tiket untuk pertandingan ini.",
-            "teams": Team.objects.all().order_by("name"),
-            "selected_team": team_name,
-        })
-
-    # Cek apakah user sudah membuat review untuk match ini
-    has_review = Review.objects.filter(match=match, user=request.user).exists()
-
-    url = reverse("reviews:user_review_page", args=[match.id])
-    if not has_review:
-        return redirect(f"{url}?autopop=1&team={team_name}")
-    else:
-        return redirect(f"{url}?team={team_name}")
+    return user.is_authenticated and getattr(user, "role", None) == "user"
 
 
 @user_passes_test(is_user)
 @login_required
 def user_review_page(request, match_id):
-    """Tampilkan halaman review user untuk satu match tertentu."""
+    """
+    Komponen review untuk sebuah match.
+    Ditampilkan di halaman detail tiket (dari app bookings).
+    """
     match = get_object_or_404(
-        Match.objects.select_related("home_team", "away_team"), id=match_id
-    )
-    teams = Team.objects.all().order_by("name")
-    selected_team = (request.GET.get("team") or "").strip()
-
-    reviews = (
-        Review.objects
-        .filter(match=match)
-        .select_related("user", "reply")
-        .order_by("-created_at")
+        Match.objects.select_related("home_team", "away_team"),
+        id=match_id
     )
 
-    my_review = reviews.filter(user=request.user).first()
-    autopop = request.GET.get("autopop") == "1" and (my_review is None)
+    # Pastikan user punya tiket yang dikonfirmasi
+    has_ticket = Ticket.objects.filter(
+        ticket_type__match=match,
+        booking__user=request.user,
+        booking__status="CONFIRMED"
+    ).exists()
+    if not has_ticket:
+        return render(
+            request,
+            "reviews/no_access.html",
+            {"message": "Kamu belum membeli tiket untuk pertandingan ini."},
+        )
 
-    return render(request, "reviews/user_review_page.html", {
-        "match": match,
-        "reviews": reviews,
-        "my_review": my_review,
-        "teams": teams,
-        "selected_team": selected_team,
-        "autopop": autopop,
-    })
+    my_review = Review.objects.filter(user=request.user, match=match).first()
+    reviews = Review.objects.filter(match=match).select_related("user").order_by("-created_at")
+
+    return render(
+        request,
+        "reviews/user_review_page.html",
+        {
+            "match": match,
+            "my_review": my_review,
+            "reviews": reviews,
+        },
+    )
 
 
 @csrf_exempt
 @user_passes_test(is_user)
 @login_required
 def api_create_review(request, match_id):
-    """API untuk membuat review baru oleh user biasa."""
     if request.method != "POST":
         return HttpResponseBadRequest("POST only")
 
     match = get_object_or_404(Match, id=match_id)
 
-    # Cek apakah user benar-benar membeli tiket match ini
     has_booking = Ticket.objects.filter(
         ticket_type__match=match,
         booking__user=request.user,
         booking__status="CONFIRMED",
     ).exists()
     if not has_booking:
-        return JsonResponse({
-            "ok": False,
-            "message": "Kamu hanya bisa mereview pertandingan yang sudah kamu beli tiketnya."
-        }, status=403)
+        return JsonResponse({"ok": False, "message": "Kamu hanya bisa mereview pertandingan yang sudah kamu beli tiketnya."}, status=403)
 
-    # Cegah duplikat review
     if Review.objects.filter(match=match, user=request.user).exists():
-        return JsonResponse({
-            "ok": False,
-            "message": "Kamu sudah pernah mereview pertandingan ini. Gunakan Edit."
-        }, status=400)
+        return JsonResponse({"ok": False, "message": "Kamu sudah pernah mereview pertandingan ini. Gunakan Edit."}, status=400)
 
-    # Validasi input
     rating = int(request.POST.get("rating", 0))
     comment = (request.POST.get("comment") or "").strip()
     if not (1 <= rating <= 5):
         return JsonResponse({"ok": False, "message": "Rating harus 1–5."}, status=400)
 
-    # Buat review
-    review = Review.objects.create(
-        user=request.user,
-        match=match,
-        rating=rating,
-        comment=comment,
-    )
-
+    review = Review.objects.create(user=request.user, match=match, rating=rating, comment=comment)
     html_item = render_to_string("reviews/_review_item.html", {"review": review}, request=request)
-    return JsonResponse({
-        "ok": True,
-        "message": "Review berhasil ditambahkan",
-        "item_html": html_item,
-        "review_id": str(review.id)
-    })
+
+    return JsonResponse({"ok": True, "message": "Review berhasil ditambahkan", "item_html": html_item, "review_id": str(review.id)})
 
 
 @csrf_exempt
 @user_passes_test(is_user)
 @login_required
 def api_update_review(request, match_id):
-    """API untuk memperbarui review user."""
     if request.method not in ("POST", "PUT", "PATCH"):
         return HttpResponseBadRequest("POST/PUT only")
 
     match = get_object_or_404(Match, id=match_id)
     review = get_object_or_404(Review, match=match, user=request.user)
 
+    data = {}
     if request.content_type == "application/json":
-        data = json.loads(request.body.decode("utf-8"))
-        rating = int(data.get("rating", review.rating))
-        comment = (data.get("comment") or review.comment or "").strip()
-    else:
-        rating = int(request.POST.get("rating", review.rating))
-        comment = (request.POST.get("comment") or review.comment or "").strip()
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except json.JSONDecodeError:
+            return JsonResponse({"ok": False, "message": "Invalid JSON format."}, status=400)
+
+    rating = int(data.get("rating", request.POST.get("rating", review.rating)))
+    comment = (data.get("comment", request.POST.get("comment", review.comment)) or "").strip()
 
     if not (1 <= rating <= 5):
         return JsonResponse({"ok": False, "message": "Rating harus 1–5."}, status=400)
@@ -176,71 +114,61 @@ def api_update_review(request, match_id):
     review.save(update_fields=["rating", "comment", "updated_at"])
 
     html_item = render_to_string("reviews/_review_item.html", {"review": review}, request=request)
-    return JsonResponse({
-        "ok": True,
-        "message": "Review berhasil diperbarui",
-        "item_html": html_item,
-        "review_id": str(review.id)
-    })
+    return JsonResponse({"ok": True, "message": "Review berhasil diperbarui", "item_html": html_item, "review_id": str(review.id)})
 
+# === ADMIN REVIEWS ===
 @user_passes_test(is_admin)
 @login_required
-def admin_review_page(request):
-    """Halaman admin untuk melihat dan membalas review user."""
-    selected_match_id = request.GET.get("match")
-    sentiment = request.GET.get("sentiment")
+def admin_review_page(request, match_id):
+    """
+    Ditampilkan di halaman detail tiket admin.
+    Menampilkan semua review user untuk 1 pertandingan.
+    """
+    match = get_object_or_404(Match.objects.select_related("home_team", "away_team"), id=match_id)
+    reviews = Review.objects.filter(match=match).select_related("user", "reply").order_by("-created_at")
 
-    if selected_match_id:
-        match = get_object_or_404(Match, id=selected_match_id)
-        reviews = Review.objects.filter(match=match).select_related("user", "reply")
-    else:
-        match = None
-        reviews = Review.objects.select_related("user", "reply")
-
-    # Filter kategori sentimen
-    if sentiment == "baik":
-        reviews = reviews.filter(rating__gte=4)
-    elif sentiment == "netral":
-        reviews = reviews.filter(rating=3)
-    elif sentiment == "buruk":
-        reviews = reviews.filter(rating__lte=2)
-
-    context = {
-        "matches": Match.objects.all(),
-        "selected_match": match,
+    return render(request, "reviews/admin_review_page.html", {
+        "match": match,
         "reviews": reviews,
-        "sentiment": sentiment,
-    }
-    return render(request, "reviews/admin_review_page.html", context)
+    })
 
 
 @csrf_exempt
 @user_passes_test(is_admin)
 @login_required
 def api_add_reply(request, review_id):
-    """API untuk admin menambahkan atau mengedit balasan review."""
+    """
+    Admin menambahkan balasan ke review (via modal pop-up di admin_review_page).
+    Review hanya bisa dibalas satu kali (OneToOne).
+    """
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Invalid method"}, status=400)
 
     review = get_object_or_404(Review, id=review_id)
-    data = json.loads(request.body.decode("utf-8"))
-    reply_text = data.get("reply_text")
 
-    if not reply_text.strip():
+    # Validasi: jika sudah dibalas, tolak
+    if hasattr(review, "reply"):
+        return JsonResponse({"status": "error", "message": "Review ini sudah memiliki balasan."}, status=400)
+
+    # Ambil teks balasan
+    reply_text = (request.POST.get("reply_text") or "").strip()
+    if not reply_text:
         return JsonResponse({"status": "error", "message": "Balasan tidak boleh kosong."}, status=400)
 
-    reply, created = ReviewReply.objects.get_or_create(
+    # Simpan balasan
+    reply = ReviewReply.objects.create(
         review=review,
-        defaults={"admin": request.user, "reply_text": reply_text}
+        admin=request.user,
+        reply_text=reply_text
     )
 
-    if not created:
-        reply.reply_text = reply_text
-        reply.save()
+    # Render ulang elemen review agar langsung diperbarui di front-end
+    html_item = render_to_string("reviews/_review_item.html", {"review": review}, request=request)
 
     return JsonResponse({
         "status": "success",
         "message": "Balasan berhasil disimpan.",
         "reply_text": reply.reply_text,
-        "review_id": review.id
+        "review_id": str(review.id),
+        "updated_html": html_item,
     })

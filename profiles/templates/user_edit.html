@@ -1,12 +1,12 @@
 <!-- Edit user profile -->
 
-{% extends "base.html" %}
+{% extends "components/base_profiles.html" %}
 {% load static %}
 
-{% block content %}
+{% block profile_content %}
 <div class="max-w-3xl mx-auto p-6 md:p-10 bg-white rounded-xl shadow-2xl">
     
-    <h1 class="text-3xl font-bold text-gray-800 mb-8 pb-3 border-b">Edit Profile</h1>
+    <h1 class="text-3xl font-bold text-gray-800 mb-8 pb-3 border-b">Ubah Profil</h1>
 
     <form id="profileForm" method="POST" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
@@ -17,15 +17,14 @@
                     <img src="{{ profile.profile_picture.url }}" alt="Current Profile Picture" 
                         class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md">
                 {% else %}
-                    <div class="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 border-4 border-white shadow-md">
-                        No Photo
-                    </div>
+                    <img src="{% static 'images/default-profile-picture.png' %}" alt="Default Profile Picture"
+                        class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md">
                 {% endif %}
             </div>
 
             <div class="flex-grow">
                 <label for="profile_picture" class="block text-sm font-medium text-gray-700 mb-1">
-                    Change Profile Picture
+                    Ubah Foto Profil
                 </label>
                 <input type="file" id="profile_picture" name="profile_picture" accept="image/*" 
                     class="w-full text-sm text-gray-500
@@ -40,19 +39,19 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             <div>
-                <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+                <label for="first_name" class="block text-sm font-medium text-gray-700">Nama Depan</label>
                 <input type="text" id="first_name" name="first_name" value="{{ person.first_name|title }}" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
 
             <div>
-                <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                <label for="last_name" class="block text-sm font-medium text-gray-700">Nama Belakang</label>
                 <input type="text" id="last_name" name="last_name" value="{{ person.last_name|title }}" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
             
             <div>
-                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                <label for="username" class="block text-sm font-medium text-gray-700">Nama Pengguna</label>
                 <input type="text" id="username" name="username" value="{{ person.username }}" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
@@ -64,13 +63,13 @@
             </div>
 
             <div>
-                <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                <label for="phone" class="block text-sm font-medium text-gray-700">Nomor Telepon</label>
                 <input type="tel" id="phone" name="phone" value="{{ person.phone }}" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
 
             <div>
-                <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
                 <input type="date" id="date_of_birth" name="date_of_birth" value="{{ profile.date_of_birth|date:'Y-m-d' }}" required
                     class="mt-1 block w-full px-4 py-1 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
@@ -79,11 +78,11 @@
         <div class="flex justify-end space-x-4 pt-4">
             <button type="button" id="resetBtn"
                     class="py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-gray-700 font-semibold bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150">
-                Reset
+                Batalkan
             </button>
             <button type="submit"
                     class="py-2 px-4 border border-transparent rounded-lg shadow-md text-white font-semibold bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150">
-                Save Changes
+                Simpan Perubahan
             </button>
         </div>
     </form>
@@ -92,8 +91,8 @@
 <script>
     const initialValues = {};
 
+    // Simpan nilai awal ketika page di load
     window.addEventListener('DOMContentLoaded', () => {
-        // Collect initial values when the page loads
         const fields = ['first_name', 'last_name', 'username', 'email', 'phone', 'date_of_birth'];
         fields.forEach(field => {
             const element = document.getElementById(field);
@@ -103,7 +102,7 @@
         });
     });
 
-    // Reset button logic
+    // Reset button 
     document.getElementById('resetBtn').addEventListener('click', function () {
         // Reset text/date inputs
         for (const [key, value] of Object.entries(initialValues)) {
@@ -118,13 +117,11 @@
             profilePictureInput.value = ''; 
         }
 
-        // Optional: Notify user
-        if (typeof showToast === 'function') {
-            showToast("Form fields reset to initial values.", "info");
-        }
+        // Notify user bahwa berhasil
+        showToast("Berhasil membatalkan perubahan.", "info");
     });
 
-    // Save button logic
+    // Save button
     document.getElementById('profileForm').addEventListener('submit', async function (e) {
         e.preventDefault();
 
@@ -141,35 +138,20 @@
             });
 
             if (response.ok) {
-                // Using showToast or alert
-                if (typeof showToast === 'function') {
-                    showToast("Profile saved successfully!", "success");
-                } else {
-                    alert("Profile saved!");
-                }
+                showToast("Berhasil menyimpan perubahan.", "success");
                 
-                // Reload the page to show new data (including new profile picture)
+                // Reload page untuk menampilkan perubahan
                 setTimeout(() => {
                     window.location.reload(); 
-                    // Changed from direct URL to reload for fresh data
                 }, 1000);
             } else {
                 const errorText = await response.text();
-                
-                if (typeof showToast === 'function') {
-                    showToast("Failed to save profile: " + errorText.substring(0, 100) + "...", "error");
-                } else {
-                    alert("Failed to save profile: " + errorText);
-                }
+                showToast("Terjadi kesalahan saat memuat profil pengguna: " + errorText.substring(0, 100) + "...", "error");
             }
         } catch (error) {
             console.error("Fetch error:", error);
-            if (typeof showToast === 'function') {
-                showToast("Error saving profile. Please check your connection.", "error");
-            } else {
-                alert("Error saving profile.");
-            }
+            showToast("Terjadi kesalahan saat menyimpan profil pengguna. Cek kembali koneksi jaringan anda.", "error");
         }
     });
 </script>
-{% endblock content %}
+{% endblock profile_content %}

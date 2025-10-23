@@ -15,6 +15,10 @@ from django.db.models.functions import TruncDate
 from django.contrib.auth.decorators import user_passes_test
 from datetime import datetime
 from datetime import time
+from reviews.models import Review
+from bookings.models import Ticket
+from django.db.models import Avg
+
 
 from .models import Team, Match, Venue, TicketPrice
 from .forms import TeamForm, MatchForm, TicketPriceFormSet
@@ -120,21 +124,50 @@ def api_match_list(request):
         'search_query': search_query,
     })
 
-
+# ini gw ubah do (Jaysen)
 def match_details_view(request, match_id):
-    match = get_object_or_404(Match.objects.select_related('home_team', 'away_team', 'venue'), id=match_id)
-    
+    match = get_object_or_404(
+        Match.objects.select_related('home_team', 'away_team', 'venue'),
+        id=match_id
+    )
+
     status = get_match_status(match.date)
     ticket_prices = match.ticket_prices.all().order_by('price')
     match.status_key = status
+
+    # === Tambahan: load review kalau match sudah selesai ===
+    reviews = []
+    user_review = None
+    can_review = False
+
+    if status == "Past":
+        # Ambil semua review utk match ini
+        reviews = Review.objects.filter(match=match).select_related("user").order_by("-created_at")
+        avg_rating = reviews.aggregate(Avg("rating"))["rating__avg"] or 0
+        # Kalau user login, cek apakah dia punya tiket
+        if request.user.is_authenticated:
+            has_ticket = Ticket.objects.filter(
+                ticket_type__match=match,
+                booking__user=request.user,
+                booking__status="CONFIRMED"
+            ).exists()
+
+            if has_ticket:
+                can_review = True
+                user_review = Review.objects.filter(user=request.user, match=match).first()
 
     context = {
         'match': match,
         'ticket_prices': ticket_prices,
         'messages_json': _get_cleaned_messages(request),
+        'reviews': reviews,
+        "avg_rating": round(avg_rating, 1),
+        'user_review': user_review,
+        'can_review': can_review,
     }
-    
+
     return render(request, 'matches/details.html', context)
+
 
 @user_passes_test(is_admin)
 def update_matches_view(request):
