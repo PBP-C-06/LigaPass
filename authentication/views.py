@@ -47,27 +47,49 @@ def login_user(request):
         form = AuthenticationForm(data=request.POST)
         if form.is_valid():
             user = form.get_user()
+
+            # Cek status profil kalau role = user
+            if hasattr(user, "profile"):
+                profile_status = user.profile.status
+                if profile_status == "banned":
+                    return JsonResponse({
+                        "status": "banned",
+                        "message": "Akun Anda telah diblokir. Hubungi admin di l1gapass@outlook.com."
+                    }, status=403)
+                elif profile_status == "suspended":
+                    warning_msg = "Akun Anda sedang ditangguhkan sementara. Beberapa fitur (seperti komentar) dinonaktifkan."
+                else:
+                    warning_msg = None
+            else:
+                profile_status = None
+                warning_msg = None
+
+            # Login user
             login(request, user)
-            # Cek profile user, journalist, atau admin
+
             if user.role == "user":
-                # Cek profile sudah ada atau belum
                 if hasattr(user, 'profile'):
                     redirect_url = reverse("matches:calendar")
                 else:
                     redirect_url = reverse("profiles:create_profile")
             else:
                 redirect_url = reverse("matches:calendar")
+
             response = JsonResponse({
                 "status": "success",
                 "message": "Login successful",
-                "redirect_url": redirect_url
+                "redirect_url": redirect_url,
+                "warning": warning_msg,
+                "profile_status": profile_status
             })
             response.set_cookie('last_login', str(datetime.datetime.now()))
             return response
+
         return JsonResponse({
             "status": "error",
             "errors": form.errors
         }, status=400)
+
     form = AuthenticationForm()
     return render(request, "login.html", {"form": form})
 
@@ -89,17 +111,12 @@ def logout_user(request):
 
 @csrf_exempt
 def google_login(request):
-    """
-    Handle Google OAuth login (redirect-based, bukan AJAX).
-    """
     if request.method == "POST":
         try:
-            # Ambil credential dari form POST
             token = request.POST.get("credential")
             if not token:
                 return JsonResponse({"status": "error", "message": "Missing credential."}, status=400)
 
-            # Verifikasi token Google
             idinfo = id_token.verify_oauth2_token(
                 token, requests.Request(), settings.GOOGLE_CLIENT_ID
             )
@@ -107,7 +124,6 @@ def google_login(request):
             email = idinfo.get("email")
             google_sub = idinfo.get("sub")
 
-            # Buat user baru kalau belum ada
             user, created = User.objects.get_or_create(
                 email=email,
                 defaults={
@@ -119,11 +135,22 @@ def google_login(request):
                 },
             )
 
+            # Cek status profile (jika ada)
+            profile_status = getattr(getattr(user, "profile", None), "status", "active")
+            if profile_status == "banned":
+                return JsonResponse({
+                    "status": "banned",
+                    "message": "Akun Anda telah diblokir. Hubungi admin di l1gapass@outlook.com."
+                }, status=403)
+
+            elif profile_status == "suspended":
+                warning_msg = "Akun Anda sedang ditangguhkan sementara. Beberapa fitur dinonaktifkan."
+            else:
+                warning_msg = None
+
             login(request, user)
 
-            # Cek profile user, journalist, atau admin
             if user.role == "user":
-                # Cek profile sudah ada atau belum
                 if hasattr(user, 'profile'):
                     redirect_url = reverse("matches:calendar")
                 else:
@@ -135,6 +162,8 @@ def google_login(request):
                 "status": "success",
                 "message": "Google login successful",
                 "redirect_url": redirect_url,
+                "warning": warning_msg,
+                "profile_status": profile_status
             })
             response.set_cookie("last_login", str(datetime.datetime.now()))
             return response
