@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tickets.forEach(t => {
         const node = tpl.content.cloneNode(true);
         const card = node.querySelector(".ticket-card");
-
+        // console.log(t);
         // Logo klub
         const homeLogo = card.querySelector(".home-logo");
         const awayLogo = card.querySelector(".away-logo");
@@ -220,13 +220,12 @@ document.getElementById("cancel-review").addEventListener("click", () => {
 document.getElementById("submit-review").addEventListener("click", async () => {
   const text = document.getElementById("review-text").value.trim();
   if (!selectedRating || !text) {
-    alert("Mohon isi rating dan ulasan terlebih dahulu!");
+    showToast("⚠️ Mohon isi rating dan ulasan terlebih dahulu!", "warning");
     return;
   }
 
   try {
-    // BAGIAN INI (FIX YOOWWW)
-    const res = await fetch(`/reviews/create/${currentMatchId}/`, {
+    const res = await fetch(`/reviews/api/${currentMatchId}/create/`, {
       method: "POST",
       headers: {
         "X-CSRFToken": "{{ csrf_token }}",
@@ -239,15 +238,37 @@ document.getElementById("submit-review").addEventListener("click", async () => {
     });
 
     const data = await res.json();
-    if (data.ok) {
-      alert("Terima kasih atas ulasan Anda!");
-      modal.classList.add("hidden");
-    } else {
-      alert(data.message || "Gagal mengirim review.");
+
+    if (!res.ok) {
+      showToast(`❌ ${data.message || "Gagal menambahkan review."}`, "error");
+      return;
     }
-  } catch (e) {
-    console.error(e);
-    alert("Terjadi kesalahan. Coba lagi nanti.");
+
+    if (data.ok) {
+      showToast("🎉 Review berhasil dikirim!", "success");
+
+      // Tutup modal
+      modal.classList.add("hidden");
+
+      // Reset form
+      selectedRating = 0;
+      document.getElementById("review-text").value = "";
+      document.querySelectorAll("#rating-stars .star").forEach(s => {
+        s.classList.replace("text-yellow-400", "text-gray-300");
+      });
+
+      // Kalau lo punya container list review, langsung tambahkan review baru
+      if (data.item_html && document.querySelector("#reviews-list")) {
+        document.querySelector("#reviews-list")
+          .insertAdjacentHTML("afterbegin", data.item_html);
+      }
+    } else {
+      showToast(`⚠️ ${data.message || "Gagal mengirim review."}`, "warning");
+    }
+
+  } catch (err) {
+    console.error("Error:", err);
+    showToast("❌ Terjadi kesalahan saat mengirim review.", "error");
   }
 });
 </script>

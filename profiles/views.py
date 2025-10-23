@@ -313,6 +313,7 @@ def user_tickets_json(request, id):
 
         results.append({
             "ticket_id": str(t.ticket_id),
+            "match_id": str(match.id),
             "seat_category": tt.seat_category,
             "match_home": getattr(match.home_team, "name", "-"),
             "match_away": getattr(match.away_team, "name", "-"),

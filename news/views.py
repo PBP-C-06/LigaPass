@@ -9,7 +9,7 @@ from django.forms.widgets import ClearableFileInput
 from django.http import JsonResponse
 
 def is_journalist(user):
-    return user.role == 'journalist'
+    return getattr(user, "is_authenticated", False) and getattr(user, "role", None) == "journalist"
 
 def latest_news_snippet(request):
     latest_news = News.objects.order_by('-created_at')[:3]  # Ambil 3 berita terbaru

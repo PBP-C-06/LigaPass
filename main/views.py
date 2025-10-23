@@ -1,35 +1,29 @@
 from django.shortcuts import render
-from django.http import JsonResponse
 from django.templatetags.static import static
-from django.urls import reverse
 from django.utils import timezone
 from matches.models import Match
 from news.models import News
 
 def home(request):
     now = timezone.now()
-    upcoming_threshold = now
 
     # === Ambil 5 pertandingan mendatang ===
     upcoming_matches = (
         Match.objects.select_related("home_team", "away_team", "venue")
-        .filter(date__gt=upcoming_threshold)
+        .filter(date__gt=now)
         .order_by("date")[:5]
     )
 
-    # === Ambil 3 berita terbaru ===
-    featured_news = list(News.objects.filter(is_featured=True).order_by("-created_at")[:3])
-    if len(featured_news) < 3:
-        additional_news = list(
-            News.objects.filter(is_featured=False)
-            .exclude(id__in=[n.id for n in featured_news])
-            .order_by("-created_at")[: 3 - len(featured_news)]
-        )
-        latest_news = featured_news + additional_news
-    else:
-        latest_news = featured_news
+    # === Ambil 6 berita terbaru (prioritaskan featured) ===
+    featured = list(News.objects.filter(is_featured=True).order_by("-created_at")[:3])
+    additional = list(
+        News.objects.filter(is_featured=False)
+        .exclude(id__in=[n.id for n in featured])
+        .order_by("-created_at")[: max(0, 6 - len(featured))]
+    )
+    latest_news = featured + additional
 
-    # === Hero slides ===
+    # === Hero Slides ===
     hero_slides = [
         {
             "title": "Rasakan Setiap Pertandingan Secara Langsung",
@@ -54,10 +48,8 @@ def home(request):
         },
     ]
 
-    context = {
+    return render(request, "main_page.html", {
         "hero_slides": hero_slides,
         "upcoming_matches": upcoming_matches,
         "latest_news": latest_news,
-    }
-
-    return render(request, "main_page.html", context)
+    })
