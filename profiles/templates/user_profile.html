@@ -5,28 +5,28 @@
 
 {% block content %}
 <div class="max-w-3xl mx-auto p-6 md:p-10 bg-white rounded-xl shadow-2xl">
-    <h1 class="text-3xl font-bold text-gray-800 mb-8 pb-3 border-b">User Profile</h1>
+    <h1 class="text-3xl font-bold text-gray-800 mb-8 pb-3 border-b">Profil Pengguna</h1>
 
     <div id="profile-container" class="space-y-6">
-        <!-- Foto + Username -->
+        <!-- Untuk foto dan username -->
         <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-8 pb-6 border-b border-gray-200">
             <div class="flex-shrink-0">
                 <img id="profile-picture"
                     src=""
-                    alt="Profile Picture"
+                    alt="Foto Profil"
                     class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md bg-gray-100">
             </div>
             <div class="text-center sm:text-left">
                 <h2 class="text-2xl font-semibold text-gray-800">
-                    <span id="username">Loading...</span>
+                    <span id="username"></span>
                 </h2>
             </div>
         </div>
 
-        <!-- Detail Info (hanya tampil kalau owner/admin) -->
+        <!-- Detail info yang hanya ditampilkan jika adalah user yang memiliki profile tersebut / admin -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden" id="detail-info">
             <div>
-                <p class="text-sm text-gray-500 font-medium">Full Name</p>
+                <p class="text-sm text-gray-500 font-medium">Nama lengkap</p>
                 <p class="mt-1 text-gray-800 font-semibold" id="full-name">-</p>
             </div>
             <div>
@@ -34,107 +34,136 @@
                 <p class="mt-1 text-gray-800 font-semibold" id="email">-</p>
             </div>
             <div>
-                <p class="text-sm text-gray-500 font-medium">Phone Number</p>
+                <p class="text-sm text-gray-500 font-medium">Nomor Telepon</p>
                 <p class="mt-1 text-gray-800 font-semibold" id="phone">-</p>
             </div>
             <div>
-                <p class="text-sm text-gray-500 font-medium">Date of Birth</p>
+                <p class="text-sm text-gray-500 font-medium">Tanggal Lahir</p>
                 <p class="mt-1 text-gray-800 font-semibold" id="date_of_birth">-</p>
             </div>
         </div>
+
+        {% if user.is_authenticated %}
+        <!-- Untuk edit profile -->
+            <div id="edit-profile-container" class="mt-10 border-t pt-6">
+                <a href="{% url 'profiles:edit_profile_for_user' user.id %}"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition">
+                    Ubah Profil
+                </a>
+            </div>
+        {% endif %}
     </div>
 
-    <!-- Admin Action -->
+    <!-- Untuk admin action  -->
     <div id="admin-actions" class="mt-10 border-t pt-6 hidden">
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">Admin Actions</h3>
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">Ubah Status User</h3>
         <div class="flex space-x-4 items-center">
             <select id="status-select"
-                    class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="w-64 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style="text-align-last: center;">
             </select>
             <button id="change-status-btn"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition">
-                Change Status
+                Konfirmasi
             </button>
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", async function () {
-    try {
-        const profileId = "{{ id|default:'' }}";
-        if (!profileId) return;
-
-        const viewerId = "{{ viewer_id }}";
-        const viewerRole = "{{ viewer_role }}";
-        const url = `/profiles/json/${profileId}/`;
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to fetch profile data from server");
-        const data = await response.json();
-
-        // Tampilkan foto & username selalu
-        document.getElementById("profile-picture").src =
-            data.profile_picture || "{% static 'images/default-avatar.png' %}";
-        document.getElementById("username").textContent = data.username || "Unknown";
-
-        const isOwner = viewerId == profileId;
-        const isAdmin = viewerRole === "admin";
-        const detailSection = document.getElementById("detail-info");
-
-        // Kalau owner/admin → tampilkan semua info
-        if (isOwner || isAdmin) {
-            detailSection.classList.remove("hidden");
-            document.getElementById("full-name").textContent = data.full_name || "-";
-            document.getElementById("email").textContent = data.email || "-";
-            document.getElementById("phone").textContent = data.phone || "-";
-            document.getElementById("date_of_birth").textContent = data.date_of_birth || "-";
-        } 
-        // Kalau user lain / anonymous → hanya foto + username
-        else {
-            detailSection.remove();  // hapus total section detail
+    document.addEventListener("DOMContentLoaded", async function () {
+        try {
+            const profileId = "{{ id|default:'' }}";
+            if (!profileId) return;
+    
+            const viewerId = "{{ viewer_id }}";
+            const viewerRole = "{{ viewer_role }}";
+            const url = `/profiles/json/${profileId}/`;
+    
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Gagal mengambil data profil dari server.");
+            const data = await response.json();
+    
+            // Untuk edit button jika ada
+            const editButton = document.getElementById("edit-profile-container");
+    
+            // Foto & username
+            const profilePic = document.getElementById("profile-picture");
+            if (data.profile_picture) {
+                profilePic.src = data.profile_picture;
+            } else {
+                // Ambil dari static jika tidak ada
+                profilePic.src = "{% static 'images/default-profile-picture.png' %}";
+            }
+            document.getElementById("username").textContent = data.username || "Anonymous";
+    
+            const isOwner = viewerId == profileId;
+            const isAdmin = viewerRole === "admin";
+            const detailSection = document.getElementById("detail-info");
+    
+            // Owner (yang memiliki profile tersebut)
+            if (isOwner) {
+                detailSection.classList.remove("hidden");
+                document.getElementById("full-name").textContent = data.full_name || "-";
+                document.getElementById("email").textContent = data.email || "-";
+                document.getElementById("phone").textContent = data.phone || "-";
+                document.getElementById("date_of_birth").textContent = data.date_of_birth || "-";
+            // Admin
+            } else if (isAdmin) {
+                detailSection.classList.remove("hidden");
+                document.getElementById("full-name").textContent = data.full_name || "-";
+                document.getElementById("email").textContent = data.email || "-";
+                document.getElementById("phone").textContent = data.phone || "-";
+                document.getElementById("date_of_birth").textContent = data.date_of_birth || "-";
+                if (editButton) editButton.remove();
+            } 
+            // Orang lain (user yang tidak memiliki profile tersebut dan journalist)
+            else {
+                detailSection.remove();
+                if (editButton) editButton.remove();
+            }
+    
+            // Admin actions
+            if (isAdmin) {
+                const adminSection = document.getElementById("admin-actions");
+                adminSection.classList.remove("hidden");
+    
+                const select = document.getElementById("status-select");
+                const statuses = ["active", "suspended", "banned"];
+                select.innerHTML = "";
+                statuses.forEach(s => {
+                    const option = document.createElement("option");
+                    option.value = s;
+                    option.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+                    if (data.status === s) option.selected = true;
+                    select.appendChild(option);
+                });
+    
+                const btn = document.getElementById("change-status-btn");
+                btn.addEventListener("click", async () => {
+                    if (!confirm(`Ubah status pengguna menjadi "${select.value}"?`)) return;
+                    try {
+                        const res = await fetch(`/profiles/admin/edit/${profileId}/`, {
+                            method: "POST",
+                            headers: {
+                                "X-CSRFToken": "{{ csrf_token }}",
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ status: select.value })
+                        });
+                        if (!res.ok) throw new Error("Gagal memperbarui status pengguna.");
+                        const resData = await res.json();
+                        showToast(`Status pengguna berhasil diubah menjadi "${resData.status}".`, "success");
+                    } catch (err) {
+                        console.error(err);
+                        showToast("Terjadi kesalahan saat memperbarui status pengguna.", "error");
+                    }
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("Terjadi kesalahan: " + error.message, "error");
         }
-
-        // Admin actions
-        if (isAdmin) {
-            const adminSection = document.getElementById("admin-actions");
-            adminSection.classList.remove("hidden");
-
-            const select = document.getElementById("status-select");
-            const statuses = ["active", "suspended", "banned"];
-            select.innerHTML = "";
-            statuses.forEach(s => {
-                const option = document.createElement("option");
-                option.value = s;
-                option.textContent = s.charAt(0).toUpperCase() + s.slice(1);
-                select.appendChild(option);
-            });
-
-            const btn = document.getElementById("change-status-btn");
-            btn.addEventListener("click", async () => {
-                if (!confirm(`Change status to "${select.value}"?`)) return;
-                try {
-                    const res = await fetch(`/profiles/admin/edit/${profileId}/`, {
-                        method: "POST",
-                        headers: {
-                            "X-CSRFToken": "{{ csrf_token }}",
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({status: select.value})
-                    });
-                    if (!res.ok) throw new Error("Failed to update status");
-                    const resData = await res.json();
-                    alert(`Status updated: ${resData.status}`);
-                } catch (err) {
-                    console.error(err);
-                    alert("Error updating status");
-                }
-            });
-        }
-    } catch (error) {
-        console.error(error);
-        alert("Error: " + error.message);
-    }
-});
+    });    
 </script>
 {% endblock %}

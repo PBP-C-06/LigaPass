@@ -7,8 +7,8 @@
 <div class="max-w-xl mx-auto p-6 md:p-8 bg-white rounded-xl shadow-2xl">
     
     <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Welcome to LigaPass, {{user.username|title}}!</h1>
-        <p class="text-gray-600">Customize your profile before purchasing tickets 🎫</p>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Selamat datang di LigaPass, {{user.username|title}}!</h1>
+        <p class="text-gray-600">Lengkapi profil Anda sebelum membeli tiket 🎫</p>
     </div>
 
     <form id="profileForm" method="POST" enctype="multipart/form-data" class="space-y-6">
@@ -16,7 +16,7 @@
         
         <div>
             <label for="profile_picture" class="block text-sm font-medium text-gray-700 mb-1">
-                Profile Picture
+                Foto Profil
             </label>
             <div class="mt-1 flex justify-center items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition duration-150">
                 <input type="file" id="profile_picture" name="profile_picture" accept="image/*" class="w-full text-sm text-gray-500
@@ -29,13 +29,13 @@
         </div>
 
         <div>
-            <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+            <label for="name" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
             <input type="text" id="name" name="name" value="{{ user.get_full_name|title }}" readonly
                 class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed">
         </div>
 
         <div>
-            <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+            <label for="username" class="block text-sm font-medium text-gray-700">Nama Pengguna</label>
             <input type="text" id="username" name="username" value="{{ user.username }}" readonly
                 class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed">
         </div>
@@ -48,13 +48,13 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-                <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
-                <input type="tel" id="phone" name="phone" placeholder="e.g., 081234567890" required
+                <label for="phone" class="block text-sm font-medium text-gray-700">Nomor Telepon</label>
+                <input type="tel" id="phone" name="phone" placeholder="misal: 081234567890" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
     
             <div>
-                <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
                 <input type="date" id="date_of_birth" name="date_of_birth" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
@@ -62,55 +62,40 @@
 
         <button type="submit"
                 class="w-full py-3 px-4 border border-transparent rounded-lg shadow-md text-white font-semibold bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
-            Next
+            Selanjutnya
         </button>
     </form>
 </div>
 
 <script>
     document.getElementById('profileForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = e.target;
-    const formData = new FormData(form);
-    
-    try {
-        const response = await fetch("{% url 'profiles:create_profile' %}", {
-            method: "POST",
-            headers: {
-                // Biarkan form data menangani csrf
-            },
-            body: formData,
-        });
-    
-        if (response.ok) {
-            if (typeof showToast === 'function') {
-                showToast("Profile saved successfully!", "success");
+        e.preventDefault();
+        
+        const form = e.target;
+        const formData = new FormData(form);
+        
+        try {
+            const response = await fetch("{% url 'profiles:create_profile' %}", {
+                method: "POST",
+                body: formData,
+            });
+        
+            if (response.ok) {
+                showToast("Profil berhasil disimpan!", "success");
+                
+                setTimeout(() => {
+                    window.location.href = "{% url 'matches:calendar' %}";
+                }, 800);
             } else {
-                alert("Profile saved!");
-            }
-            
-            setTimeout(() => {
-                window.location.href = "{% url 'matches:calendar' %}";
-            }, 800);
-        } else {
-            const errorData = await response.json().catch(() => ({ message: "Unknown error." }));
-            const errorMessage = errorData.message || "Failed to save profile. Please check your data.";
+                const errorData = await response.json().catch(() => ({ message: "Terjadi kesalahan." }));
+                const errorMessage = errorData.message || "Gagal menyimpan profil. Mohon periksa data Anda.";
 
-            if (typeof showToast === 'function') {
                 showToast(errorMessage, "error");
-            } else {
-                alert("Failed to save profile: " + errorMessage);
             }
+        } catch (error) {
+            console.error("Fetch error:", error);
+            showToast("Terjadi kesalahan saat mengirim data. Silakan coba lagi.", "error");
         }
-    } catch (error) {
-        console.error("Fetch error:", error);
-        if (typeof showToast === 'function') {
-            showToast("Something went wrong while sending the data. Please try again.", "error");
-        } else {
-            alert("Something went wrong while sending the data. Please try again.");
-        }
-    }
     });
 </script>
 {% endblock content %}
