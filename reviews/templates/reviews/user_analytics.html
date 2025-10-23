@@ -18,21 +18,17 @@
     </div>
 </div>
 
-<!-- Tambahkan Chart.js -->
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
     try {
-        // Ambil data dari API kamu
         const res = await fetch("/reviews/analytics/user/data/");
         const data = await res.json();
 
         console.log("✅ Data Analytics:", data);
 
-        // =======================
-        // 📊 Chart 1 - Spending
-        // =======================
         const spendingLabels = data.spendingData.map(item => {
             const monthNames = [
                 "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", 
@@ -61,9 +57,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         });
 
-        // =======================
-        // 🍰 Chart 2 - Seat Count
-        // =======================
+      
         const seatLabels = data.seatCount.map(item => item.ticket_type__seat_category);
         const seatValues = data.seatCount.map(item => item.count);
 
