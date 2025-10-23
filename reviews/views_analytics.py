@@ -15,10 +15,6 @@ def is_user(user):
     return user.is_authenticated and getattr(user, "role", None) == "user"
 
 
-# =====================================
-# ==== ADMIN ANALYTICS PAGE ===========
-# =====================================
-
 @login_required
 @user_passes_test(is_admin)
 def admin_analytics_page(request):
@@ -73,10 +69,6 @@ def api_admin_analytics_data(request):
         "occupancyData": occupancy_data,
     })
 
-
-# =====================================
-# ==== USER ANALYTICS PAGE ============
-# =====================================
 
 @login_required
 @user_passes_test(is_user)

@@ -13,10 +13,6 @@ from django.conf import settings
 
 import json
 
-
-# =====================================================
-# ✅ Helper Functions
-# =====================================================
 def is_admin(user):
     """Cek apakah user merupakan admin (berdasarkan role atau bawaan Django)."""
     return user.is_authenticated and getattr(user, "role", None) == "admin"
@@ -26,10 +22,6 @@ def is_user(user):
     """Cek apakah user merupakan user biasa (bukan admin atau jurnalis)."""
     return user.is_authenticated and getattr(user, "role", None) == "user"
 
-
-# =====================================================
-# ✅ USER VIEWS
-# =====================================================
 @user_passes_test(is_user)
 @login_required
 def user_review_entry(request):
@@ -43,14 +35,11 @@ def user_review_entry(request):
     """
 
     team_name = (request.GET.get("team") or "").strip()
-
-    # ⚙️ FIXED: gunakan related_name yang benar (ticket_prices)
     qs = Match.objects.filter(
         ticket_prices__ticket__booking__user=request.user,
         ticket_prices__ticket__booking__status="CONFIRMED",
     ).select_related("home_team", "away_team").distinct().order_by("-date")
 
-    # Filter berdasarkan tim
     if team_name:
         qs = qs.filter(
             Q(home_team__name=team_name) | Q(away_team__name=team_name)
@@ -64,10 +53,8 @@ def user_review_entry(request):
             "selected_team": team_name,
         })
 
-    # Cek apakah user sudah review
     has_review = Review.objects.filter(match=match, user=request.user).exists()
 
-    # ⚙️ FIXED: gunakan str(match.id) untuk UUID
     url = reverse("reviews:user_review_page", args=[str(match.id)])
     if not has_review:
         return redirect(f"{url}?autopop=1&team={team_name}")
@@ -115,9 +102,7 @@ def user_review_page(request, match_id):
     })
 
 
-# =====================================================
-# ✅ API untuk User (CRUD Review)
-# =====================================================
+
 @csrf_exempt
 @user_passes_test(is_user)
 @login_required
@@ -205,9 +190,6 @@ def api_update_review(request, match_id):
     })
 
 
-# =====================================================
-# ✅ ADMIN VIEWS
-# =====================================================
 @user_passes_test(is_admin)
 @login_required
 def admin_review_page(request):
