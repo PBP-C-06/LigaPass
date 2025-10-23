@@ -1,19 +1,19 @@
 from django.http import JsonResponse
 from django.conf import settings
 from django.shortcuts import get_object_or_404, render
-from bookings.models import *
-from matches.models import *
 from django.utils import timezone
-import requests, json, base64, uuid
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
+from bookings.models import *
+from matches.models import *
+import requests, json, base64, uuid
 
 
 @login_required
 def create_booking(request, match_id):
     match = get_object_or_404(Match, id=match_id)
 
-    # --- GET: render halaman pilih kursi & metode ---
+    # GET: tampilkan halaman pemesanan
     if request.method == "GET":
         ticket_prices = TicketPrice.objects.filter(match=match).order_by('price')
         return render(request, "create_booking.html", {
@@ -21,7 +21,7 @@ def create_booking(request, match_id):
             "ticket_prices": ticket_prices,
         })
 
-    # --- POST: buat booking baru ---
+    # POST: buat booking baru
     elif request.method == "POST":
         data = json.loads(request.body)
         ticket_types = data.get("types", {})
@@ -34,15 +34,16 @@ def create_booking(request, match_id):
         if not method:
             return JsonResponse({"error": "Payment method not selected"}, status=400)
 
-        # Hitung total dan kurangi stok tiket
+        # Hitung total dan validasi stok
         for seat_category, quantity in ticket_types.items():
             try:
                 ticket_type = TicketPrice.objects.get(match=match, seat_category=seat_category)
             except TicketPrice.DoesNotExist:
-                 return JsonResponse({"error": f"Ticket type {seat_category} not found"}, status=404)
+                return JsonResponse({"error": f"Ticket type {seat_category} not found"}, status=404)
 
             quantity = int(quantity)
-            if quantity <= 0: continue
+            if quantity <= 0:
+                continue
 
             if ticket_type.quantity_available < quantity:
                 return JsonResponse(
@@ -56,15 +57,16 @@ def create_booking(request, match_id):
             booking_items.append((ticket_type, quantity))
 
         if not booking_items:
-             return JsonResponse({"error": "No valid tickets selected"}, status=400)
+            return JsonResponse({"error": "No valid tickets selected"}, status=400)
 
+        # Buat booking
         booking = Booking.objects.create(
             user=request.user,
             total_price=total_price,
             status='PENDING'
         )
 
-        # Simpan item booking
+        # Simpan tiap item booking
         for ticket_type, qty in booking_items:
             BookingItem.objects.create(
                 booking=booking,
@@ -72,7 +74,7 @@ def create_booking(request, match_id):
                 quantity=qty
             )
 
-        # Simpan metode pembayaran sementara ke session (biar diambil di payment)
+        # Simpan metode pembayaran ke session
         request.session["selected_method"] = method
         request.session.modified = True
 
@@ -90,17 +92,13 @@ def payment(request, booking_id):
     booking = get_object_or_404(Booking, booking_id=booking_id, user=request.user)
 
     if request.method == "GET":
-        selected_method = request.session.get("selected_method", None)
-        if not selected_method and booking.status == 'PENDING' and not booking.midtrans_order_id:
-            pass
-
+        selected_method = request.session.get("selected_method")
         return render(request, "payment.html", {
             "booking": booking,
             "MIDTRANS_CLIENT_KEY": settings.MIDTRANS_CLIENT_KEY,
             "selected_method": selected_method
         })
 
-    # --- POST: buat transaksi ke Midtrans ---
     elif request.method == "POST":
         data = json.loads(request.body)
         method = data.get("method")
@@ -109,7 +107,7 @@ def payment(request, booking_id):
         if not method:
             return JsonResponse({"error": "Payment method is required"}, status=400)
 
-        # --- AUTH BASIC ---
+        # Setup authorization Midtrans
         server_key = settings.MIDTRANS_SERVER_KEY
         auth_str = base64.b64encode(f"{server_key}:".encode()).decode()
         headers = {
@@ -118,32 +116,31 @@ def payment(request, booking_id):
             "Accept": "application/json",
         }
 
+        # Cek apakah transaksi sebelumnya sudah dibuat
         if booking.midtrans_order_id:
             payment_responses = request.session.get("payment_responses", {})
-            stored_response = payment_responses.get(str(booking.booking_id))
-
-            if stored_response:
-                return JsonResponse(stored_response, status=200)
+            cached = payment_responses.get(str(booking.booking_id))
+            if cached:
+                return JsonResponse(cached)
             else:
-                check_url = f"https://api.sandbox.midtrans.com/v2/{booking.midtrans_order_id}/status"
-                check_res = requests.get(check_url, headers=headers)
-                check_data = check_res.json()
-                return JsonResponse(check_data, status=check_res.status_code)
+                check_res = requests.get(
+                    f"https://api.sandbox.midtrans.com/v2/{booking.midtrans_order_id}/status",
+                    headers=headers
+                )
+                return JsonResponse(check_res.json(), status=check_res.status_code)
 
-        # Pastikan booking masih PENDING sebelum membuat order baru
         if booking.status != 'PENDING':
-            return JsonResponse({"error": "Booking is already processed or expired"}, status=400)
+            return JsonResponse({"error": "Booking already processed"}, status=400)
 
         order_id = f"book-{method[:3]}-{uuid.uuid4().hex[:8]}"
 
-        item_details = []
-        for item in booking.items.all():
-            item_details.append({
-                "id": str(item.id),
-                "price": float(item.ticket_type.price),
-                "quantity": item.quantity,
-                "name": f"Ticket: {item.ticket_type.seat_category}"
-            })
+        # Siapkan detail item
+        item_details = [{
+            "id": str(item.id),
+            "price": float(item.ticket_type.price),
+            "quantity": item.quantity,
+            "name": f"Ticket {item.ticket_type.seat_category}"
+        } for item in booking.items.all()]
 
         payload = {
             "transaction_details": {
@@ -154,63 +151,52 @@ def payment(request, booking_id):
                 "first_name": booking.user.first_name or booking.user.username,
                 "last_name": booking.user.last_name or "",
                 "email": booking.user.email,
-                "phone": booking.user.profile.phone_number if hasattr(booking.user, 'profile') else "",
+                "phone": getattr(getattr(booking.user, "profile", None), "phone_number", ""),
             },
-            "item_details": item_details
+            "item_details": item_details,
         }
 
+        # Tentukan payment type
         if method == "card":
             if not token_id:
-                 return JsonResponse({"error": "Card token is required"}, status=400)
+                return JsonResponse({"error": "Card token is required"}, status=400)
             payload["payment_type"] = "credit_card"
-            payload["credit_card"] = {
-                "token_id": token_id,
-                "authentication": True
-            }
-
+            payload["credit_card"] = {"token_id": token_id, "authentication": True}
         elif method.startswith("bank_"):
-            bank_name = method.split("_")[1]
-            if bank_name not in ['bca', 'bni', 'bri', 'cimb']:
-                 return JsonResponse({"error": f"Invalid bank: {bank_name}"}, status=400)
+            bank = method.split("_")[1]
+            if bank not in ["bca", "bni", "bri", "cimb", "mandiri"]:
+                return JsonResponse({"error": "Invalid bank"}, status=400)
             payload["payment_type"] = "bank_transfer"
-            payload["bank_transfer"] = {"bank": bank_name}
-
+            payload["bank_transfer"] = {"bank": bank}
         elif method == "gopay":
             payload["payment_type"] = "qris"
             payload["qris"] = {"acquirer": "gopay"}
-
         else:
-            return JsonResponse({"error": f"Invalid payment method: {method}"}, status=400)
+            return JsonResponse({"error": "Invalid payment method"}, status=400)
 
-        # --- KIRIM REQUEST KE MIDTRANS ---
+        # Kirim request ke Midtrans
         try:
-            response = requests.post(
-                "https://api.sandbox.midtrans.com/v2/charge",
-                headers=headers,
-                json=payload,
-                timeout=20
-            )
-            midtrans_data = response.json()
-
-            # Tangani error dari Midtrans
-            if response.status_code >= 400:
-                return JsonResponse(midtrans_data, status=response.status_code)
-
+            res = requests.post("https://api.sandbox.midtrans.com/v2/charge",
+                                headers=headers, json=payload, timeout=20)
+            mid_data = res.json()
+            if res.status_code >= 400:
+                return JsonResponse(mid_data, status=res.status_code)
         except requests.exceptions.RequestException as e:
             return JsonResponse({"error": f"Midtrans request failed: {e}"}, status=500)
 
-        if "payment_responses" not in request.session:
-            request.session["payment_responses"] = {}
-        request.session["payment_responses"][str(booking.booking_id)] = midtrans_data
+        # Cache response di session
+        payment_responses = request.session.get("payment_responses", {})
+        payment_responses[str(booking.booking_id)] = mid_data
+        request.session["payment_responses"] = payment_responses
         request.session.modified = True
 
         booking.midtrans_order_id = order_id
-        booking.status = midtrans_data.get("transaction_status", "PENDING").upper()
+        booking.status = mid_data.get("transaction_status", "PENDING").upper()
         booking.save(update_fields=["midtrans_order_id", "status"])
 
-        return JsonResponse(midtrans_data, status=response.status_code)
+        return JsonResponse(mid_data)
 
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+    return JsonResponse({"error": "Invalid method"}, status=405)
 
 def cancel_booking(request, booking_id):
     # Pastikan booking milik user dan masih pending
@@ -247,6 +233,14 @@ def cancel_booking(request, booking_id):
 
     return JsonResponse({"message": f"Booking cannot be cancelled (Status: {booking.status})"}, status=400)
 
+@login_required
+def check_booking_status(request, booking_id):
+    try:
+        booking = Booking.objects.get(booking_id=booking_id, user=request.user)
+        return JsonResponse({"status": booking.status})
+    except Booking.DoesNotExist:
+        return JsonResponse({"error": "Booking not found"}, status=404)
+
 
 @csrf_exempt
 def midtrans_notification(request):
@@ -254,8 +248,10 @@ def midtrans_notification(request):
         return JsonResponse({'error': 'Invalid method'}, status=405)
 
     try:
+        print("Raw body bytes:", request.body)
+        print("Decoded body:", request.body.decode('utf-8', errors='ignore'))
         payload = json.loads(request.body)
-        order_id = payload.get('order_id')
+        order_id = payload.get("order_id")
         if not order_id:
             return JsonResponse({'error': 'Missing order_id'}, status=400)
 
@@ -264,53 +260,25 @@ def midtrans_notification(request):
 
         booking = Booking.objects.filter(midtrans_order_id=order_id).first()
         if not booking:
-            return JsonResponse({'message': 'Booking not found, notification ignored'}, status=200)
+            return JsonResponse({'message': 'Booking not found'}, status=200)
 
-        if booking.status == 'PENDING':
-            new_status = None
-            if transaction_status in ['settlement', 'capture'] and fraud_status == 'accept':
-                new_status = 'CONFIRMED'
+        new_status = None
+        if transaction_status in ["settlement", "capture"] and fraud_status == "accept":
+            new_status = "CONFIRMED"
+            for item in booking.items.all():
+                for _ in range(item.quantity):
+                    Ticket.objects.create(booking=booking, ticket_type=item.ticket_type)
+        elif transaction_status in ["expire", "cancel", "deny"]:
+            new_status = "EXPIRED" if transaction_status == "expire" else "CANCELLED"
+            for item in booking.items.all():
+                item.ticket_type.quantity_available += item.quantity
+                item.ticket_type.save()
 
-                tickets_created = []
-                for item in booking.items.all():
-                    for _ in range(item.quantity):
-                        t = Ticket.objects.create(
-                            booking=booking,
-                            ticket_type=item.ticket_type
-                        )
-                        tickets_created.append({"ticket_id": str(t.ticket_id)})
+        if new_status:
+            booking.status = new_status
+            booking.updated_at = timezone.now()
+            booking.save(update_fields=["status", "updated_at"])
 
-
-            elif transaction_status in ['expire', 'cancel', 'deny']:
-                new_status = 'EXPIRED' if transaction_status == 'expire' else 'CANCELLED'
-
-                # Kembalikan stok HANYA jika status baru adalah EXPIRED/CANCELLED
-                for item in booking.items.all():
-                    item.ticket_type.quantity_available += item.quantity
-                    item.ticket_type.save(update_fields=["quantity_available"])
-
-
-            # Jika ada perubahan status, simpan
-            if new_status:
-                booking.status = new_status
-                booking.updated_at = timezone.now()
-                booking.save(update_fields=['status', 'updated_at'])
-
-                if "payment_responses" in request.session:
-                    if str(booking.booking_id) in request.session["payment_responses"]:
-                        del request.session["payment_responses"][str(booking.booking_id)]
-
-
-        # Kirim respons 200 OK ke Midtrans agar tidak dikirim ulang
-        return JsonResponse({'message': f'Notification processed for {order_id}, status: {booking.status}'}, status=200)
-
+        return JsonResponse({'message': f'Processed {order_id} with {booking.status}'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-@login_required
-def check_booking_status(request, booking_id):
-    try:
-        booking = Booking.objects.get(booking_id=booking_id, user=request.user)
-        return JsonResponse({"status": booking.status})
-    except Booking.DoesNotExist:
-        return JsonResponse({"error": "Booking not found or access denied"}, status=404)

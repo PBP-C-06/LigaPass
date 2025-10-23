@@ -15,12 +15,17 @@ class TeamForm(forms.ModelForm):
 class MatchForm(forms.ModelForm):
     class Meta:
         model = Match
-        fields = ['home_team', 'away_team', 'venue', 'date']
+        fields = ['home_team', 'away_team', 'venue', 'date', 'home_goals', 'away_goals']
         widgets = {
-            'date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-input-class'}),
+            'date': forms.DateTimeInput(
+                attrs={'type': 'datetime-local', 'class': 'form-input-class'},
+                format="%Y-%m-%dT%H:%M",
+                ),
             'home_team': forms.Select(attrs={'class': 'form-input-class'}),
             'away_team': forms.Select(attrs={'class': 'form-input-class'}),
             'venue': forms.Select(attrs={'class': 'form-input-class'}),
+            'home_goals': forms.NumberInput(attrs={'class': 'form-input-class', 'min': 0}),
+            'away_goals': forms.NumberInput(attrs={'class': 'form-input-class', 'min': 0}),
         }
     
     def clean(self):
