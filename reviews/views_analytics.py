@@ -2,15 +2,17 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.db.models import Sum, Count, F
+from django.db.models.functions import ExtractMonth, ExtractYear
 from bookings.models import Booking, Ticket
 from matches.models import Match, TicketPrice
 
+
 # === ROLE CHECKERS ===
 def is_admin(user):
-    return user.is_authenticated and user.role == "admin"
+    return user.is_authenticated and getattr(user, "role", None) == "admin"
 
 def is_user(user):
-    return user.is_authenticated and user.role == "user"
+    return user.is_authenticated and getattr(user, "role", None) == "user"
 
 
 # =====================================
@@ -22,7 +24,6 @@ def is_user(user):
 def admin_analytics_page(request):
     matches = Match.objects.all().order_by("-date")
     seat_categories = ["ALL", "VVIP", "VIP", "REGULAR"]
-
     return render(request, "reviews/admin_analytics.html", {
         "matches": matches,
         "seat_categories": seat_categories,
@@ -32,49 +33,44 @@ def admin_analytics_page(request):
 @login_required
 @user_passes_test(is_admin)
 def api_admin_analytics_data(request):
-    """
-    Return JSON for:
-    - total revenue per match
-    - tickets sold per match
-    - seat occupancy per category
-    """
     match_id = request.GET.get("match_id")
     seat_filter = request.GET.get("seat")
 
-    tickets = Ticket.objects.select_related("ticket_type__match")
+    tickets = Ticket.objects.select_related("ticket_type__match").all()
 
     if match_id:
         tickets = tickets.filter(ticket_type__match__id=match_id)
     if seat_filter and seat_filter != "ALL":
         tickets = tickets.filter(ticket_type__seat_category=seat_filter)
 
-    # total revenue (sum of ticket_type.price)
     revenue_data = (
-        tickets.values("ticket_type__match__id", "ticket_type__match__home_team__name", "ticket_type__match__away_team__name")
-        .annotate(
-            total_revenue=Sum("ticket_type__price"),
-            tickets_sold=Count("id"),
+        tickets.values(
+            "ticket_type__match__id",
+            "ticket_type__match__home_team__name",
+            "ticket_type__match__away_team__name"
         )
-        .order_by("ticket_type__match__id")
+        .annotate(
+            tickets_sold=Count("id", distinct=True),
+            total_revenue=Sum(F("ticket_type__price")),
+        )
+        .order_by("ticket_type__match__date")
     )
 
-    # seat occupancy (sold / available)
     occupancy_data = []
-    ticket_prices = TicketPrice.objects.all()
+    ticket_prices = TicketPrice.objects.select_related("match").all()
     for tp in ticket_prices:
         sold = tickets.filter(ticket_type=tp).count()
-        occupancy = 0
-        if tp.quantity_available > 0:
-            occupancy = (sold / tp.quantity_available) * 100
+        occupancy = (sold / tp.quantity_available * 100) if tp.quantity_available else 0
         occupancy_data.append({
-            "match": str(tp.match.id),
-            "seat_category": tp.seat_category,
-            "occupancy": round(occupancy, 2)
+            "matchId": str(tp.match.id),
+            "matchName": f"{tp.match.home_team.name} vs {tp.match.away_team.name}",
+            "seatCategory": tp.seat_category,
+            "occupancy": round(occupancy, 2),
         })
 
     return JsonResponse({
-        "revenue_data": list(revenue_data),
-        "occupancy_data": occupancy_data,
+        "revenueData": list(revenue_data),
+        "occupancyData": occupancy_data,
     })
 
 
@@ -91,30 +87,28 @@ def user_analytics_page(request):
 @login_required
 @user_passes_test(is_user)
 def api_user_analytics_data(request):
-    """
-    Return JSON for:
-    - total spending per month
-    - count of tickets by seat category
-    """
-    bookings = Booking.objects.filter(user=request.user, status="CONFIRMED").order_by("created_at")
+    bookings = Booking.objects.filter(
+        user=request.user, 
+        status="CONFIRMED",
+        created_at__isnull=False
+    ).order_by("created_at")
 
-    # spending per month
     spending_data = (
-        bookings.annotate(month=F("created_at__month"))
-        .values("month")
+        bookings
+        .annotate(month=ExtractMonth("created_at"), year=ExtractYear("created_at"))
+        .values("month", "year")
         .annotate(total_spent=Sum("total_price"))
-        .order_by("month")
+        .order_by("year", "month")
     )
 
-    # ticket distribution by category
     tickets = Ticket.objects.filter(booking__in=bookings).select_related("ticket_type")
     seat_count = (
         tickets.values("ticket_type__seat_category")
-        .annotate(count=Count("id"))
+        .annotate(count=Count("ticket_id"))
         .order_by("ticket_type__seat_category")
     )
 
     return JsonResponse({
-        "spending_data": list(spending_data),
-        "seat_count": list(seat_count),
+        "spendingData": list(spending_data),
+        "seatCount": list(seat_count),
     })
