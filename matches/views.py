@@ -149,13 +149,14 @@ class TeamCreateView(AdminRequiredMixin, CreateView):
     success_url = reverse_lazy('matches:manage_teams')
 
     def form_valid(self, form):
-        # API ID Logic DIBERSIHKAN TOTAL
         self.object = form.save() 
         messages.success(self.request, f'Tim "{self.object.name}" berhasil ditambahkan.')
         return redirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Di CreateView, mode selalu Tambah
+        context['is_update'] = False
         context['messages_json'] = _get_cleaned_messages(self.request)
         return context
 
@@ -172,6 +173,8 @@ class TeamUpdateView(AdminRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Di UpdateView, mode selalu Edit
+        context['is_update'] = True
         context['messages_json'] = _get_cleaned_messages(self.request)
         return context
     
@@ -192,16 +195,6 @@ class TeamDeleteView(AdminRequiredMixin, DeleteView):
     
 # --- MANAJEMEN MATCH & MIXIN ---
 
-class MatchCreateUpdateMixin:
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context['formset'] = TicketPriceFormSet(self.request.POST, self.request.FILES, instance=self.object)
-        else:
-            context['formset'] = TicketPriceFormSet(instance=self.object)
-        context['messages_json'] = _get_cleaned_messages(self.request) 
-        return context
-
 class MatchListView(AdminRequiredMixin, ListView):
     model = Match
     template_name = 'matches/manage/match_list.html'
@@ -212,6 +205,20 @@ class MatchListView(AdminRequiredMixin, ListView):
         context['messages_json'] = _get_cleaned_messages(self.request)
         return context
 
+class MatchCreateUpdateMixin:
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        is_update_mode = self.object is not None and self.object.pk is not None
+        
+        if self.request.POST:
+            context['formset'] = TicketPriceFormSet(self.request.POST, self.request.FILES, instance=self.object)
+        else:
+            context['formset'] = TicketPriceFormSet(instance=self.object)
+            
+        context['is_update'] = is_update_mode
+        context['messages_json'] = _get_cleaned_messages(self.request) 
+        return context
+
 class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
     model = Match
     form_class = MatchForm 
@@ -219,22 +226,18 @@ class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
     success_url = reverse_lazy('matches:manage_matches')
 
     def form_valid(self, form):
-        # 1. Tunda simpan form utama
         self.object = form.save(commit=False)
         
-        # 2. Set API ID ke NULL, dan set nilai default yang dibutuhkan
         if not self.object.pk:
-            self.object.api_id = None # Set to NULL/None because it's nullable now
+            self.object.api_id = None
             self.object.status_short = "NS"
             self.object.status_long = "Not Started"
             self.object.home_goals = None
             self.object.away_goals = None
             
-        # 3. Simpan object utama (CRITICAL: Match object must be saved to DB)
         self.object.save()
         form.save_m2m() 
 
-        # 4. Validasi dan Simpan Formset
         formset = TicketPriceFormSet(self.request.POST, self.request.FILES, instance=self.object)
 
         if formset.is_valid():
@@ -243,11 +246,9 @@ class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
             messages.success(self.request, f'Pertandingan {self.object.home_team.name} vs {self.object.away_team.name} berhasil ditambahkan.')
             return redirect(self.get_success_url())
         else:
-            # If formset fails, delete the partially created match object
             messages.error(self.request, "Gagal menambahkan harga tiket. Pertandingan yang dibuat telah dihapus. Silakan coba lagi.")
             self.object.delete() 
             
-            # Re-render the form with errors
             context = self.get_context_data(form=form)
             context['formset'] = formset 
             return self.render_to_response(context)
@@ -257,16 +258,16 @@ class MatchUpdateView(AdminRequiredMixin, MatchCreateUpdateMixin, UpdateView):
     form_class = MatchForm
     template_name = 'matches/manage/match_form.html'
     success_url = reverse_lazy('matches:manage_matches')
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('home_team', 'away_team')
 
     def form_valid(self, form):
-        # 1. Tunda simpan form utama
         self.object = form.save(commit=False)
 
-        # 2. Simpan object utama (untuk update fields)
         self.object.save()
         form.save_m2m() 
 
-        # 3. Validasi dan Simpan Formset
         formset = TicketPriceFormSet(self.request.POST, self.request.FILES, instance=self.object)
 
         if formset.is_valid():
@@ -275,7 +276,6 @@ class MatchUpdateView(AdminRequiredMixin, MatchCreateUpdateMixin, UpdateView):
             messages.success(self.request, f'Pertandingan {self.object.home_team.name} vs {self.object.away_team.name} berhasil diperbarui.')
             return redirect(self.get_success_url())
         else:
-            # No need to delete on update, just render with errors
             messages.error(self.request, "Gagal memperbarui harga tiket.")
             
             context = self.get_context_data(form=form)

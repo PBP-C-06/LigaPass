@@ -1,13 +1,13 @@
 <a href="{% url 'matches:details' match.id %}" class="relative block bg-white border border-slate-200 p-4 rounded-lg hover:shadow-md hover:scale-[1.01] transition">
   <div class="flex items-center justify-center">
     <div class="flex-1 text-right text-slate-800 font-semibold">{{ match.home_team.name }}</div>
-    <img src="{{ match.home_team.logo_url }}" alt="{{ match.home_team.name }} logo" class="w-8 h-8 mx-2">
+    <img src="{{ match.home_team.display_logo_url }}" alt="{{ match.home_team.name }} logo" class="w-8 h-8 mx-2">
     <div class="text-xl font-bold text-slate-900">
       {% if match.status_key == 'Past' %}
         {{ match.home_goals|default_if_none:"-" }} - {{ match.away_goals|default_if_none:"-" }}
       {% else %}VS{% endif %}
     </div>
-    <img src="{{ match.away_team.logo_url }}" alt="{{ match.away_team.name }} logo" class="w-8 h-8 mx-2">
+    <img src="{{ match.away_team.display_logo_url }}" alt="{{ match.away_team.name }} logo" class="w-8 h-8 mx-2">
     <div class="flex-1 text-left text-slate-800 font-semibold">{{ match.away_team.name }}</div>
   </div>
   <div class="absolute top-3 right-4 text-right text-xs text-slate-500">

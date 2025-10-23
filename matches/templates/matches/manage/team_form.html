@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
-{% block title %}Manajemen Tim - {% if form.instance.pk %}Edit{% else %}Tambah{% endif %}{% endblock %}
+{% block title %}Manajemen Tim - {% if is_update %}Edit{% else %}Tambah{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-xl mx-auto bg-slate-800 p-8 rounded-lg shadow-xl">
     <h1 class="text-3xl font-bold mb-6 text-white">
-        {% if form.instance.pk %}Edit Tim: {{ form.instance.name }}{% else %}Tambah Tim Baru{% endif %}
+        {% if is_update %}Edit Tim: {{ form.instance.name }}{% else %}Tambah Tim Baru{% endif %}
     </h1>
 
     <form method="post" class="space-y-4">

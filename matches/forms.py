@@ -17,7 +17,10 @@ class MatchForm(forms.ModelForm):
         model = Match
         fields = ['home_team', 'away_team', 'venue', 'date']
         widgets = {
-            'date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-input-class'}),
+            'date': forms.DateTimeInput(
+                attrs={'type': 'datetime-local', 'class': 'form-input-class'},
+                format="%Y-%m-%dT%H:%M",
+                ),
             'home_team': forms.Select(attrs={'class': 'form-input-class'}),
             'away_team': forms.Select(attrs={'class': 'form-input-class'}),
             'venue': forms.Select(attrs={'class': 'form-input-class'}),
