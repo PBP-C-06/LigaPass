@@ -43,12 +43,89 @@
 
     <!-- Profile container untuk user -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2" id="profilesContainer"></div>
-
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async function () {
+        const STATIC_URL = "{% static '' %}";
+        const MEDIA_URL = "{{ MEDIA_URL }}";
+        const DUMMY_USER_IMAGE = STATIC_URL + 'images/default-profile-picture.png';
+    
+        const profilePicture = document.getElementById("profile-picture");
+        const usernameEl = document.getElementById("username");
+        const searchInput = document.getElementById('searchInput');
+        const filterSelect = document.getElementById('filterSelect');
+        const profilesContainer = document.getElementById('profilesContainer');
+    
+        // --- Fetch admin profile ---
+        try {
+            const response = await fetch(`/profiles/json/adminjournalist/`);
+            if (!response.ok) throw new Error("Gagal mengambil data admin dari server.");
+            const data = await response.json();
+    
+            usernameEl.textContent = data.username;
+            profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
+            profilePicture.alt = "Foto Profil Admin";
+        } catch (error) {
+            console.error("Terjadi kesalahan saat memuat profil admin:", error);
+            showToast("Terjadi kesalahan saat memuat profil admin.", "error");
+        }
+    
+        // --- Fetch user profiles ---
+        async function fetchProfiles() {
+            const search = searchInput.value;
+            const filter = filterSelect.value;
+    
+            try {
+                const response = await fetch(`{% url 'profiles:admin_view_json' %}?search=${search}&filter=${filter}`);
+                if (!response.ok) throw new Error("Gagal mengambil data profil dari server.");
+    
+                const profiles = await response.json();
+                profilesContainer.innerHTML = "";
+    
+                if (profiles.length > 0) {
+                    profiles.forEach(p => {
+                        const card = document.createElement("div");
+                        card.className = "flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm hover:border-blue-300 transition duration-150 ease-in-out";
+                        card.innerHTML = `
+                            <div class="flex items-center space-x-3">
+                                <img src="${p.profile_picture ? MEDIA_URL + p.profile_picture : DUMMY_USER_IMAGE}" 
+                                    alt="Profil Pengguna ${p.username}" class="h-12 w-12 rounded-full object-cover">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">${p.username}</p>
+                                    <p class="text-xs text-gray-500">${p.email || 'username@gmail.com'}</p>
+                                </div>
+                            </div>
+                            <button class="details-btn text-blue-600 hover:text-blue-800 font-medium text-xs flex items-center p-1.5" data-id="${p.id}">
+                                Detail
+                            </button>
+                        `;
+                        profilesContainer.appendChild(card);
+                    });
+    
+                    document.querySelectorAll(".details-btn").forEach(btn => {
+                        btn.addEventListener("click", () => {
+                            window.location.href = `/profiles/user/${btn.dataset.id}/`;
+                        });
+                    });
+    
+                } else {
+                    profilesContainer.innerHTML = `<p class='col-span-2 text-center text-gray-500'>Tidak ada profil untuk pencarian "${search}" dengan filter "${filter}".</p>`;
+                }
+            } catch (error) {
+                console.error("Terjadi kesalahan saat memuat profil pengguna:", error);
+                profilesContainer.innerHTML = "<p class='col-span-2 text-center text-red-500'>Terjadi kesalahan saat memuat profil.</p>";
+                showToast("Terjadi kesalahan saat memuat profil pengguna.", "error");
+            }
+        }
+    
+        fetchProfiles();
+        searchInput.addEventListener('input', fetchProfiles);
+        filterSelect.addEventListener('change', fetchProfiles);
+    });
+    </script>    
 {% endblock profile_content %}
 
-{% block scripts %}
-{{ block.super }}
 <script>
 document.addEventListener("DOMContentLoaded", async function () {
     const STATIC_URL = "{% static '' %}";
@@ -128,5 +205,4 @@ document.addEventListener("DOMContentLoaded", async function () {
     filterSelect.addEventListener('change', fetchProfiles);
 });
 </script>
-{% endblock scripts %}
 

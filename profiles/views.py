@@ -223,57 +223,86 @@ def edit_profile_for_user(request, id):
 @login_required
 def admin_change_status(request, id):
     import json
-    
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
     
+    # Hanya admin yang boleh mengubah status sisanya permission denied
     if request.user.role != "admin":
         return JsonResponse({"error": "Permission denied"}, status=403)
     
+    # Ambil data JSON dari request body
     data = json.loads(request.body)
-    new_status = data.get("status")
+    new_status = data.get("status") # Ambil status baru 
     
-    STATUS_CHOICES = ['active', 'suspended', 'banned']
+    STATUS_CHOICES = ['active', 'suspended', 'banned'] # Adalah daftar status yang valid
 
+    # Jika status invalid maka error
     if new_status not in STATUS_CHOICES:
         return JsonResponse({"error": "Invalid status"}, status=400)
-    
+    # Jika valid maka
     try:
+        # Ambil user berdasarkan id
         user = User.objects.get(pk=id)
+
+        # Ambil profile user jika ada
         profile = getattr(user, 'profile', None)
         if not profile:
             return JsonResponse({"error": "Profile not found"}, status=404)
         
+        # Ubah dan save perubahan status
         profile.status = new_status
         profile.save()
         return JsonResponse({"status": profile.status})
-    except User.DoesNotExist:
+    except User.DoesNotExist: # Jika user tidak ditemukan 
         return JsonResponse({"error": "User not found"}, status=404)
-    
-def current_user_json(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({"authenticated": False})
 
+def current_user_json(request):
     user = request.user
     profile = getattr(user, "profile", None)
-
-    # Tentukan url profile picture berdasarkan role
+    login_page = reverse("authentication:login") 
+    
+    if not user.is_authenticated:
+        # Anonymous user redirect ke login
+        return JsonResponse({
+            "authenticated": False,
+            "username": "Anonymous",
+            "email": "",
+            "role": "anonymous",
+            "id": None,
+            "profile_picture": static("images/default-profile-picture.png"),
+            "menu": [
+                {"name": "Profil", "url": login_page},
+                {"name": "Tiket Saya", "url": login_page},
+                {"name": "Analisis", "url": login_page},
+            ]
+        })
+    
+    # Tentukan profile picture & main profile URL
     if user.role == "admin":
         profile_picture_url = static("images/Admin.png")
         my_profile_url = reverse("profiles:admin_view")
+        menu = [
+            {"name": "Profil", "url": my_profile_url},
+            {"name": "Dashboard", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
+            {"name": "Review", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti 
+            {"name": "Teams", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
+            {"name": "Matches", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
+        ]
     elif user.role == "journalist":
         profile_picture_url = static("images/Journalist.png")
         my_profile_url = reverse("profiles:journalist_view")
-    else:
-        if profile and profile.profile_picture:
-            profile_picture_url = profile.profile_picture.url
-        else:
-            profile_picture_url = static("images/default-profile-picture.png")
+        menu = [
+            {"name": "Profil", "url": my_profile_url},
+        ]
+    else:  # regular user
+        profile_picture_url = profile.profile_picture.url if profile and profile.profile_picture else static("images/default-profile-picture.png")
         my_profile_url = reverse("profiles:user_view", args=[user.id])
-
-    my_tickets_url = reverse("profiles:user_tickets_page", args=[user.id]) # GUYS JGN LUPA DIGANTI!!!!
-    my_analytics_url = reverse("profiles:user_view", args=[user.id]) # GUYS JGN LUPA DIGANTI!!!!
-
+        menu = [
+            {"name": "Profil", "url": my_profile_url},
+            {"name": "My Booking", "url": reverse("profiles:user_tickets_page", args=[user.id])},
+            {"name": "Matches", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
+        ]
+    
     return JsonResponse({
         "authenticated": True,
         "username": user.username,
@@ -281,9 +310,7 @@ def current_user_json(request):
         "role": user.role,
         "id": str(user.id),
         "profile_picture": profile_picture_url,
-        "my_profile_url": my_profile_url,
-        "my_tickets_url": my_tickets_url,
-        "my_analytics_url": my_analytics_url,
+        "menu": menu,
     })
 
 @login_required
