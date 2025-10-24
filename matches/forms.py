@@ -2,6 +2,7 @@ from django import forms
 from django.forms.models import inlineformset_factory, BaseInlineFormSet
 from django.core.exceptions import ValidationError
 from .models import Team, Match, TicketPrice, Venue
+from django.utils import timezone
 
 class TicketPriceForm(forms.ModelForm):
     class Meta:
@@ -64,11 +65,16 @@ class MatchForm(forms.ModelForm):
         cleaned_data = super().clean()
         home_team = cleaned_data.get("home_team")
         away_team = cleaned_data.get("away_team")
+        match_date = cleaned_data.get("date")
 
         if home_team and away_team and home_team == away_team:
             raise ValidationError(
                 "Tim Tuan Rumah (Home Team) tidak boleh sama dengan Tim Tamu (Away Team)."
             )
+
+        if match_date and match_date > timezone.now():
+            cleaned_data['home_goals'] = None
+            cleaned_data['away_goals'] = None
 
         return cleaned_data
     

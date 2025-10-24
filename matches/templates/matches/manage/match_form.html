@@ -196,6 +196,11 @@
         outline: none;
         box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
       }
+      .field-wrapper input:disabled {
+          background-color: #f3f4f6;
+          cursor: not-allowed;
+          color: #9ca3af;
+      }
     </style>
 
     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors mt-6">
@@ -307,6 +312,38 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   updateCategoryNumbers();
+
+  const dateInput = document.getElementById('id_date');
+  const homeGoalsInput = document.getElementById('id_home_goals');
+  const awayGoalsInput = document.getElementById('id_away_goals');
+
+  function checkMatchDate() {
+      if (!dateInput || !homeGoalsInput || !awayGoalsInput) return;
+
+      try {
+          const matchDate = new Date(dateInput.value);
+          const now = new Date();
+
+          if (dateInput.value && matchDate > now) {
+              homeGoalsInput.value = 0;
+              homeGoalsInput.disabled = true;
+              
+              awayGoalsInput.value = 0;
+              awayGoalsInput.disabled = true;
+          } else {
+              homeGoalsInput.disabled = false;
+              awayGoalsInput.disabled = false;
+          }
+      } catch (e) {
+          homeGoalsInput.disabled = false;
+          awayGoalsInput.disabled = false;
+      }
+  }
+
+  if (dateInput) {
+      checkMatchDate();
+      dateInput.addEventListener('input', checkMatchDate);
+  }
 
   const isMatchLiveOrFinished = {{ is_match_live_or_finished|yesno:"true,false" }};
   const matchForm = document.querySelector('form[method="post"]');
