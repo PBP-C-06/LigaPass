@@ -1,0 +1,25 @@
+{% extends 'matches/manage/admin_manage_base.html' %}
+{% block title %}Konfirmasi Hapus Venue{% endblock %}
+
+{% block list_content %}
+<div class="max-w-lg mx-auto bg-slate-800 p-8 rounded-lg shadow-xl text-center">
+    <h1 class="text-3xl font-bold mb-4 text-red-400">Hapus Venue</h1>
+    <p class="text-lg text-white mb-6">
+        Anda yakin ingin menghapus venue <strong>{{ object.name }}</strong> ({{ object.city }})?
+    </p>
+
+    <p class="text-sm text-yellow-400 mb-8">
+        Tindakan ini tidak dapat dibatalkan dan dapat memengaruhi data pertandingan yang terhubung.
+    </p>
+
+    <form method="post" class="flex justify-center space-x-4">
+        {% csrf_token %}
+        <a href="{% url 'matches:manage_venues' %}" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+            Batal
+        </a>
+        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+            Ya, Hapus
+        </button>
+    </form>
+</div>
+{% endblock list_content %}

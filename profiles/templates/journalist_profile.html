@@ -5,6 +5,7 @@
 
 {% block profile_content %}
 <div class="bg-white p-8 md:p-10 rounded-xl shadow-xl max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8 pb-3 border-b">Profil Journalist</h1>
 
     <!-- Journalist Profile Section -->
     <div class="mb-7 border-b pb-6">
@@ -41,16 +42,16 @@
 <script>
     document.addEventListener("DOMContentLoaded", async function () {
         const STATIC_URL = "{% static '' %}";
-        const DUMMY_USER_IMAGE = STATIC_URL + 'images/default-profile-picture.png';
+        const DUMMY_USER_IMAGE = STATIC_URL + 'images/Journalist.png';
     
         const profilePicture = document.getElementById("profile-picture");
         const usernameEl = document.getElementById("username");
         const newsCountEl = document.getElementById("news-count");
         const totalViewsEl = document.getElementById("total-views");
     
-        // --- Fetch Journalist Profile ---
+        // Fetch journalist profile
         try {
-            const response = await fetch(`/profiles/json/adminjournalist/`);
+            const response = await fetch(`/profiles/json/journalist/`);
             if (!response.ok) throw new Error("Gagal mengambil data journalist dari server.");
             const data = await response.json();
     
@@ -58,7 +59,7 @@
             profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
             profilePicture.alt = "Foto Profil journalist";
     
-            // --- News info ---
+            // News infos
             newsCountEl.textContent = data.total_news ?? 0;
             totalViewsEl.textContent = data.total_views ?? 0;
         } catch (error) {

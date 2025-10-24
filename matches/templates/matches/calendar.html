@@ -3,14 +3,45 @@
 {% block content %}
 <div class="max-w-4xl mx-auto">
   <h1 class="text-3xl font-bold text-center mb-6 text-slate-800">Kalender Pertandingan</h1>
-  
+
+  <h2 class="text-2xl font-semibold mb-4 text-slate-700">Tim Liga</h2>
+  <div class="w-full mb-8 relative group">
+
+    <div id="team-slider-container" class="flex overflow-x-auto space-x-4 pb-4 scroll-smooth">
+      
+      {% for team in teams %}
+      <a href="#" 
+         class="team-filter-card flex-shrink-0 w-32 bg-white p-4 rounded-lg border border-slate-200 text-center hover:shadow-lg hover:border-blue-400 transition-all duration-200 cursor-pointer" 
+         data-team-name="{{ team.name }}">
+        
+        <img src="{{ team.display_logo_url }}" alt="{{ team.name }} logo" class="h-16 w-16 mx-auto mb-2 object-contain pointer-events-none">
+        
+        <span class="text-xs font-semibold text-slate-800 pointer-events-none line-clamp-2">{{ team.name }}</span>
+      </a>
+      {% endfor %}
+
+    </div>
+
+    <button id="slider-btn-left" class="absolute top-1/2 left-2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-md cursor-pointer hover:bg-white opacity-0 group-hover:opacity-100 transition-all duration-300 hidden">
+      <svg class="w-5 h-5 text-slate-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+      </svg>
+    </button>
+    <button id="slider-btn-right" class="absolute top-1/2 right-2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-md cursor-pointer hover:bg-white opacity-0 group-hover:opacity-100 transition-all duration-300">
+      <svg class="w-5 h-5 text-slate-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+      </svg>
+    </button>
+
+  </div>
+
   <form id="search-filter-form" method="GET" action="{% url 'matches:calendar' %}" class="mb-8 mt-6 space-y-4">
     <div class="flex">
       <input type="text" name="q" id="search-input" placeholder="Cari nama tim..." value="{{ search_query|default:'' }}"
         class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400">
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <select id="date-mode-filter" class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
           <option value="single">Tanggal Tertentu</option>
           <option value="range">Rentang Tanggal</option>
@@ -23,7 +54,23 @@
       <input type="date" name="date_end" id="date-end-filter" 
         class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400 hidden"
         placeholder="Tanggal Akhir">
-    </div>
+
+      <div id="status-checkbox-container" class="col-span-1 p-3 bg-white rounded-lg border border-slate-300 space-y-1">
+          <p class="text-xs font-semibold text-slate-600 mb-1">Filter Status:</p>
+          <div class="flex items-center space-x-2">
+              <input type="checkbox" id="status-upcoming" name="status" value="Upcoming" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <label for="status-upcoming" class="text-sm text-slate-800">Upcoming</label>
+          </div>
+          <div class="flex items-center space-x-2">
+              <input type="checkbox" id="status-ongoing" name="status" value="Ongoing" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <label for="status-ongoing" class="text-sm text-slate-800">Ongoing</label>
+          </div>
+          <div class="flex items-center space-x-2">
+              <input type="checkbox" id="status-finished" name="status" value="Finished" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <label for="status-finished" class="text-sm text-slate-800">Finished</label>
+          </div>
+      </div>
+      </div>
 
     <div class="grid grid-cols-1">
         <select name="venue" id="venue-filter"
@@ -33,6 +80,16 @@
               <option value="{{ venue.id }}">{{ venue.name }}, {{ venue.city }}</option>
           {% endfor %}
         </select>
+    </div>
+
+    <div class="flex justify-end items-center gap-2 mt-2">
+      <label for="per-page-select" class="text-sm text-slate-600">Item per halaman:</label>
+      <select name="per_page" id="per-page-select" class="p-1 border border-slate-300 rounded-md text-sm">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+      </select>
     </div>
 
   </form>
@@ -55,19 +112,17 @@
     {% endif %}
   </div>
 
-  <div class="flex border-b border-slate-300 mb-6">
-    <button data-status="Upcoming" class="tab-button px-4 py-2 text-lg font-semibold border-b-2 border-transparent transition duration-150 hover:text-blue-600" data-active="true">Upcoming</button>
-    <button data-status="Ongoing" class="tab-button px-4 py-2 text-lg font-semibold border-b-2 border-transparent transition duration-150 hover:text-blue-600">Ongoing</button>
-    <button data-status="Past" class="tab-button px-4 py-2 text-lg font-semibold border-b-2 border-transparent transition duration-150 hover:text-blue-600">Past</button>
-  </div>
-  
   <div id="matches-container">
     <div class="text-center py-8 text-gray-500">Memuat data pertandingan...</div>
   </div>
 
   <div class="bg-slate-50 border border-slate-200 p-6 rounded-lg text-center hidden" id="no-matches-found">
     <p class="text-slate-600">Tidak ada pertandingan yang ditemukan.</p>
+
   </div>
+
+  <div id="pagination-controls" class="mt-8 flex justify-center items-center space-x-2 hidden">
+    </div>
 
   <div id="loading-overlay" class="fixed inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 opacity-0 z-10">
     <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -84,78 +139,142 @@ function getCookie(name) {
   if (parts.length === 2) return parts.pop().split(';').shift();
 }
 const CSRF_TOKEN = getCookie('csrftoken');
+const STATUS_ORDER = ['Upcoming', 'Ongoing', 'Finished']; 
+let currentPage = 1;
+
+const STATUS_STYLES = {
+    'Upcoming': 'bg-blue-100 text-blue-800 border border-blue-300',
+    'Ongoing': 'bg-red-100 text-red-800 border border-red-300 animate-pulse',
+    'Finished': 'bg-gray-100 text-gray-800 border border-gray-300'
+};
 
 function renderMatchCard(match) {
-  const isPast = match.status_key === 'Past';
+  const isFinished = match.status_key === 'Finished';
   const dateParts = match.date.split(' @ ');
   const matchTime = dateParts[1] || '';
   const matchDate = dateParts[0] || '';
 
-  const scoreDisplay = isPast 
+  const scoreDisplay = isFinished 
     ? `${match.home_goals != null ? match.home_goals : '0'} - ${match.away_goals != null ? match.away_goals : '0'}` 
     : 'VS';
 
+  const statusStyle = STATUS_STYLES[match.status_key] || STATUS_STYLES['Finished'];
+  const statusText = match.status_key;
+
   return `
     <a href="${match.details_url}" class="relative block bg-white border border-slate-200 p-4 rounded-lg hover:shadow-md hover:scale-[1.01] transition">
-      <div class="flex items-center justify-center">
+      
+      <div class="absolute top-3 left-4">
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${statusStyle}">
+          ${statusText}
+        </span>
+      </div>
+
+      <div class="absolute top-3 right-4 text-right text-xs text-slate-500">
+        <p>${matchDate}</p>
+        <p>${matchTime}</p>
+      </div>
+
+      <div class="flex items-center justify-center pt-5"> 
         <div class="flex-1 text-right text-slate-800 font-semibold">${match.home_team_name}</div>
         <img src="${match.home_logo_url}" alt="${match.home_team_name} logo" class="w-8 h-8 mx-2">
         <div class="text-xl font-bold text-slate-900">${scoreDisplay}</div>
         <img src="${match.away_logo_url}" alt="${match.away_team_name} logo" class="w-8 h-8 mx-2">
         <div class="flex-1 text-left text-slate-800 font-semibold">${match.away_team_name}</div>
       </div>
-      <div class="absolute top-3 right-4 text-right text-xs text-slate-500">
-        <p>${matchDate}</p>
-        <p>${matchTime}</p>
-      </div>
     </a>
   `;
 }
 
-const STATUS_MESSAGES = {
-  'Upcoming': 'Tidak ada pertandingan yang dijadwalkan dalam waktu dekat.',
-  'Ongoing': 'Tidak ada pertandingan yang sedang berlangsung saat ini.',
-  'Past': 'Belum ada riwayat pertandingan yang tercatat.',
-};
+function renderPaginationControls(paginationData) {
+    const controlsContainer = document.getElementById('pagination-controls');
+    controlsContainer.innerHTML = ''; 
+    
+    if (!paginationData || paginationData.total_pages <= 1) {
+        controlsContainer.classList.add('hidden'); 
+        return;
+    }
 
-let activeStatus = 'Upcoming'; 
-const STATUS_ORDER = ['Upcoming', 'Ongoing', 'Past'];
+    controlsContainer.classList.remove('hidden'); 
+
+    const prevButton = document.createElement('button');
+    prevButton.innerHTML = '&laquo; Prev';
+    prevButton.className = 'px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed';
+    prevButton.disabled = !paginationData.has_previous;
+    prevButton.onclick = () => { 
+        if (paginationData.has_previous) { 
+            currentPage--; 
+            fetchFilteredMatches(); 
+            window.scrollTo(0, 0); 
+        } 
+    };
+    controlsContainer.appendChild(prevButton);
+
+    paginationData.page_range.forEach(pageNum => {
+        if (pageNum === null) { 
+            const ellipsis = document.createElement('span');
+            ellipsis.textContent = '...';
+            ellipsis.className = 'px-3 py-1 text-slate-500';
+            controlsContainer.appendChild(ellipsis);
+        } else { 
+            const pageButton = document.createElement('button');
+            pageButton.textContent = pageNum;
+            pageButton.className = `px-3 py-1 rounded border border-slate-300 ${
+                pageNum === paginationData.current_page
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-600 hover:bg-slate-50'
+            }`;
+            pageButton.onclick = () => { 
+                if (pageNum !== paginationData.current_page) { 
+                    currentPage = pageNum; 
+                    fetchFilteredMatches(); 
+                    window.scrollTo(0, 0); 
+                } 
+            };
+            controlsContainer.appendChild(pageButton);
+        }
+    });
+
+    const nextButton = document.createElement('button');
+    nextButton.innerHTML = 'Next &raquo;';
+    nextButton.className = 'px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed';
+    nextButton.disabled = !paginationData.has_next;
+    nextButton.onclick = () => { 
+        if (paginationData.has_next) { 
+            currentPage++; 
+            fetchFilteredMatches(); 
+            window.scrollTo(0, 0); 
+        } 
+    };
+    controlsContainer.appendChild(nextButton);
+}
+
 
 function renderFilteredMatches(data) {
   const container = document.getElementById('matches-container');
   const noMatchesEl = document.getElementById('no-matches-found');
-  
-  let totalMatchesRendered = 0;
+
   container.innerHTML = ''; 
+  noMatchesEl.classList.add('hidden'); 
 
-  const matchesToRender = data.grouped_matches[activeStatus] || [];
+  const matches = data.matches || [];
+  let listHtml = '';
 
-  if (matchesToRender.length > 0) {
-    let listHtml = `<div class="space-y-4">`;
-    matchesToRender.forEach(match => {
-      listHtml += renderMatchCard(match);
+  if (matches.length > 0) {
+    listHtml += `<div class="space-y-4 mb-8">`;
+    matches.forEach(match => {
+        listHtml += renderMatchCard(match); 
     });
     listHtml += `</div>`;
-    
-    container.innerHTML += listHtml;
-    totalMatchesRendered = matchesToRender.length;
-    noMatchesEl.classList.add('hidden');
-
+    container.innerHTML = listHtml;
   } else {
-    const emptyHtml = `
-      <div class="bg-slate-50 border border-slate-200 p-6 rounded-lg text-center mb-8">
-        <p class="text-slate-600">${STATUS_MESSAGES[activeStatus]}</p>
-      </div>`;
-    container.innerHTML += emptyHtml;
-    noMatchesEl.classList.add('hidden');
+    container.innerHTML = ''; 
+    noMatchesEl.classList.remove('hidden'); 
   }
 
-  const totalMatchesInDatabase = data.grouped_matches.Upcoming.length + data.grouped_matches.Ongoing.length + data.grouped_matches.Past.length;
-  
-  if (totalMatchesInDatabase === 0 && (document.getElementById('search-input').value || document.getElementById('date-start-filter').value || document.getElementById('venue-filter').value)) {
-    container.innerHTML = `<p class='text-center text-red-500 py-8'>Tidak ditemukan pertandingan dengan filter tersebut.</p>`;
-  }
+  renderPaginationControls(data.pagination);
 }
+
 
 let debounceTimer;
 let isFetching = false;
@@ -163,15 +282,18 @@ let isFetching = false;
 function setLoadingState(isLoading) {
   const matchesContainer = document.getElementById('matches-container');
   const overlay = document.getElementById('loading-overlay');
+  const paginationControls = document.getElementById('pagination-controls'); 
 
   if (isLoading) {
     isFetching = true;
     matchesContainer.classList.add('opacity-50', 'pointer-events-none');
+    paginationControls.classList.add('opacity-50', 'pointer-events-none'); 
     overlay.classList.remove('opacity-0');
     overlay.classList.add('opacity-100');
   } else {
     isFetching = false;
     matchesContainer.classList.remove('opacity-50', 'pointer-events-none');
+    paginationControls.classList.remove('opacity-50', 'pointer-events-none'); 
     overlay.classList.add('opacity-0');
     overlay.classList.remove('opacity-100');
   }
@@ -187,59 +309,62 @@ async function fetchFilteredMatches() {
   const dateStartFilter = document.getElementById('date-start-filter');
   const dateEndFilter = document.getElementById('date-end-filter');
   const venueFilter = document.getElementById('venue-filter');
+  const perPageSelect = document.getElementById('per-page-select'); 
+  
+  const selectedStatuses = Array.from(document.querySelectorAll('#status-checkbox-container input[name="status"]:checked'))
+                                .map(cb => cb.value)
+                                .join(','); 
   
   const query = searchInput.value.trim();
   const dateMode = dateModeFilter.value;
   const dateStart = dateStartFilter.value;
   const dateEnd = dateEndFilter.value;
   const venue = venueFilter.value;
+  const perPage = perPageSelect.value; 
 
-  // Cek apakah ada filter yang aktif
-  const hasFilterInput = query.length >= 1 || dateStart || dateEnd || venue;
-
-  // Panggil fetch jika query kosong (untuk load awal) atau jika ada input filter
-  if (query.length === 0 || hasFilterInput) { 
+  if (true) { 
     
     debounceTimer = setTimeout(async () => {
       const url = "{% url 'matches:api_calendar' %}"; 
-      
       const params = new URLSearchParams();
-      if (query) params.append('q', query);
       
-      // Logika Penentuan Filter Tanggal
+      if (query) params.append('q', query);
       if (dateStart) {
           params.append('date_start', dateStart);
           if (dateMode === 'range' && dateEnd) {
               params.append('date_end', dateEnd);
           }
       }
-
       if (venue) params.append('venue', venue);
-
+      if (selectedStatuses) params.append('status', selectedStatuses); 
+      params.append('page', currentPage);
+      params.append('per_page', perPage);
+      
       setLoadingState(true);
       
       try {
         const response = await fetch(`${url}?${params.toString()}`, {
           method: 'GET',
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest' 
-          },
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
         });
 
         const data = await response.json();
         
         if (response.ok) {
-          renderFilteredMatches(data);
-          // Update URL
-          const newQueryString = params.toString() ? `?${params.toString()}` : `{% url 'matches:calendar' %}`;
-          history.replaceState(null, '', newQueryString);
+          renderFilteredMatches(data); 
+          
+          const newQueryString = `?${params.toString()}`;
+          history.pushState({ page: currentPage }, '', newQueryString);
+
         } else {
           document.getElementById('matches-container').innerHTML = `<p class='text-center text-red-500 py-8'>Gagal memuat hasil pencarian.</p>`;
+          renderPaginationControls(null); 
         }
 
       } catch (error) {
         console.error("AJAX Search/Filter Error:", error);
         document.getElementById('matches-container').innerHTML = `<p class='text-center text-red-500 py-8'>Error jaringan saat mencari.</p>`;
+        renderPaginationControls(null); 
       } finally {
         setLoadingState(false);
       }
@@ -247,42 +372,29 @@ async function fetchFilteredMatches() {
   }
 }
 
-
-// --- Fungsi untuk menangani Tab Click ---
-function handleTabClick(event) {
-    const newStatus = event.currentTarget.dataset.status;
-    
-    activeStatus = newStatus;
-    document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('text-blue-600', 'border-blue-600');
-        btn.classList.add('border-transparent');
-    });
-    event.currentTarget.classList.add('text-blue-600', 'border-blue-600');
-    
-    fetchFilteredMatches();
-}
-
-// --- Fungsi untuk menampilkan/menyembunyikan input tanggal akhir ---
-function toggleDateEndInput() {
+let _toggleDateEndInput; 
+function toggleDateEndInput(shouldFetch = true) {
     const dateModeFilter = document.getElementById('date-mode-filter');
     const dateEndFilter = document.getElementById('date-end-filter');
+    const gridContainer = document.querySelector('#search-filter-form > div:nth-child(2)');
+    
+    gridContainer.classList.remove('md:grid-cols-2', 'md:grid-cols-3', 'md:grid-cols-4');
     
     if (dateModeFilter.value === 'range') {
         dateEndFilter.classList.remove('hidden');
-        // Ubah grid untuk menampung 3 kolom
-        document.querySelector('#search-filter-form > div:nth-child(2)').classList.remove('md:grid-cols-2');
-        document.querySelector('#search-filter-form > div:nth-child(2)').classList.add('md:grid-cols-3');
+        gridContainer.classList.add('md:grid-cols-4'); 
     } else {
         dateEndFilter.classList.add('hidden');
-        dateEndFilter.value = ''; // Hapus nilai jika beralih ke single date
-        // Ubah grid kembali ke 2 kolom
-        document.querySelector('#search-filter-form > div:nth-child(2)').classList.remove('md:grid-cols-3');
-        document.querySelector('#search-filter-form > div:nth-child(2)').classList.add('md:grid-cols-2');
+        if (shouldFetch) dateEndFilter.value = '';
+        gridContainer.classList.add('md:grid-cols-3');
     }
     
-    // Panggil fetch setiap kali mode berubah
-    fetchFilteredMatches();
+    if (shouldFetch) {
+        currentPage = 1; 
+        fetchFilteredMatches();
+    }
 }
+_toggleDateEndInput = toggleDateEndInput; 
 
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -293,47 +405,47 @@ document.addEventListener('DOMContentLoaded', function() {
   const dateStartFilter = document.getElementById('date-start-filter');
   const dateEndFilter = document.getElementById('date-end-filter');
   const venueFilter = document.getElementById('venue-filter');
-  const tabButtons = document.querySelectorAll('.tab-button');
+  const statusCheckboxes = document.querySelectorAll('#status-checkbox-container input[name="status"]');
+  const perPageSelect = document.getElementById('per-page-select'); 
   
-  // --- Inisialisasi State Awal dari URL ---
   const params = new URLSearchParams(window.location.search);
   const initialQuery = params.get('q') || '';
   const initialDateStart = params.get('date_start') || '';
   const initialDateEnd = params.get('date_end') || '';
   const initialVenue = params.get('venue') || '';
+  const initialStatus = params.get('status') || ''; 
+  const initialPage = parseInt(params.get('page') || '1'); 
+  const initialPerPage = params.get('per_page') || '10'; 
 
-  // Tentukan mode awal berdasarkan parameter URL
+  currentPage = initialPage;
+  perPageSelect.value = initialPerPage;
+
   let initialMode = 'single';
   if (initialDateEnd) {
       initialMode = 'range';
   }
   
-  // Set nilai input dari URL
   searchInput.value = initialQuery;
   dateStartFilter.value = initialDateStart;
   venueFilter.value = initialVenue;
   
-  // Atur mode dan tampilkan/sembunyikan input end date
-  dateModeFilter.value = initialMode;
-  dateEndFilter.value = initialDateEnd;
-  toggleDateEndInput(); // Panggil ini untuk mengatur visibility & grid awal
-
-  // Inisialisasi Tab Aktif Pertama Kali
-  const urlStatus = params.get('status');
-  if (urlStatus && STATUS_ORDER.includes(urlStatus)) {
-      activeStatus = urlStatus;
-  }
-  const activeTab = document.querySelector(`.tab-button[data-status="${activeStatus}"]`);
-  if (activeTab) {
-      activeTab.classList.add('text-blue-600', 'border-blue-600');
+  if (!initialStatus && initialStatus !== 'none') { 
+      statusCheckboxes.forEach(cb => {
+          cb.checked = true;
+      });
   } else {
-      // Pastikan Upcoming aktif jika tidak ada status di URL
-      document.querySelector(`.tab-button[data-status="Upcoming"]`).classList.add('text-blue-600', 'border-blue-600');
+    const selectedStatuses = initialStatus.split(',');
+    statusCheckboxes.forEach(cb => {
+        cb.checked = selectedStatuses.includes(cb.value) ? true : false;
+    });
   }
   
+  dateModeFilter.value = initialMode;
+  dateEndFilter.value = initialDateEnd;
+  
+  _toggleDateEndInput(false); 
 
 
-  // --- Logika Admin API Update (Tidak Berubah) ---
   if (updateApiBtn) {
     updateApiBtn.addEventListener('click', async function() {
       const url = "{% url 'matches:update_from_api' %}";
@@ -351,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       try {
         const response = await fetch(url, {
-          method: 'POST',
+          method: 'POST', 
           headers: {
             'X-CSRFToken': CSRF_TOKEN,
             'X-Requested-With': 'XMLHttpRequest' 
@@ -363,12 +475,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (response.ok && data.status === 'success') {
           statusDiv.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
           statusDiv.classList.add('bg-green-100', 'border-green-300', 'text-green-800');
-          statusDiv.innerHTML = data.message || 'Sinkronisasi berhasil! Memuat ulang halaman...';
+          statusDiv.innerHTML = data.message || 'Sinkronisasi berhasil! Memuat ulang data...';
           
-          setTimeout(() => {
-            window.location.reload(); 
-          }, 1500); 
-
+          currentPage = 1; 
+          fetchFilteredMatches(); 
         } else {
           statusDiv.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
           statusDiv.classList.add('bg-red-100', 'border-red-300', 'text-red-800');
@@ -388,44 +498,131 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Event Listeners untuk Filter (Search, Date, Venue) dan Tabs
   searchInput.addEventListener('input', function() {
+    currentPage = 1;
     fetchFilteredMatches();
   });
-  dateModeFilter.addEventListener('change', toggleDateEndInput);
-  dateStartFilter.addEventListener('change', fetchFilteredMatches);
-  dateEndFilter.addEventListener('change', fetchFilteredMatches);
-  venueFilter.addEventListener('change', fetchFilteredMatches);
+  
+  dateModeFilter.addEventListener('change', () => _toggleDateEndInput(true)); 
+  
+  dateStartFilter.addEventListener('change', () => {
+    currentPage = 1;
+    fetchFilteredMatches();
+  });
+  
+  dateEndFilter.addEventListener('change', () => {
+    currentPage = 1;
+    fetchFilteredMatches();
+  });
+  
+  venueFilter.addEventListener('change', () => {
+    currentPage = 1;
+    fetchFilteredMatches();
+  });
+  
+  statusCheckboxes.forEach(cb => {
+      cb.addEventListener('change', () => {
+        currentPage = 1;
+        fetchFilteredMatches();
+      });
+  });
 
-  // Event Listeners untuk Tabs
-  tabButtons.forEach(btn => btn.addEventListener('click', handleTabClick));
+  perPageSelect.addEventListener('change', () => {
+    currentPage = 1;
+    fetchFilteredMatches();
+  });
+  
+  document.querySelectorAll('.team-filter-card').forEach(card => {
+      card.addEventListener('click', function(e) {
+          e.preventDefault();
+          const teamName = this.dataset.teamName;
+          
+          document.getElementById('search-input').value = teamName;
+          
+          currentPage = 1;
+          
+          fetchFilteredMatches();
+          
+          document.getElementById('search-filter-form').scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start' 
+          });
+      });
+  });
 
-
-  // Pemicu saat tombol 'back' ditekan (untuk memuat hasil filter yang benar)
   window.addEventListener('popstate', function(event) {
     const params = new URLSearchParams(window.location.search);
     const query = params.get('q') || '';
     const dateStart = params.get('date_start') || '';
     const dateEnd = params.get('date_end') || '';
     const venue = params.get('venue') || '';
+    const status = params.get('status') || '';
+    const page = parseInt(params.get('page') || '1'); 
+    const perPage = params.get('per_page') || '10'; 
     
-    // Tentukan mode berdasarkan data URL
     let mode = 'single';
     if (dateEnd) mode = 'range';
     
-    // Update input field
+    currentPage = page;
+    perPageSelect.value = perPage;
     searchInput.value = query; 
     dateStartFilter.value = dateStart;
     dateEndFilter.value = dateEnd;
     venueFilter.value = venue;
     dateModeFilter.value = mode;
     
-    // Panggil fetch segera tanpa debounce saat popstate
-    fetchFilteredMatches();
+    const selectedStatuses = status.split(',');
+    
+    statusCheckboxes.forEach(cb => {
+        cb.checked = selectedStatuses.includes(cb.value);
+    });
+    if (!status) {
+        statusCheckboxes.forEach(cb => cb.checked = true);
+    }
+
+    _toggleDateEndInput(false); 
+    fetchFilteredMatches(); 
   });
   
-  // Pemuatan awal - SELALU panggil
   fetchFilteredMatches();
+
+  const sliderContainer = document.getElementById('team-slider-container');
+  const sliderBtnLeft = document.getElementById('slider-btn-left');
+  const sliderBtnRight = document.getElementById('slider-btn-right');
+
+  if (sliderContainer) {
+      const scrollAmount = 300; 
+
+      const checkSliderButtons = () => {
+          if (!sliderContainer) return;
+          const maxScroll = sliderContainer.scrollWidth - sliderContainer.clientWidth;
+          
+          if (sliderContainer.scrollLeft > 0) {
+              sliderBtnLeft.classList.remove('hidden');
+          } else {
+              sliderBtnLeft.classList.add('hidden');
+          }
+          
+          if (sliderContainer.scrollLeft >= maxScroll - 1) {
+              sliderBtnRight.classList.add('hidden');
+          } else {
+              sliderBtnRight.classList.remove('hidden');
+          }
+      };
+
+      sliderBtnRight.addEventListener('click', () => {
+          sliderContainer.scrollLeft += scrollAmount;
+      });
+
+      sliderBtnLeft.addEventListener('click', () => {
+          sliderContainer.scrollLeft -= scrollAmount;
+      });
+
+      sliderContainer.addEventListener('scroll', checkSliderButtons);
+      
+      setTimeout(checkSliderButtons, 100); 
+      window.addEventListener('resize', checkSliderButtons);
+  }
 });
 </script>
 {% endblock %}

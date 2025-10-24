@@ -6,49 +6,19 @@
     <div class="flex flex-col lg:flex-row gap-8">
         
         <!-- Sidebar -->
-        <div class="lg:w-1/4 w-full flex-shrink-0 bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+        <div class="lg:w-1/4 w-full flex-shrink-0 bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-[570px] overflow-y-auto">
             
             <!-- Profile infos -->
             <div class="flex flex-col items-center text-center pb-6 border-b border-gray-200 mb-6">
-                <!-- Profile picture -->
                 <img id="base-profile-picture" src="{% static 'images/default-profile-picture.png' %}" 
                     alt="Foto Profil" 
                     class="h-20 w-20 rounded-full object-cover border-4 border-gray-100 shadow-md">
-                
-                <!-- Username -->
                 <h2 id="base-username" class="mt-3 text-xl font-semibold text-gray-800"></h2>
-                
-                <!-- Email -->
                 <p id="base-email" class="text-sm text-gray-500"></p>
             </div>
             
             <!-- Navigation links -->
-            <nav class="space-y-1">
-                <a href="#" id="link-profile" class="flex items-center p-3 text-base font-medium rounded-lg">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                            d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    Profil
-                </a>
-
-                <a href="#" id="link-my-tickets" class="flex items-center p-3 text-base font-medium rounded-lg">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                            d="M8 7V3m8 4V3m-9 8h6m-3 0h3m-6 4h6m-3 0h3M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    Tiket Saya
-                </a>
-
-                <a href="#" id="link-analytics" class="flex items-center p-3 text-base font-medium rounded-lg">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                            d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                            d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
-                    </svg>
-                    Analisis
-                </a>
+            <nav id="sidebar-menu" class="space-y-1">
             </nav>
 
         </div>
@@ -67,34 +37,37 @@ document.addEventListener("DOMContentLoaded", function() {
     fetch("{% url 'profiles:current_user_json' %}")
         .then(response => response.json())
         .then(data => {
-            if(data.authenticated){
-                // Profile infos
-                document.getElementById("base-profile-picture").src = data.profile_picture;
-                document.getElementById("base-username").textContent = data.username;
-                document.getElementById("base-email").textContent = data.email;
+            // Profile infos
+            document.getElementById("base-profile-picture").src = data.profile_picture;
+            document.getElementById("base-username").textContent = data.username;
+            document.getElementById("base-email").textContent = data.email;
 
-                // Url links
-                document.getElementById("link-profile").href = data.my_profile_url;
-                document.getElementById("link-my-tickets").href = data.my_tickets_url;
-                document.getElementById("link-analytics").href = data.my_analytics_url;
+            // Render menu
+            const menuContainer = document.getElementById("sidebar-menu");
+            menuContainer.innerHTML = ""; 
+
+            const currentPath = window.location.pathname;
+
+            data.menu.forEach(item => {
+                const link = document.createElement("a");
+                link.href = item.url;
+                link.className = "block p-3 text-base font-medium rounded-lg transition-colors";
 
                 // Highlight menu yang sedang aktif
-                const path = window.location.pathname;
-                if(path === new URL(data.my_profile_url, window.location.origin).pathname){
-                    document.getElementById("link-profile").classList.add("bg-red-50", "text-red-600");
-                } else if(path === new URL(data.my_tickets_url, window.location.origin).pathname){
-                    document.getElementById("link-my-tickets").classList.add("bg-red-50", "text-red-600");
-                } else if(path === new URL(data.my_analytics_url, window.location.origin).pathname){
-                    document.getElementById("link-analytics").classList.add("bg-red-50", "text-red-600");
+                if (currentPath === new URL(item.url, window.location.origin).pathname) {
+                    link.classList.add("bg-red-50", "text-red-600");
                 } else {
-                    // default style
-                    ["link-profile","link-my-tickets","link-analytics"].forEach(id => {
-                        document.getElementById(id).classList.add("text-gray-600","hover:bg-gray-50","hover:text-gray-800");
-                    });
+                    link.classList.add("text-gray-600","hover:bg-gray-50","hover:text-gray-800");
                 }
-            }
+
+                // Tambahkan text menu saja, tanpa icon
+                link.textContent = item.name;
+
+                menuContainer.appendChild(link);
+            });
         })
         .catch(err => console.error("Error fetching user data:", err));
 });
 </script>
 {% endblock content %}
+

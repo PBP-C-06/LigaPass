@@ -5,6 +5,7 @@
 
 {% block profile_content %}
 <div class="bg-white p-8 md:p-10 rounded-xl shadow-xl max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8 pb-3 border-b">Profil Admin</h1>
 
     <!-- Menampilkan profile admin -->
     <div class="mb-10 border-b pb-6">
@@ -19,36 +20,115 @@
         </div>
     </div>
 
-    <!-- Menampilkan informasi tentang users -->
-    <h2 class="text-xl font-semibold text-gray-800 mb-4">Informasi Profil Pengguna</h2>
+    {% if user.role == 'admin' %}
+        <!-- Menampilkan informasi tentang users -->
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Informasi Profil Pengguna</h2>
 
-    <!-- Search dan filter -->
-    <div class="flex flex-col sm:flex-row gap-4 mb-6">
-        <div class="relative flex-grow">
-            <input id="searchInput" type="text" placeholder="Cari nama pengguna..." 
-                class="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
-            <img src="{% static 'images/magnifier-icon.ico' %}"
-                alt="Search Icon"
-                class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 opacity-70">
+        <!-- Search dan filter -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-6">
+            <div class="relative flex-grow">
+                <input id="searchInput" type="text" placeholder="Cari nama pengguna..." 
+                    class="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                <img src="{% static 'images/magnifier-icon.ico' %}"
+                    alt="Search Icon"
+                    class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 opacity-70">
+            </div>
+
+            <select id="filterSelect" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:w-40" 
+                style="text-align-last:center">
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+                <option value="banned">Banned</option>
+            </select>
         </div>
 
-        <select id="filterSelect" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:w-40" 
-            style="text-align-last:center">
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="suspended">Suspended</option>
-            <option value="banned">Banned</option>
-        </select>
-    </div>
-
-    <!-- Profile container untuk user -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2" id="profilesContainer"></div>
-
+        <!-- Profile container untuk user -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2" id="profilesContainer"></div>
+    {% endif %}
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async function () {
+        const STATIC_URL = "{% static '' %}";
+        const MEDIA_URL = "{{ MEDIA_URL }}";
+        const DUMMY_USER_IMAGE = STATIC_URL + 'images/Admin.png';
+    
+        const profilePicture = document.getElementById("profile-picture");
+        const usernameEl = document.getElementById("username");
+        const searchInput = document.getElementById('searchInput');
+        const filterSelect = document.getElementById('filterSelect');
+        const profilesContainer = document.getElementById('profilesContainer');
+    
+        // Fetch admin profile
+        try {
+            const response = await fetch(`/profiles/json/admin/`);
+            if (!response.ok) throw new Error("Gagal mengambil data admin dari server.");
+            const data = await response.json();
+    
+            usernameEl.textContent = data.username;
+            profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
+            profilePicture.alt = "Foto Profil Admin";
+        } catch (error) {
+            console.error("Terjadi kesalahan saat memuat profil admin:", error);
+            showToast("Terjadi kesalahan saat memuat profil admin.", "error");
+        }
+    
+        // Fetch user profiles 
+        async function fetchProfiles() {
+            const search = searchInput.value;
+            const filter = filterSelect.value;
+    
+            try {
+                const response = await fetch(`{% url 'profiles:admin_search_and_filter' %}?search=${search}&filter=${filter}`);
+                if (!response.ok) throw new Error("Gagal mengambil data profil dari server.");
+    
+                const profiles = await response.json();
+                profilesContainer.innerHTML = "";
+    
+                if (profiles.length > 0) {
+                    profiles.forEach(p => {
+                        const card = document.createElement("div");
+                        card.className = "flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm hover:border-blue-300 transition duration-150 ease-in-out";
+                        card.innerHTML = `
+                            <div class="flex items-center space-x-3">
+                                <img src="${p.profile_picture ? MEDIA_URL + p.profile_picture : DUMMY_USER_IMAGE}" 
+                                    alt="Profil Pengguna ${p.username}" class="h-12 w-12 rounded-full object-cover">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">${p.username}</p>
+                                    <p class="text-xs text-gray-500">${p.email || 'username@gmail.com'}</p>
+                                </div>
+                            </div>
+                            <button class="details-btn text-blue-600 hover:text-blue-800 font-medium text-xs flex items-center p-1.5" data-id="${p.id}">
+                                Detail
+                            </button>
+                        `;
+                        profilesContainer.appendChild(card);
+                    });
+    
+                    document.querySelectorAll(".details-btn").forEach(btn => {
+                        btn.addEventListener("click", () => {
+                            window.location.href = `/profiles/user/${btn.dataset.id}/`;
+                        });
+                    });
+    
+                } else {
+                    profilesContainer.innerHTML = `<p class='col-span-2 text-center text-gray-500'>Tidak ada profil untuk pencarian "${search}" dengan filter "${filter}".</p>`;
+                }
+            } catch (error) {
+                console.error("Terjadi kesalahan saat memuat profil pengguna:", error);
+                profilesContainer.innerHTML = "<p class='col-span-2 text-center text-red-500'>Terjadi kesalahan saat memuat profil.</p>";
+                showToast("Terjadi kesalahan saat memuat profil pengguna.", "error");
+            }
+        }
+    
+        fetchProfiles();
+        searchInput.addEventListener('input', fetchProfiles);
+        filterSelect.addEventListener('change', fetchProfiles);
+    });
+    </script>    
 {% endblock profile_content %}
 
-{% block scripts %}
-{{ block.super }}
 <script>
 document.addEventListener("DOMContentLoaded", async function () {
     const STATIC_URL = "{% static '' %}";
@@ -63,7 +143,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     // --- Fetch admin profile ---
     try {
-        const response = await fetch(`/profiles/json/adminjournalist/`);
+        const response = await fetch(`/profiles/json/admin/`);
         if (!response.ok) throw new Error("Gagal mengambil data admin dari server.");
         const data = await response.json();
 
@@ -81,7 +161,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const filter = filterSelect.value;
 
         try {
-            const response = await fetch(`{% url 'profiles:admin_view_json' %}?search=${search}&filter=${filter}`);
+            const response = await fetch(`{% url 'profiles:admin_search_and_filter' %}?search=${search}&filter=${filter}`);
             if (!response.ok) throw new Error("Gagal mengambil data profil dari server.");
 
             const profiles = await response.json();
@@ -128,5 +208,4 @@ document.addEventListener("DOMContentLoaded", async function () {
     filterSelect.addEventListener('change', fetchProfiles);
 });
 </script>
-{% endblock scripts %}
 

@@ -1,0 +1,39 @@
+{% extends "components/base_profiles.html" %}
+{% load static %}
+
+{% block profile_content %}
+<h2 class="text-2xl font-bold mb-6">Analytics</h2>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <!-- Kehadiran -->
+  <div class="bg-white p-6 rounded-2xl shadow">
+    <h3 class="font-semibold text-gray-700 mb-3">Statistik Kehadiran</h3>
+    <canvas id="attendanceChart" height="220"></canvas>
+    <div class="mt-4 space-y-1 text-center text-sm text-gray-700">
+      <p><span class="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>Hadir</p>
+      <p><span class="inline-block w-3 h-3 bg-gray-300 rounded-full mr-2"></span>Tidak Hadir</p>
+    </div>
+  </div>
+
+  <!-- Pengeluaran -->
+  <div class="bg-white p-6 rounded-2xl shadow">
+    <div class="flex justify-between mb-3 items-center">
+      <h3 class="font-semibold text-gray-700">Data Pengeluaran</h3>
+      <select id="spendingPeriod" class="border rounded px-2 py-1 text-sm">
+        <option value="daily">Harian</option>
+        <option value="weekly">Mingguan</option>
+        <option value="monthly">Bulanan</option>
+      </select>
+    </div>
+    <canvas id="spendingChart" height="220"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/analytics.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  initUserAnalytics();
+});
+</script>
+{% endblock profile_content %}

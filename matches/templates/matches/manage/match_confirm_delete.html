@@ -1,25 +1,46 @@
-{% extends 'base.html' %}
-{% block title %}Konfirmasi Hapus Pertandingan{% endblock %}
+{% extends 'matches/manage/admin_manage_base.html' %}
 
-{% block content %}
+{% block title %}Hapus Pertandingan{% endblock %}
+
+{% block list_content %}
 <div class="max-w-lg mx-auto bg-slate-800 p-8 rounded-lg shadow-xl text-center">
-    <h1 class="text-3xl font-bold mb-4 text-red-400">Hapus Pertandingan</h1>
-    <p class="text-lg text-white mb-6">
-        Anda yakin ingin menghapus pertandingan antara <strong>{{ object.home_team.name }} vs {{ object.away_team.name }}</strong> pada tanggal **{{ object.date|date:"d M Y" }}**?
+  <h1 class="text-3xl font-bold mb-4 text-red-400">Konfirmasi Hapus</h1>
+  
+  <form id="delete-form" method="post">
+    {% csrf_token %}
+    <p class="text-lg text-white">
+      Apakah Anda yakin ingin menghapus pertandingan 
+      <strong class="font-semibold">{{ object.home_team.name }} vs {{ object.away_team.name }}</strong>
+      pada <strong class="font-semibold">{{ object.date|date:"d M Y" }}</strong>?
     </p>
-
-    <p class="text-sm text-yellow-400 mb-8">
-        Tindakan ini tidak dapat dibatalkan dan akan menghapus semua harga tiket dan pemesanan yang terhubung.
-    </p>
-
-    <form method="post" class="flex justify-center space-x-4">
-        {% csrf_token %}
-        <a href="{% url 'matches:manage_matches' %}" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            Batal
-        </a>
-        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            Ya, Hapus
-        </button>
-    </form>
+    <p class="text-sm text-yellow-400 mt-2">Tindakan ini tidak dapat dibatalkan.</p>
+    
+    <div class="mt-8 flex justify-center space-x-4">
+      <a href="{% url 'matches:manage_matches' %}" class="rounded bg-slate-700 px-4 py-2 font-bold text-white hover:bg-slate-600">
+        Batal
+      </a>
+      <button type="submit" id="delete-button" class="rounded bg-red-600 px-4 py-2 font-bold text-white hover:bg-red-700">
+        Ya, Hapus
+      </button>
+    </div>
+  </form>
 </div>
-{% endblock %}
+{% endblock list_content %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('delete-form');
+  const deleteButton = document.getElementById('delete-button');
+
+  if (form && deleteButton) {
+    
+    deleteButton.addEventListener('click', function(e) {
+      // NOTE: Mengirimkan form langsung
+      form.submit();
+    });
+  }
+});
+</script>
+{% endblock scripts %}

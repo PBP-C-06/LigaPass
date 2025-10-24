@@ -1,6 +1,8 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponseBadRequest
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.template.loader import render_to_string
 
@@ -9,8 +11,10 @@ from reviews.models import Review, ReviewReply
 from bookings.models import Ticket
 import json
 
+
 def is_admin(user):
     return user.is_authenticated and getattr(user, "role", None) == "admin"
+
 
 def is_user(user):
     return user.is_authenticated and getattr(user, "role", None) == "user"
@@ -19,40 +23,32 @@ def is_user(user):
 @user_passes_test(is_user)
 @login_required
 def user_review_page(request, match_id):
-    """
-    Komponen review untuk sebuah match.
-    Ditampilkan di halaman detail tiket (dari app bookings).
-    """
     match = get_object_or_404(
         Match.objects.select_related("home_team", "away_team"),
         id=match_id
     )
 
-    # Pastikan user punya tiket yang dikonfirmasi
+    # Cek apakah user punya tiket valid
     has_ticket = Ticket.objects.filter(
         ticket_type__match=match,
         booking__user=request.user,
         booking__status="CONFIRMED"
     ).exists()
+
     if not has_ticket:
-        return render(
-            request,
-            "reviews/no_access.html",
-            {"message": "Kamu belum membeli tiket untuk pertandingan ini."},
-        )
+        return JsonResponse({
+            "ok": False,
+            "message": "Kamu belum membeli tiket untuk pertandingan ini."
+        }, status=403)
 
     my_review = Review.objects.filter(user=request.user, match=match).first()
     reviews = Review.objects.filter(match=match).select_related("user").order_by("-created_at")
 
-    return render(
-        request,
-        "reviews/user_review_page.html",
-        {
-            "match": match,
-            "my_review": my_review,
-            "reviews": reviews,
-        },
-    )
+    return render(request, "user_review_page.html", {
+        "match": match,
+        "my_review": my_review,
+        "reviews": reviews,
+    })
 
 
 @csrf_exempt
@@ -63,12 +59,12 @@ def api_create_review(request, match_id):
         return HttpResponseBadRequest("POST only")
 
     match = get_object_or_404(Match, id=match_id)
-
     has_booking = Ticket.objects.filter(
         ticket_type__match=match,
         booking__user=request.user,
-        booking__status="CONFIRMED",
+        booking__status="CONFIRMED"
     ).exists()
+
     if not has_booking:
         return JsonResponse({"ok": False, "message": "Kamu hanya bisa mereview pertandingan yang sudah kamu beli tiketnya."}, status=403)
 
@@ -81,7 +77,7 @@ def api_create_review(request, match_id):
         return JsonResponse({"ok": False, "message": "Rating harus 1–5."}, status=400)
 
     review = Review.objects.create(user=request.user, match=match, rating=rating, comment=comment)
-    html_item = render_to_string("reviews/_review_item.html", {"review": review}, request=request)
+    html_item = render_to_string("_review_item.html", {"review": review}, request=request)
 
     return JsonResponse({"ok": True, "message": "Review berhasil ditambahkan", "item_html": html_item, "review_id": str(review.id)})
 
@@ -113,62 +109,35 @@ def api_update_review(request, match_id):
     review.comment = comment
     review.save(update_fields=["rating", "comment", "updated_at"])
 
-    html_item = render_to_string("reviews/_review_item.html", {"review": review}, request=request)
+    html_item = render_to_string("_review_item.html", {"review": review}, request=request)
     return JsonResponse({"ok": True, "message": "Review berhasil diperbarui", "item_html": html_item, "review_id": str(review.id)})
 
-# === ADMIN REVIEWS ===
+
 @user_passes_test(is_admin)
 @login_required
 def admin_review_page(request, match_id):
-    """
-    Ditampilkan di halaman detail tiket admin.
-    Menampilkan semua review user untuk 1 pertandingan.
-    """
     match = get_object_or_404(Match.objects.select_related("home_team", "away_team"), id=match_id)
     reviews = Review.objects.filter(match=match).select_related("user", "reply").order_by("-created_at")
-
-    return render(request, "reviews/admin_review_page.html", {
-        "match": match,
-        "reviews": reviews,
-    })
+    return render(request, "admin_review_page.html", {"match": match, "reviews": reviews})
 
 
 @csrf_exempt
 @user_passes_test(is_admin)
 @login_required
 def api_add_reply(request, review_id):
-    """
-    Admin menambahkan balasan ke review (via modal pop-up di admin_review_page).
-    Review hanya bisa dibalas satu kali (OneToOne).
-    """
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Invalid method"}, status=400)
 
     review = get_object_or_404(Review, id=review_id)
 
-    # Validasi: jika sudah dibalas, tolak
     if hasattr(review, "reply"):
         return JsonResponse({"status": "error", "message": "Review ini sudah memiliki balasan."}, status=400)
 
-    # Ambil teks balasan
     reply_text = (request.POST.get("reply_text") or "").strip()
     if not reply_text:
         return JsonResponse({"status": "error", "message": "Balasan tidak boleh kosong."}, status=400)
 
-    # Simpan balasan
-    reply = ReviewReply.objects.create(
-        review=review,
-        admin=request.user,
-        reply_text=reply_text
-    )
+    reply = ReviewReply.objects.create(review=review, admin=request.user, reply_text=reply_text)
+    html_item = render_to_string("_review_item.html", {"review": review}, request=request)
 
-    # Render ulang elemen review agar langsung diperbarui di front-end
-    html_item = render_to_string("reviews/_review_item.html", {"review": review}, request=request)
-
-    return JsonResponse({
-        "status": "success",
-        "message": "Balasan berhasil disimpan.",
-        "reply_text": reply.reply_text,
-        "review_id": str(review.id),
-        "updated_html": html_item,
-    })
+    return JsonResponse({"status": "success", "message": "Balasan berhasil disimpan.", "reply_text": reply.reply_text, "review_id": str(review.id), "updated_html": html_item})

@@ -29,7 +29,7 @@ Registrasi, login, logout, dan manage cookie untuk mendapatkan role yang sesuai.
    Modul Profile menyediakan halaman profil untuk tiga peran: **User**, **Admin**, dan **Jurnalis**. Pengguna dapat melihat serta mengedit data dasar seperti foto, nama lengkap, username, email, nomor telepon, dan tanggal lahir. Admin dapat meninjau profil pengguna beserta riwayat pembelian tiket dan riwayat ulasan, serta mengelola status akun seperti aktif, suspended, atau banned(opsional). **Admin** dan **Jurnalis** bersifat **hardcoded**. Journalist memiliki ringkasan kinerja konten, seperti total tayang dan jumlah berita yang telah dipublikasikan.
 3. **News**  
 *Dikerjakan oleh Mei Ching*  
-   Modul ini menyediakan halaman utama daftar berita yang dapat difilter dan search berdasarkan keyword. Akses berbasis peran: User dan Admin melihat semua berita, sedangkan Journalist mendapat tombol Create News untuk membuat berita baru. Pada detail berita, Journalist juga melihat Edit News untuk memperbarui atau menghapus; setelah disunting, label tanggal berubah menjadi “tanggal disunting”. 
+   Modul ini menyediakan halaman utama daftar berita yang dapat difilter dan search berdasarkan keyword. Akses berbasis peran: User melihat semua berita, sedangkan Journalist mendapat tombol Create News untuk membuat berita baru. Pada detail berita, Journalist juga melihat Edit News untuk memperbarui atau menghapus; setelah disunting, label tanggal berubah menjadi “tanggal disunting”. Selain itu, User dan Journalist dapat berinteraksi dengan menuliskan comment pada halaman news detail.
 4. **Matches**  
 *Dikerjakan oleh Muhammad Aldo Fahrezy*  
    Aplikasi ini mencakup pipeline inisialisasi data (data seeding) dari dataset Kaggle dengan preprocessing/cleaning untuk menstandarkan nama tim, format tanggal–waktu, dan menangani missing/inconsistency sebelum masuk ke model Team dan Match. Admin punya CRUD penuh untuk data master: mengelola klub (tambah, lihat, ubah nama/logo, hapus) dan jadwal pertandingan (buat, lihat, ubah waktu–stadion–harga tiket, hapus). Di sisi pengguna, tersedia halaman kalender yang otomatis mengelompokkan pertandingan menjadi Upcoming, Ongoing, dan Past berdasarkan waktu saat ini, serta halaman detail pertandingan yang menampilkan info kedua tim, kickoff, stadion, harga tiket, dan ketersediaannya
@@ -57,6 +57,7 @@ Registrasi, login, logout, dan manage cookie untuk mendapatkan role yang sesuai.
 
 ## 🔗 URL
 **Deployment** : https://jaysen-lestari-ligapass.pbp.cs.ui.ac.id/   
-**Figma** : 
-* https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/TK-UTS?page-id=0%3A1&node-id=1-1935&p=f&viewport=-1269%2C-173%2C0.41&t=KgYTQaoFAjTJ0iZZ-1&scaling=min-zoom&content-scaling=fixed
-* https://www.figma.com/design/czV0IIjdOHyPQ4iIKozhPX/LigaPass?node-id=12-131&p=f&t=tU0cwy6Zw08RPEvM-0
+**Figma** : https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/TK-UTS?page-id=0%3A1&node-id=1-1935&p=f&viewport=-1269%2C-173%2C0.41&t=KgYTQaoFAjTJ0iZZ-1&scaling=min-zoom&content-scaling=fixed
+**User flow** : User flow: https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/LigaPass?node-id=0-1&p=f&viewport=-567%2C78%2C0.21&t=18d5UYBpfanXeuIm-0&scaling=contain&content-scaling=fixed&starting-point-node-id=1%3A1935
+**Admin flow**: https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/LigaPass?node-id=12-131&p=f&viewport=321%2C241%2C0.09&t=18d5UYBpfanXeuIm-0&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=353%3A1124
+**Journalist flow**: https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/LigaPass?node-id=182-2062&p=f&viewport=243%2C401%2C0.08&t=18d5UYBpfanXeuIm-0&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=353%3A1373

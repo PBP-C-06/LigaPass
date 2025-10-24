@@ -1,7 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'matches/manage/admin_manage_base.html' %}
 {% block title %}Manajemen Tim - {% if is_update %}Edit{% else %}Tambah{% endif %}{% endblock %}
 
-{% block content %}
+{% block list_content %}
 <div class="max-w-xl mx-auto bg-slate-800 p-8 rounded-lg shadow-xl">
     <h1 class="text-3xl font-bold mb-6 text-white">
         {% if is_update %}Edit Tim: {{ form.instance.name }}{% else %}Tambah Tim Baru{% endif %}
@@ -58,4 +58,4 @@
         <a href="{% url 'matches:manage_teams' %}" class="text-slate-400 hover:text-slate-300 text-sm">Kembali ke Daftar Tim</a>
     </div>
 </div>
-{% endblock %}
+{% endblock list_content %}
