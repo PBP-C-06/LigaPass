@@ -14,10 +14,20 @@
       {{ form.title }}
     </div>
 
-    <!-- Konten -->
+    <!-- Konten pakai Trix Editor -->
     <div>
-      <label for="{{ form.content.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Isi Berita</label>
-      {{ form.content }}
+      <label for="id_content" class="block text-sm font-medium text-gray-700 mb-1">
+        Isi Berita
+      </label>
+
+      <!-- Hidden input untuk menyimpan konten dari Trix -->
+      <input id="id_content" type="hidden" name="content" value="{{ form.content.value|default_if_none:'' }}">
+
+      <!-- Trix Editor -->
+      <trix-editor
+        input="id_content"
+        class="bg-white border border-gray-300 rounded-md px-4 py-2 min-h-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+      </trix-editor>
     </div>
 
     <!-- Kategori -->

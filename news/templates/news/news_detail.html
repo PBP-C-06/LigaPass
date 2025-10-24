@@ -51,16 +51,16 @@
 {% endif %}
 
 <div class="prose max-w-none leading-relaxed">
-  {{ news.content|linebreaks }}
+  {{ news.content|safe }}
 </div>
 
 {% if request.user.role == 'journalist' %}
   <div class="mt-6 flex gap-4">
     <a href="{% url 'news:news_edit' news.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">
-      ✏️ Edit Berita
+    Edit Berita
     </a>
     <button onclick="openDeleteModal()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded flex items-center gap-2">
-      🗑️ Hapus Berita
+    Hapus Berita
     </button>
   </div>
 {% endif %}
@@ -92,37 +92,424 @@
   </div>
 </div>
 
-<!-- Script AJAX -->
+<!-- Komentar -->
+{% if request.user.is_authenticated %}
+  <div class="mt-10">
+    <h3 class="text-xl font-bold mb-2">Tinggalkan Komentar</h3>
+    <form method="post" id="main-comment-form">
+      {% csrf_token %}
+      {{ comment_form }}
+      <button type="submit" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        Kirim Komentar
+      </button>
+    </form>
+  </div>
+{% else %}
+  <p class="text-gray-600 mt-8">
+    <a href="{% url 'login' %}" class="text-blue-600 underline">Login</a> untuk berkomentar.
+  </p>
+{% endif %}
+
+<!-- Modal Konfirmasi Hapus Komentar -->
+<div id="delete-comment-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full text-center">
+    <div class="text-red-600 text-3xl mb-2">🗑️</div>
+    <h3 class="text-lg font-semibold mb-2">Hapus Komentar?</h3>
+    <p class="text-gray-600 mb-4">Komentar ini akan dihapus secara permanen.</p>
+    <div class="flex justify-center gap-4">
+      <button id="confirm-delete-comment-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Ya, Hapus</button>
+      <button onclick="closeDeleteCommentModal()" class="border border-gray-300 px-4 py-2 rounded hover:bg-gray-100">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="flex items-center justify-between mt-10 mb-4">
+  <h3 class="text-xl font-bold">
+    Komentar <span id="total-comment-count">({{ total_comments }})</span>
+    <span class="text-sm font-normal text-gray-500" id="current-sort-label">
+      {% if sort == 'popular' %}Terpopuler{% else %}Terbaru{% endif %}
+    </span>
+  </h3>
+  <div class="flex gap-2">
+    <button
+      class="px-3 py-1 border rounded {% if sort == 'latest' %}bg-blue-600 text-white{% else %}text-gray-700{% endif %}"
+      data-sort="latest">
+      Terbaru
+    </button>
+    <button
+      class="px-3 py-1 border rounded {% if sort == 'popular' %}bg-blue-600 text-white{% else %}text-gray-700{% endif %}"
+      data-sort="popular">
+      Terpopuler
+    </button>
+  </div>
+</div>
+
+<div id="comment-{{ comment.id }}" class="comments-container space-y-6">
+  {% include "news/comment_list.html" %}
+</div>
+
+<!-- ========= SCRIPT BAGIAN BAWAH ========== -->
 <script>
-  function openDeleteModal() {
-    document.getElementById('deleteModal').classList.remove('hidden');
+let currentSort = "{{ sort|default:'latest' }}";
+
+function highlightSortButton() {
+  document.querySelectorAll("button[data-sort]").forEach(btn => {
+    const isActive = btn.dataset.sort === currentSort;
+    btn.classList.toggle("bg-blue-600", isActive);
+    btn.classList.toggle("text-white", isActive);
+    btn.classList.toggle("text-gray-700", !isActive);
+  });
+}
+
+function openDeleteModal() {
+    const modal = document.getElementById("deleteModal");
+    if (modal) {
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
   }
 
   function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.add('hidden');
+    const modal = document.getElementById("deleteModal");
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
   }
 
   function confirmDelete() {
     fetch("{% url 'news:news_delete' news.pk %}", {
       method: "POST",
       headers: {
-        "X-CSRFToken": "{{ csrf_token }}",
+        "X-CSRFToken": getCookie("csrftoken"),
         "X-Requested-With": "XMLHttpRequest"
       }
     })
     .then(response => {
       if (response.ok) {
-        showToast("Berita berhasil dihapus.", "success");
-        setTimeout(() => window.location.href = "{% url 'news:news_list' %}", 1200);
+        return response.json();
+      }
+      throw new Error("Gagal menghapus.");
+    })
+    .then(data => {
+      if (data.success) {
+        // Redirect setelah berhasil hapus
+        window.location.href = "{% url 'news:news_list' %}";
       } else {
-        throw new Error("Terjadi kesalahan saat menghapus berita.");
+        alert("Gagal menghapus berita.");
       }
     })
     .catch(error => {
-      console.error(error);
-      showToast("Gagal menghapus berita.", "error");
-      closeDeleteModal();
+      console.error("Error:", error);
+      alert("Terjadi kesalahan saat menghapus.");
     });
   }
+
+  let commentIdToDelete = null;
+
+  function openDeleteCommentModal(commentId) {
+  commentIdToDelete = commentId;
+  const modal = document.getElementById("delete-comment-modal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+}
+
+function closeDeleteCommentModal() {
+  commentIdToDelete = null;
+  const modal = document.getElementById("delete-comment-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+}
+
+// Konfirmasi hapus komentar
+document.getElementById("confirm-delete-comment-btn").addEventListener("click", async () => {
+  if (!commentIdToDelete) return;
+
+  try {
+    const response = await fetch(`/news/comment/${commentIdToDelete}/delete/`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      credentials: "same-origin"
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+
+      // Hapus dari DOM
+      const commentEl = document.getElementById(`comment-${commentIdToDelete}`);
+      if (commentEl) commentEl.remove();
+
+      // Update total komentar
+      const countSpan = document.getElementById("total-comment-count");
+      if (countSpan && data.total_comments !== undefined) {
+        countSpan.textContent = `(${data.total_comments})`;
+      }
+
+      closeDeleteCommentModal();
+    } else {
+      alert("Gagal menghapus komentar.");
+    }
+  } catch (err) {
+    console.error("Error hapus komentar:", err);
+    alert("Terjadi kesalahan.");
+  }
+});
+
+// Ambil CSRF token dari cookie
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const csrfToken = getCookie('csrftoken');
+
+  // === Event delegation untuk form balasan komentar
+  document.addEventListener("submit", async function (e) {
+  const form = e.target;
+
+  // === Balasan komentar
+  if (form.matches(".reply-form")) {
+    e.preventDefault();
+    const parentId = form.dataset.commentId;
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch(window.location.href, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin",
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        form.classList.add("hidden");
+        form.querySelector("textarea").value = "";
+
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = data.comment_html;
+
+        const repliesContainer = document.getElementById(`replies-${parentId}`);
+        if (repliesContainer) {
+          repliesContainer.appendChild(wrapper);
+        }
+
+        const countSpan = document.getElementById("total-comment-count");
+        if (countSpan && data.total_comments !== undefined) {
+          countSpan.textContent = `(${data.total_comments})`;
+        }
+      } else {
+        alert("Gagal mengirim balasan.");
+      }
+    } catch (err) {
+      console.error("Error:", err);
+    }
+  }
+
+  // === Like komentar
+  if (form.matches("form[data-like-form]")) {
+    e.preventDefault();
+
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const btn = form.querySelector("button");
+        const span = form.querySelector("span");
+
+        if (data.liked) {
+          btn.innerText = "❤️ Unlike";
+          btn.classList.replace("text-gray-600", "text-red-600");
+        } else {
+          btn.innerText = "🤍 Like";
+          btn.classList.replace("text-red-600", "text-gray-600");
+        }
+
+        span.innerText = `(${data.like_count})`;
+      }
+    } catch (err) {
+      console.error("Error like:", err);
+    }
+  }
+
+  // === Komentar utama
+  if (form.matches("#main-comment-form")) {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch(window.location.href, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin",
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        form.reset();
+
+        // Tambahkan komentar ke atas
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = data.comment_html;
+
+        const container = document.querySelector(".comments-container");
+        if (container) {
+          container.prepend(wrapper);
+
+          // Force browser to recognize the new form properly
+          setTimeout(() => {
+            const newForm = wrapper.querySelector("form.reply-form");
+            if (newForm) newForm.reset(); // Just trigger recognition
+          }, 100);
+        }
+
+         // Update total komentar
+        const countSpan = document.getElementById("total-comment-count");
+        if (countSpan && data.total_comments !== undefined) {
+          countSpan.textContent = `(${data.total_comments})`;
+        }
+
+        // Set label sort jadi "Terbaru"
+        const sortLabel = document.getElementById("current-sort-label");
+        if (sortLabel) sortLabel.textContent = "Terbaru";
+          currentSort = "latest";
+          highlightSortButton();
+
+        // Highlight tombol "Terbaru"
+        document.querySelectorAll("button[data-sort]").forEach(btn => {
+          if (btn.dataset.sort === "latest") {
+            btn.classList.add("bg-blue-600", "text-white");
+            btn.classList.remove("text-gray-700");
+          } else {
+            btn.classList.remove("bg-blue-600", "text-white");
+            btn.classList.add("text-gray-700");
+          }
+        });
+
+        } else {
+          alert("Gagal mengirim komentar.");
+        }
+      } catch (err) {
+        console.error("Error:", err);
+      }
+    }
+
+  // === Hapus komentar
+  if (form.matches("form[data-delete-form]")) {
+    e.preventDefault();
+
+    const confirmed = confirm("Yakin ingin menghapus komentar ini?");
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrfToken,
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Hapus elemen komentar dari DOM
+        const commentBlock = form.closest(".comment-block");
+        if (commentBlock) commentBlock.remove();
+
+        // Update total komentar
+        const countSpan = document.getElementById("total-comment-count");
+        if (countSpan && data.total_comments !== undefined) {
+          countSpan.textContent = `(${data.total_comments})`;
+        }
+
+      } else {
+        alert("Gagal menghapus komentar.");
+      }
+    } catch (err) {
+      console.error("Error hapus komentar:", err);
+    }
+  }
+});
+
+document.querySelectorAll("button[data-sort]").forEach(button => {
+  button.addEventListener("click", async () => {
+    const sortValue = button.dataset.sort;
+    currentSort = sortValue;
+    highlightSortButton();
+
+    try {
+      const response = await fetch(window.location.pathname + `?sort=${sortValue}`, {
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const container = document.querySelector(".comments-container");
+
+        if (container) {
+          container.innerHTML = data.comments_html;
+
+          // Update label sort juga kalau mau
+          const sortLabel = document.querySelector("#current-sort-label");
+          if (sortLabel) {
+            sortLabel.textContent = sortValue === "popular" ? "Terpopuler" : "Terbaru";
+          }
+
+          // Reset ID komentar yang ingin dihapus
+          commentIdToDelete = null;
+        }
+      } else {
+        alert("Gagal memuat komentar.");
+      }
+    } catch (err) {
+      console.error("AJAX filter error:", err);
+    }
+  });
+});
+
+  // Fungsi toggle reply form
+  window.toggleReplyForm = function (commentId) {
+    const form = document.getElementById(`reply-form-${commentId}`);
+    if (form) {
+      form.classList.toggle("hidden");
+    }
+  };
 </script>
 {% endblock %}
