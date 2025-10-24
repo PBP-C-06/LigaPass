@@ -11,12 +11,12 @@
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-semibold text-gray-800">Total Tiket Terjual</h3>
         <select id="ticketPeriod" class="border rounded px-2 py-1 text-sm">
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly" selected>Monthly</option>
+          <option value="daily">Harian</option>
+          <option value="weekly">Mingguan</option>
+          <option value="monthly" selected>Bulanan</option>
         </select>
       </div>
-      <canvas id="ticketsChart" height="260"></canvas>
+      <canvas id="ticketChart" height="260"></canvas>
     </div>
 
     <!-- RIGHT CHART: Total Pendapatan -->
@@ -24,9 +24,9 @@
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-semibold text-gray-800">Total Pemasukkan</h3>
         <select id="revenuePeriod" class="border rounded px-2 py-1 text-sm">
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly" selected>Monthly</option>
+          <option value="daily">Harian</option>
+          <option value="weekly" selected>Mingguan</option>
+          <option value="monthly">Bulanan</option>
         </select>
       </div>
       <canvas id="revenueChart" height="260"></canvas>
@@ -38,97 +38,114 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const ticketCtx = document.getElementById("ticketsChart");
+  const ticketCtx = document.getElementById("ticketChart");
   const revenueCtx = document.getElementById("revenueChart");
   const ticketPeriod = document.getElementById("ticketPeriod");
   const revenuePeriod = document.getElementById("revenuePeriod");
 
-  let ticketsChart, revenueChart;
+  let ticketChart = null;
+  let revenueChart = null;
 
-  // Fetch data dari API
+  // Helper: Fetch data analytics
   async function fetchData(period) {
     const res = await fetch(`/reviews/analytics/admin/data/?period=${period}`);
+    if (!res.ok) throw new Error("Gagal ambil data");
     return res.json();
   }
 
-  // Render kedua chart bar
-  async function renderCharts(period = "monthly") {
-    const data = await fetchData(period);
+  // === Chart Tiket Terjual ===
+  async function renderTicketChart() {
+    const period = ticketPeriod.value.toLowerCase();
+    try {
+      const data = await fetchData(period);
+      const labels = data.ticketsData.map(d => d.date);
+      const values = data.ticketsData.map(d => d.tickets_sold);
 
-    const ticketLabels = data.ticketsData.map(i => i.date);
-    const ticketValues = data.ticketsData.map(i => i.tickets_sold);
-    const revenueLabels = data.revenueData.map(i => i.date);
-    const revenueValues = data.revenueData.map(i => i.total_revenue);
+      if (ticketChart) ticketChart.destroy();
 
-    // === 1️⃣ Chart Tickets Sold ===
-    if (ticketsChart) ticketsChart.destroy();
-    ticketsChart = new Chart(ticketCtx, {
-      type: "bar",
-      data: {
-        labels: ticketLabels,
-        datasets: [{
-          label: "Tickets Sold",
-          data: ticketValues,
-          backgroundColor: "rgba(59, 130, 246, 0.8)",   // biru solid
-          hoverBackgroundColor: "rgba(59, 130, 246, 1)",
-          borderRadius: 8,
-          borderSkipped: false
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        animation: { duration: 700, easing: "easeOutQuart" },
-        scales: {
-          x: { grid: { display: false } },
-          y: {
-            beginAtZero: true,
-            grid: { color: "#f0f0f0" },
-            ticks: { stepSize: 10 }
-          }
-        }
-      }
-    });
-
-    // === 2️⃣ Chart Revenue (bar juga) ===
-    if (revenueChart) revenueChart.destroy();
-    revenueChart = new Chart(revenueCtx, {
-      type: "bar",
-      data: {
-        labels: revenueLabels,
-        datasets: [{
-          label: "Total Revenue (Rp)",
-          data: revenueValues,
-          backgroundColor: "rgba(16, 185, 129, 0.8)",  // hijau solid
-          hoverBackgroundColor: "rgba(16, 185, 129, 1)",
-          borderRadius: 8,
-          borderSkipped: false
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        animation: { duration: 700, easing: "easeOutQuart" },
-        scales: {
-          x: { grid: { display: false } },
-          y: {
-            beginAtZero: true,
-            grid: { color: "#f0f0f0" },
-            ticks: {
-              callback: v => "Rp " + v.toLocaleString("id-ID")
+      ticketChart = new Chart(ticketCtx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Tiket Terjual",
+            data: values,
+            backgroundColor: "rgba(59, 130, 246, 0.8)",
+            hoverBackgroundColor: "rgba(59, 130, 246, 1)",
+            borderRadius: 8,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          animation: { duration: 700, easing: "easeOutQuart" },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              beginAtZero: true,
+              grid: { color: "#f3f3f3" },
+              ticks: { stepSize: 1 }
             }
           }
         }
-      }
-    });
+      });
+    } catch (err) {
+      console.error("❌ Gagal render chart tiket:", err);
+    }
   }
 
-  // === Dropdown event listeners ===
-  ticketPeriod.addEventListener("change", () => renderCharts(ticketPeriod.value));
-  revenuePeriod.addEventListener("change", () => renderCharts(revenuePeriod.value));
+  // === Chart Pendapatan ===
+  async function renderRevenueChart() {
+    const period = revenuePeriod.value.toLowerCase();
+    try {
+      const data = await fetchData(period);
+      const labels = data.revenueData.map(d => d.date);
+      const values = data.revenueData.map(d => d.total_revenue);
 
-  // === Render pertama kali ===
-  renderCharts();
+      if (revenueChart) revenueChart.destroy();
+
+      revenueChart = new Chart(revenueCtx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Pendapatan (Rp)",
+            data: values,
+            backgroundColor: "rgba(16, 185, 129, 0.8)",
+            hoverBackgroundColor: "rgba(16, 185, 129, 1)",
+            borderRadius: 8,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          animation: { duration: 700, easing: "easeOutQuart" },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              beginAtZero: true,
+              grid: { color: "#f3f3f3" },
+              ticks: {
+                callback: v => "Rp " + v.toLocaleString("id-ID")
+              }
+            }
+          }
+        }
+      });
+    } catch (err) {
+      console.error("❌ Gagal render chart revenue:", err);
+    }
+  }
+
+  // === Event Listener per filter (independen) ===
+  ticketPeriod.addEventListener("change", renderTicketChart);
+  revenuePeriod.addEventListener("change", renderRevenueChart);
+
+  // === Render awal ===
+  renderTicketChart();
+  renderRevenueChart();
 });
 </script>
 {% endblock profile_content %}
