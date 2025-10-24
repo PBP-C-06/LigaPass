@@ -300,7 +300,7 @@ def current_user_json(request):
         menu = [
             {"name": "Profil", "url": my_profile_url},
             {"name": "My Booking", "url": reverse("profiles:user_tickets_page", args=[user.id])},
-            {"name": "Matches", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
+            {"name": "Analytics", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
         ]
     
     return JsonResponse({

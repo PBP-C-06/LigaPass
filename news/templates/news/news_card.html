@@ -1,15 +1,17 @@
 <div class="group relative bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl shadow-md overflow-hidden w-full max-w-md transform transition duration-500 hover:scale-105 hover:shadow-xl hover:ring-2 hover:ring-blue-300/60">
+{% load static %}
 
   <!-- Gambar Thumbnail -->
   <div class="relative overflow-hidden">
-    {% if news.thumbnail %}
-      <img src="{{ news.thumbnail.url }}" alt="thumbnail"
-           class="w-full h-56 object-cover transform transition duration-700 group-hover:scale-110 group-hover:brightness-110">
-    {% else %}
-      <div class="w-full h-56 bg-gray-300 flex items-center justify-center text-gray-600">
-        Tidak Ada Gambar
-      </div>
-    {% endif %}
+    <div class="w-full max-w-xl my-4 overflow-hidden rounded shadow group mx-auto">
+      {% if news.thumbnail and news.thumbnail.name != 'default.jpg' %}
+        <img src="{{ news.thumbnail.url }}" alt="thumbnail"
+            class="w-full h-56 object-cover transform transition duration-700 group-hover:scale-110 group-hover:brightness-110">
+      {% else %}
+        <img src="{% static 'images/thumbnail_placeholder.png' %}" alt="placeholder thumbnail"
+            class="w-full h-56 bg-gray-300 flex items-center justify-center text-gray-600">
+      {% endif %}
+    </div>
 
     <!-- Overlay efek hover -->
     <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
