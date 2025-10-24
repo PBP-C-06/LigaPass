@@ -51,7 +51,6 @@ class NewsViewsTests(TestCase):
         )
 
     def test_news_list_renders(self):
-        self.client.force_login(self.user)
         url = reverse("news:news_list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -59,7 +58,6 @@ class NewsViewsTests(TestCase):
         self.assertIn("news_list", response.context)
 
     def test_news_detail_increments_views(self):
-        self.client.force_login(self.user)
         old_views = self.news.news_views
         url = reverse("news:news_detail", args=[self.news.pk])
         response = self.client.get(url)
@@ -69,21 +67,18 @@ class NewsViewsTests(TestCase):
         self.assertTemplateUsed(response, "news/news_detail.html")
 
     def test_news_list_with_search_filter(self):
-        self.client.force_login(self.user)
         url = reverse("news:news_list") + "?search=Berita"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Berita Lama")
 
     def test_news_list_with_category_filter(self):
-        self.client.force_login(self.user)
         url = reverse("news:news_list") + "?category=update"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Berita Lama")
 
     def test_news_list_with_sorting(self):
-        self.client.force_login(self.user)
         url = reverse("news:news_list") + "?sort=created_at"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -251,3 +246,16 @@ class NewsViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get("success"), True)
         self.assertFalse(Comment.objects.filter(pk=comment.pk).exists())
+
+    def test_anonymous_cannot_post_comment(self):
+        url = reverse("news:news_detail", args=[self.news.pk])
+        response = self.client.post(url, {"content": "Komentar anonim"}, follow=True)
+        self.assertEqual(response.status_code, 200)  # Sukses redirect ke login
+
+    def test_authenticated_user_can_post_comment(self):
+        self.client.force_login(self.user)
+        url = reverse("news:news_detail", args=[self.news.pk])
+        response = self.client.post(url, {"content": "Komentar user login"}, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Komentar user login")
+        

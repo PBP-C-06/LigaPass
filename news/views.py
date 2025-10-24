@@ -9,6 +9,7 @@ from django.forms.widgets import ClearableFileInput
 from django.http import JsonResponse, HttpResponseForbidden
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
+from django.conf import settings
 
 # Override tampilan input file menggunakan template kustom
 class PlainFileInput(ClearableFileInput):
@@ -24,7 +25,6 @@ def latest_news_snippet(request):
     return render(request, 'news/latest_news_snippet.html', {'latest_news': latest_news})
 
 # Menampilkan daftar semua berita dengan filter & sort
-@login_required # Hanya user yang sudah login yang bisa akses 
 def news_list(request):
     news = News.objects.all() # Ambil semua berita
 
@@ -56,7 +56,6 @@ def news_list(request):
     })
 
 # Menampilkan detail berita dan komentarnya
-@login_required
 def news_detail(request, pk):
     news = get_object_or_404(News, pk=pk) # Ambil berita berdasarkan primary key
     news.news_views += 1 # Tambahkan view count 
@@ -108,6 +107,8 @@ def news_detail(request, pk):
 
     # AJAX POST untuk komentar utama atau balasan
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'error': 'Login diperlukan untuk komentar.'}, status=403) # Cek autentikasi user
         comment_form = CommentForm(request.POST)
         if comment_form.is_valid():
             parent_id = request.POST.get("parent_id")
@@ -140,6 +141,8 @@ def news_detail(request, pk):
             return JsonResponse({'success': False, 'error': 'Komentar tidak valid'}, status=400)
 
     elif request.method == 'POST':
+        if not request.user.is_authenticated:  # Cek autentikasi user
+            return redirect(settings.LOGIN_URL)
         # Fallback jika bukan AJAX
         comment_form = CommentForm(request.POST)
         if comment_form.is_valid():
