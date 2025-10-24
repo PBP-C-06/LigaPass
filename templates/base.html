@@ -11,6 +11,28 @@
 
   <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
 
+  <link rel="stylesheet" href="https://unpkg.com/trix@2.0.0/dist/trix.css">
+  <script src="https://unpkg.com/trix@2.0.0/dist/trix.umd.min.js"></script>
+
+  <style>
+  trix-editor .attachment {
+    display: none !important;
+  }
+
+  .prose figure {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .prose a {
+    word-break: break-word;
+  }
+
+  .prose [data-trix-attachment] {
+    display: none !important;
+  }
+</style>
+
   <style>
     body {
       font-family: 'Poppins', sans-serif;
@@ -217,6 +239,21 @@
               }
               hideModal();
           });
+      }
+    });
+
+    document.addEventListener('trix-file-accept', function (e) {
+      e.preventDefault(); // blok upload file
+    });
+
+    document.addEventListener("trix-initialize", function (event) {
+      const toolbar = event.target.toolbarElement;
+      if (toolbar) {
+        const buttonsToHide = ['attachFiles', 'link'];
+        buttonsToHide.forEach(button => {
+          const btn = toolbar.querySelector(`[data-trix-action="${button}"]`);
+          if (btn) btn.remove();
+        });
       }
     });
   </script>

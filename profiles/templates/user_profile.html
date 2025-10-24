@@ -87,7 +87,7 @@
             // Untuk edit button jika ada
             const editButton = document.getElementById("edit-profile-container");
     
-            // Foto & username
+            // Foto dan username
             const profilePic = document.getElementById("profile-picture");
             if (data.profile_picture) {
                 profilePic.src = data.profile_picture;
@@ -156,10 +156,10 @@ btn.addEventListener("click", async () => {
         const resData = await res.json();
 
         if (res.ok && resData.ok) {
-            // Menampilkan toast sukses dari message backend
+            // Jika berhasil 
             showToast(resData.message, "success");
         } else {
-            // Jika gagal (misal status invalid atau permission denied)
+            // Jika gagal
             showToast(resData.message || "Terjadi kesalahan saat memperbarui status.", "error");
         }
         } catch (err) {
