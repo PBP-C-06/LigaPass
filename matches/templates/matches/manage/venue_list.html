@@ -1,0 +1,36 @@
+{% extends 'matches/manage/admin_manage_base.html' %}
+{% block title %}Manajemen Venue{% endblock %}
+
+{% block list_content %}
+<div class="bg-slate-800 p-6 rounded-lg shadow-xl">
+    <h1 class="text-2xl font-bold text-white mb-4">Manajemen Venue</h1>
+    <a href="{% url 'matches:add_venue' %}" class="bg-green-500 text-white p-2 rounded my-4 inline-block hover:bg-green-600 transition-colors">
+        + Tambah Venue Baru
+    </a>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        {% for venue in venues %}
+        <div class="bg-slate-700 p-4 rounded-lg shadow-md flex flex-col hover:bg-slate-600 transition-colors duration-200 border-l-4 border-indigo-500">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex flex-col">
+                    <p class="font-semibold text-white text-lg">{{ venue.name }}</p>
+                    <p class="text-sm text-slate-400">{{ venue.city|default:"N/A" }}</p>
+                </div>
+                <div class="flex space-x-2">
+                    <a href="{% url 'matches:edit_venue' venue.pk %}" class="text-yellow-400 hover:text-yellow-300 text-sm font-semibold p-1 rounded transition">Edit</a>
+                    <a href="{% url 'matches:delete_venue' venue.pk %}" class="text-red-400 hover:text-red-300 text-sm font-semibold p-1 rounded transition">Hapus</a>
+                </div>
+            </div>
+            
+            <div class="w-full h-32 bg-slate-600 rounded-md flex items-center justify-center text-slate-400 text-xs italic">
+                [Foto Venue Belum Tersedia]
+            </div>
+        </div>
+        {% empty %}
+            <div class="col-span-full bg-slate-700 p-6 rounded-lg text-center">
+                <p class="text-slate-400">Belum ada venue yang terdaftar.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock list_content %}
