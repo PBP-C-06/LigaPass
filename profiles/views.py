@@ -305,10 +305,8 @@ def current_user_json(request):
         my_profile_url = reverse("profiles:admin_view")
         menu = [
             {"name": "Profil", "url": my_profile_url},
-            {"name": "Dashboard", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
-            {"name": "Review", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti 
-            {"name": "Teams", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
-            {"name": "Matches", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
+            {"name": "Reviews", "url": reverse("reviews:admin_review_page")},  # halaman review admin
+            {"name": "Analytics", "url": reverse("reviews:admin_analytics_page")},
         ]
     elif user.role == "journalist":
         profile_picture_url = static("images/Journalist.png")
@@ -322,7 +320,7 @@ def current_user_json(request):
         menu = [
             {"name": "Profil", "url": my_profile_url},
             {"name": "My Booking", "url": reverse("profiles:user_tickets_page", args=[user.id])},
-            {"name": "Analytics", "url": reverse("profiles:user_view", args=[user.id])}, # Ganti
+            {"name": "Analytics", "url": reverse("reviews:user_analytics_page")},
         ]
     
     return JsonResponse({
