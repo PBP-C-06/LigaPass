@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ form_title }} - LigaPass{% endblock %}
-
+{% load static %}
 {% block content %}
 <div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg">
   <h1 class="text-2xl font-bold text-gray-800 mb-6">{{ form_title }}</h1>
@@ -32,12 +32,14 @@
 
       <div id="thumbnail-preview-container" class="mb-3 {% if not form.thumbnail.value %}hidden{% endif %}">
         <div class="flex items-start space-x-4">
-          <img
-            id="thumbnail-preview"
-            src="{% if form.thumbnail.value %}{{ form.instance.thumbnail.url }}{% endif %}"
+          <img id="thumbnail-preview"
+            src="{% if form.instance.thumbnail and form.instance.thumbnail.name != 'default.jpg' %}
+                      {{ form.instance.thumbnail.url }}
+                  {% else %}
+                      {% static 'images/thumbnail_placeholder.png' %}
+                  {% endif %}"
             class="w-48 h-32 object-cover rounded-md border border-gray-300 shadow"
-            alt="Thumbnail Preview"
-          />
+            alt="Thumbnail Preview">
           <button type="button" id="delete-thumbnail-button" class="px-4 py-2 text-sm font-medium text-red-600 border border-red-400 rounded-md hover:bg-red-50 transition">
             Hapus Gambar
           </button>
