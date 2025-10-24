@@ -316,7 +316,7 @@ def current_user_json(request):
         my_profile_url = reverse("profiles:user_view", args=[user.id])
         menu = [
             {"name": "Profil", "url": my_profile_url},
-            {"name": "My Booking", "url": reverse("profiles:user_tickets_page", args=[user.id])},
+            {"name": "My Tickets", "url": reverse("profiles:user_tickets_page", args=[user.id])},
             {"name": "Analytics", "url": reverse("reviews:user_analytics_page")},
         ]
     

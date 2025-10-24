@@ -27,7 +27,7 @@ def is_user(user):
 @user_passes_test(is_admin)
 def admin_analytics_page(request):
     """Halaman Analytics untuk Admin"""
-    return render(request, "reviews/admin_analytics.html")
+    return render(request, "admin_analytics.html")
 
 
 @login_required
@@ -128,7 +128,7 @@ def api_admin_analytics_data(request):
 @user_passes_test(is_user)
 def user_analytics_page(request):
     """Halaman Analytics untuk User"""
-    return render(request, "reviews/user_analytics.html")
+    return render(request, "user_analytics.html")
 
 
 @login_required
