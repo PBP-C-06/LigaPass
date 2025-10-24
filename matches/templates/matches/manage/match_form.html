@@ -157,45 +157,103 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const addButton = document.getElementById('add-ticket-row');
+// Fungsi untuk memperbarui nomor urut kategori
+function updateCategoryNumbers() {
   const formsetDiv = document.getElementById('ticket-price-formset');
-  const totalForms = document.getElementById('id_ticketprice_set-TOTAL_FORMS');
-  const emptyTemplateHtml = document.getElementById('empty-form-template').innerHTML;
+  if (!formsetDiv) return;
 
-  addButton.addEventListener('click', function () {
+  let counter = 1;
+  
+  formsetDiv.querySelectorAll('.ticket-price-form').forEach((form) => {
+    if (form.style.display !== 'none') {
+      const label = form.querySelector('p.text-sm.font-medium.text-white');
+      if (label) {
+        label.textContent = `Kategori #${counter}`;
+        counter++;
+      }
+    }
+  });
+}
+
+// Fungsi utama untuk menambah form baru
+function addTicketForm(event) {
+  event.preventDefault();
+  
+  // FIX KRITIS: Menggunakan ID yang benar dari log error Anda.
+  const formsetDiv = document.getElementById('ticket-price-formset');
+  const totalForms = document.getElementById('id_ticket_prices-TOTAL_FORMS'); // <--- PERUBAHAN DI SINI!
+  const emptyTemplate = document.getElementById('empty-form-template');
+
+  if (!totalForms || !formsetDiv || !emptyTemplate) {
+    console.error('FATAL ERROR: Elemen formset management atau container/template tidak ditemukan.');
+    return;
+  }
+
+  try {
     const currentCount = parseInt(totalForms.value);
+    
+    const emptyTemplateHtml = emptyTemplate.innerHTML;
+    
+    // Ganti placeholder __prefix__ dengan index baru
     let newHtml = emptyTemplateHtml.replace(/__prefix__/g, currentCount);
+    
+    // Karena formset management form di-render menggunakan prefix: 'ticket_prices'
+    // Kita juga harus mengganti '__prefix__' di dalam HTML template input.
+    // Pastikan template HTML juga menggunakan prefix yang benar untuk input name/id jika ada hardcode
+    
+    // 3. Konversi string HTML menjadi elemen DOM
     const temp = document.createElement('div');
     temp.innerHTML = newHtml.trim();
     const newForm = temp.firstElementChild;
 
+    // 4. Reset nilai input/select/textarea pada form baru
     newForm.querySelectorAll('input, select, textarea').forEach(el => {
-      if (el.type === 'checkbox') el.checked = false;
+      if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
       else el.value = '';
     });
 
+    // 5. Tambahkan ke DOM dan update total
     formsetDiv.appendChild(newForm);
-    totalForms.value = currentCount + 1;
+    totalForms.value = currentCount + 1; // Increment TOTAL_FORMS
+    
     updateCategoryNumbers();
-  });
-
-  function updateCategoryNumbers() {
-    formsetDiv.querySelectorAll('.ticket-price-form').forEach((form, index) => {
-      const label = form.querySelector('p.text-sm.font-medium.text-white');
-      if (label) label.textContent = `Kategori #${index + 1}`;
-    });
+    
+  } catch (error) {
+    console.error('Error saat menambahkan kategori baru:', error);
+    alert('Terjadi kesalahan saat menambah kategori.');
   }
+}
 
-  formsetDiv.addEventListener('click', function (e) {
-    if (e.target.classList.contains('delete-ticket')) {
-      const form = e.target.closest('.ticket-price-form');
-      const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
-      if (deleteInput) deleteInput.checked = true;
+// Fungsi untuk menangani penghapusan form
+function deleteTicketForm(e) {
+  if (e.target.classList.contains('delete-ticket')) {
+    e.preventDefault();
+    const form = e.target.closest('.ticket-price-form');
+    
+    // Name attribute untuk DELETE harus dicari dengan benar
+    const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
+    
+    if (deleteInput) {
+      deleteInput.checked = true;
       form.style.display = 'none';
       updateCategoryNumbers();
     }
-  });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const addButton = document.getElementById('add-ticket-row');
+  const formsetDiv = document.getElementById('ticket-price-formset');
+  
+  if (addButton) {
+    addButton.addEventListener('click', addTicketForm);
+  }
+  
+  if (formsetDiv) {
+    formsetDiv.addEventListener('click', deleteTicketForm);
+  }
+  
+  updateCategoryNumbers();
 });
 </script>
 {% endblock %}
