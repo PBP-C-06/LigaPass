@@ -93,7 +93,7 @@
           {{ ticket_form.id }}
           {{ ticket_form.match }}
 
-          {{ ticket_form.DELETE }}
+          <div class="hidden">{{ ticket_form.DELETE }}</div>
         </div>
       {% endfor %}
     </div>
@@ -123,7 +123,7 @@
         {{ formset.empty_form.id }}
         {{ formset.empty_form.match }}
 
-        {{ formset.empty_form.DELETE }}
+        <div class="hidden">{{ formset.empty_form.DELETE }}</div>
       </div>
     </div>
 
