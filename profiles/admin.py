@@ -7,16 +7,16 @@ class ProfileAdmin(admin.ModelAdmin):
     list_filter = ('status',)
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email')
     ordering = ('user__username',)
-    
+
+    # Hanya menampilkan true / false
     def has_profile_picture(self, obj):
         return bool(obj.profile_picture)
     has_profile_picture.boolean = True
-    has_profile_picture.short_description = 'Profile Picture?'
+    has_profile_picture.short_description = 'Profile Picture'
 
     def full_name(self, obj):
         return obj.full_name
     full_name.short_description = 'Full Name'
-
 
 @admin.register(AdminJournalistProfile)
 class AdminJournalistProfileAdmin(admin.ModelAdmin):
@@ -28,10 +28,11 @@ class AdminJournalistProfileAdmin(admin.ModelAdmin):
         return obj.user.role
     role_display.short_description = 'Role'
 
+    # Hanya menampilkan true / false
     def has_profile_picture(self, obj):
         return bool(obj.profile_picture)
     has_profile_picture.boolean = True
-    has_profile_picture.short_description = 'Profile Picture?'
+    has_profile_picture.short_description = 'Profile Picture'
 
     def news_count(self, obj):
         return obj.news_count
