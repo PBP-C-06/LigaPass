@@ -371,4 +371,3 @@ def user_tickets_json(request, id):
         })
 
     return JsonResponse({"tickets": results})
-
