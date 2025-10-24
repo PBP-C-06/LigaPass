@@ -51,6 +51,7 @@ class NewsViewsTests(TestCase):
         )
 
     def test_news_list_renders(self):
+        self.client.force_login(self.user)
         url = reverse("news:news_list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -58,6 +59,7 @@ class NewsViewsTests(TestCase):
         self.assertIn("news_list", response.context)
 
     def test_news_detail_increments_views(self):
+        self.client.force_login(self.user)
         old_views = self.news.news_views
         url = reverse("news:news_detail", args=[self.news.pk])
         response = self.client.get(url)
@@ -67,18 +69,21 @@ class NewsViewsTests(TestCase):
         self.assertTemplateUsed(response, "news/news_detail.html")
 
     def test_news_list_with_search_filter(self):
+        self.client.force_login(self.user)
         url = reverse("news:news_list") + "?search=Berita"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Berita Lama")
 
     def test_news_list_with_category_filter(self):
+        self.client.force_login(self.user)
         url = reverse("news:news_list") + "?category=update"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Berita Lama")
 
     def test_news_list_with_sorting(self):
+        self.client.force_login(self.user)
         url = reverse("news:news_list") + "?sort=created_at"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -169,3 +174,80 @@ class NewsViewsTests(TestCase):
         response = self.client.post(url, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
         self.assertEqual(response.status_code, 200)
         self.assertJSONEqual(response.content, {"success": True})
+    
+    def test_ajax_get_comments_on_news_detail(self):
+        self.client.force_login(self.user)
+        url = reverse("news:news_detail", args=[self.news.pk])
+        response = self.client.get(url, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("comments_html", response.json())
+    
+    def test_ajax_post_comment(self):
+        self.client.force_login(self.user)
+        url = reverse("news:news_detail", args=[self.news.pk])
+        data = {"content": "Komentar AJAX"}
+        response = self.client.post(
+            url,
+            data,
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue("comment_html" in response.json())
+    
+    def test_ajax_post_reply_comment(self):
+        from news.models import Comment
+        self.client.force_login(self.user)
+
+        # Buat komentar utama
+        parent = Comment.objects.create(
+            news=self.news,
+            user=self.user,
+            content="Komentar utama"
+        )
+
+        url = reverse("news:news_detail", args=[self.news.pk])
+        data = {
+            "content": "Balasan",
+            "parent_id": parent.id
+        }
+
+        response = self.client.post(
+            url,
+            data,
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("comment_html", response.json())
+    
+    def test_like_unlike_comment_ajax(self):
+        from news.models import Comment
+        self.client.force_login(self.user)
+
+        comment = Comment.objects.create(news=self.news, user=self.journalist, content="Test")
+
+        url = reverse("news:like_comment", args=[comment.id])
+
+        # Like
+        response = self.client.post(url, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("liked"))
+        self.assertEqual(response.json().get("like_count"), 1)
+
+        # Unlike
+        response = self.client.post(url, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json().get("liked"))
+        self.assertEqual(response.json().get("like_count"), 0)
+    
+    def test_delete_comment_ajax(self):
+        from news.models import Comment
+        self.client.force_login(self.user)
+
+        comment = Comment.objects.create(news=self.news, user=self.user, content="To be deleted")
+        url = reverse("news:delete_comment", args=[comment.id])
+
+        response = self.client.post(url, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json().get("success"), True)
+        self.assertFalse(Comment.objects.filter(pk=comment.pk).exists())

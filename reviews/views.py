@@ -172,3 +172,69 @@ def api_add_reply(request, review_id):
         "review_id": str(review.id),
         "updated_html": html_item,
     })
+
+# fungsi di bawah ini supaya balasan dari admin bisa diedit atau dihapus via ajax
+@csrf_exempt
+@user_passes_test(is_admin)
+@login_required
+def api_edit_reply(request, review_id):
+    """
+    Admin mengedit balasan ke review (via modal pop-up di admin_review_page).
+    """
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid method"}, status=400)
+
+    review = get_object_or_404(Review, id=review_id)
+
+    # Validasi: jika belum dibalas, tolak
+    if not hasattr(review, "reply"):
+        return JsonResponse({"status": "error", "message": "Review ini belum memiliki balasan."}, status=400)
+
+    # Ambil teks balasan
+    reply_text = (request.POST.get("reply_text") or "").strip()
+    if not reply_text:
+        return JsonResponse({"status": "error", "message": "Balasan tidak boleh kosong."}, status=400)
+
+    # Simpan balasan
+    review.reply.reply_text = reply_text
+    review.reply.save(update_fields=["reply_text", "created_at"])
+
+    # Render ulang elemen review agar langsung diperbarui di front-end
+    html_item = render_to_string("reviews/_review_item.html", {"review": review}, request=request)
+
+    return JsonResponse({
+        "status": "success",
+        "message": "Balasan berhasil diperbarui.",
+        "reply_text": review.reply.reply_text,
+        "review_id": str(review.id),
+        "updated_html": html_item,
+    })
+
+@csrf_exempt
+@user_passes_test(is_admin)
+@login_required
+def api_delete_reply(request, review_id):
+    """
+    Admin menghapus balasan ke review (via modal pop-up di admin_review_page).
+    """
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid method"}, status=400)
+
+    review = get_object_or_404(Review, id=review_id)
+
+    # Validasi: jika belum dibalas, tolak
+    if not hasattr(review, "reply"):
+        return JsonResponse({"status": "error", "message": "Review ini belum memiliki balasan."}, status=400)
+
+    # Hapus balasan
+    review.reply.delete()
+
+    # Render ulang elemen review agar langsung diperbarui di front-end
+    html_item = render_to_string("reviews/_review_item.html", {"review": review}, request=request)
+
+    return JsonResponse({
+        "status": "success",
+        "message": "Balasan berhasil dihapus.",
+        "review_id": str(review.id),
+        "updated_html": html_item,
+    })

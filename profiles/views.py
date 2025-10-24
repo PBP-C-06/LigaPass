@@ -305,7 +305,6 @@ def current_user_json(request):
         my_profile_url = reverse("profiles:admin_view")
         menu = [
             {"name": "Profil", "url": my_profile_url},
-            {"name": "Reviews", "url": reverse("reviews:admin_review_page")}, 
             {"name": "Analytics", "url": reverse("reviews:admin_analytics_page")},
         ]
     elif user.role == "journalist":
