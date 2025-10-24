@@ -36,7 +36,6 @@ class Team(models.Model):
 class Venue(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    api_id = models.IntegerField(unique=True, null=True, blank=True)
     name = models.CharField(max_length=100)
     city = models.CharField(max_length=100, null=True, blank=True)
 
@@ -60,8 +59,8 @@ class Match(models.Model):
     status_short = models.CharField(max_length=10, default="NS")
     status_long = models.CharField(max_length=50, default="Not Started")
     
-    home_goals = models.IntegerField(null=True, blank=True, default=0)
-    away_goals = models.IntegerField(null=True, blank=True, default=0)
+    home_goals = models.IntegerField(null=True, blank=True) 
+    away_goals = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.home_team} vs {self.away_team} on {self.date.strftime('%Y-%m-%d')}"

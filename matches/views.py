@@ -43,6 +43,7 @@ def _get_cleaned_messages(request):
         })
     return message_list
 
+# PERBAIKAN: Mengganti 'Past' menjadi 'Finished'
 def get_match_status(match_time):
     now = timezone.now()
     if match_time > now:
@@ -50,7 +51,7 @@ def get_match_status(match_time):
     elif match_time <= now and (now - match_time) < timedelta(hours=2.5):
         return 'Ongoing'
     else:
-        return 'Past'
+        return 'Finished'
 
 def _serialize_match(match):
     return {
@@ -86,6 +87,7 @@ def api_match_list(request):
     date_start_filter = request.GET.get('date_start', '')
     date_end_filter = request.GET.get('date_end', '')
     venue_filter = request.GET.get('venue', '')
+    status_filter = request.GET.get('status', '') # Ambil status filter
 
     if search_query:
         queryset = queryset.filter(
@@ -112,15 +114,31 @@ def api_match_list(request):
         except ValueError:
             pass
 
-    grouped_matches = {'Upcoming': [], 'Ongoing': [], 'Past': []}
+    # --- LOGIKA PENGELOMPOKAN DAN FILTER STATUS UNTUK CHECKBOX ---
+    # PERUBAHAN: Mengganti 'Past' menjadi 'Finished' di inisialisasi grouped_matches
+    grouped_matches = {'Upcoming': [], 'Ongoing': [], 'Finished': []}
     
+    # PERBAIKAN: Jika status_filter kosong (tidak ada checkbox dicentang), gunakan semua status
+    if status_filter:
+        allowed_statuses = [s.strip() for s in status_filter.split(',') if s.strip()]
+    else:
+        # DEFAULT: Jika filter kosong, anggap semua status diizinkan
+        allowed_statuses = ['Upcoming', 'Ongoing', 'Finished'] 
+    
+    # Kita perlu mengiterasi queryset untuk menentukan status
     for match in queryset:
         status = get_match_status(match.date)
-        match.status_key = status
-        grouped_matches[status].append(_serialize_match(match))
+        
+        # HANYA masukkan ke list jika statusnya ada di list yang diizinkan
+        if status in allowed_statuses:
+            match.status_key = status
+            # Masukkan ke dictionary pengelompokan (kunci harus sama dengan status)
+            grouped_matches[status].append(_serialize_match(match))
+
+    # --- AKHIR LOGIKA PENGELOMPOKAN ---
 
     return JsonResponse({
-        'grouped_matches': grouped_matches,
+        'grouped_matches': grouped_matches, 
         'search_query': search_query,
     })
 
