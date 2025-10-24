@@ -1,0 +1,5 @@
+{% for comment in comments %}
+  {% include "news/comment_tree.html" with comment=comment is_child=False %}
+{% empty %}
+  <p class="text-gray-500">Belum ada komentar.</p>
+{% endfor %}
