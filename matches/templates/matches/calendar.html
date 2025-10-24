@@ -10,7 +10,7 @@
         class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400">
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <select id="date-mode-filter" class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
           <option value="single">Tanggal Tertentu</option>
           <option value="range">Rentang Tanggal</option>
@@ -23,7 +23,23 @@
       <input type="date" name="date_end" id="date-end-filter" 
         class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400 hidden"
         placeholder="Tanggal Akhir">
-    </div>
+
+      <div id="status-checkbox-container" class="col-span-1 p-3 bg-white rounded-lg border border-slate-300 space-y-1">
+          <p class="text-xs font-semibold text-slate-600 mb-1">Filter Status:</p>
+          <div class="flex items-center space-x-2">
+              <input type="checkbox" id="status-upcoming" name="status" value="Upcoming" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <label for="status-upcoming" class="text-sm text-slate-800">Upcoming</label>
+          </div>
+          <div class="flex items-center space-x-2">
+              <input type="checkbox" id="status-ongoing" name="status" value="Ongoing" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <label for="status-ongoing" class="text-sm text-slate-800">Ongoing</label>
+          </div>
+          <div class="flex items-center space-x-2">
+              <input type="checkbox" id="status-finished" name="status" value="Finished" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <label for="status-finished" class="text-sm text-slate-800">Finished</label>
+          </div>
+      </div>
+      </div>
 
     <div class="grid grid-cols-1">
         <select name="venue" id="venue-filter"
@@ -55,12 +71,6 @@
     {% endif %}
   </div>
 
-  <div class="flex border-b border-slate-300 mb-6">
-    <button data-status="Upcoming" class="tab-button px-4 py-2 text-lg font-semibold border-b-2 border-transparent transition duration-150 hover:text-blue-600" data-active="true">Upcoming</button>
-    <button data-status="Ongoing" class="tab-button px-4 py-2 text-lg font-semibold border-b-2 border-transparent transition duration-150 hover:text-blue-600">Ongoing</button>
-    <button data-status="Past" class="tab-button px-4 py-2 text-lg font-semibold border-b-2 border-transparent transition duration-150 hover:text-blue-600">Past</button>
-  </div>
-  
   <div id="matches-container">
     <div class="text-center py-8 text-gray-500">Memuat data pertandingan...</div>
   </div>
@@ -84,14 +94,17 @@ function getCookie(name) {
   if (parts.length === 2) return parts.pop().split(';').shift();
 }
 const CSRF_TOKEN = getCookie('csrftoken');
+// PERUBAHAN: Mengganti 'Past' menjadi 'Finished'
+const STATUS_ORDER = ['Upcoming', 'Ongoing', 'Finished']; 
 
 function renderMatchCard(match) {
-  const isPast = match.status_key === 'Past';
+  // PERUBAHAN: Cek status_key === 'Finished'
+  const isFinished = match.status_key === 'Finished';
   const dateParts = match.date.split(' @ ');
   const matchTime = dateParts[1] || '';
   const matchDate = dateParts[0] || '';
 
-  const scoreDisplay = isPast 
+  const scoreDisplay = isFinished 
     ? `${match.home_goals != null ? match.home_goals : '0'} - ${match.away_goals != null ? match.away_goals : '0'}` 
     : 'VS';
 
@@ -112,48 +125,63 @@ function renderMatchCard(match) {
   `;
 }
 
-const STATUS_MESSAGES = {
-  'Upcoming': 'Tidak ada pertandingan yang dijadwalkan dalam waktu dekat.',
-  'Ongoing': 'Tidak ada pertandingan yang sedang berlangsung saat ini.',
-  'Past': 'Belum ada riwayat pertandingan yang tercatat.',
-};
-
-let activeStatus = 'Upcoming'; 
-const STATUS_ORDER = ['Upcoming', 'Ongoing', 'Past'];
-
 function renderFilteredMatches(data) {
   const container = document.getElementById('matches-container');
   const noMatchesEl = document.getElementById('no-matches-found');
   
-  let totalMatchesRendered = 0;
   container.innerHTML = ''; 
+  noMatchesEl.classList.add('hidden');
 
-  const matchesToRender = data.grouped_matches[activeStatus] || [];
-
-  if (matchesToRender.length > 0) {
-    let listHtml = `<div class="space-y-4">`;
-    matchesToRender.forEach(match => {
-      listHtml += renderMatchCard(match);
-    });
-    listHtml += `</div>`;
-    
-    container.innerHTML += listHtml;
-    totalMatchesRendered = matchesToRender.length;
-    noMatchesEl.classList.add('hidden');
-
-  } else {
-    const emptyHtml = `
-      <div class="bg-slate-50 border border-slate-200 p-6 rounded-lg text-center mb-8">
-        <p class="text-slate-600">${STATUS_MESSAGES[activeStatus]}</p>
-      </div>`;
-    container.innerHTML += emptyHtml;
-    noMatchesEl.classList.add('hidden');
-  }
-
-  const totalMatchesInDatabase = data.grouped_matches.Upcoming.length + data.grouped_matches.Ongoing.length + data.grouped_matches.Past.length;
+  const groupedMatches = data.grouped_matches || {}; 
+  let totalMatches = 0;
+  let listHtml = '';
   
-  if (totalMatchesInDatabase === 0 && (document.getElementById('search-input').value || document.getElementById('date-start-filter').value || document.getElementById('venue-filter').value)) {
-    container.innerHTML = `<p class='text-center text-red-500 py-8'>Tidak ditemukan pertandingan dengan filter tersebut.</p>`;
+  const selectedStatuses = Array.from(document.querySelectorAll('#status-checkbox-container input[name="status"]:checked'))
+                                .map(cb => cb.value);
+
+  const statusesToDisplayHeaders = selectedStatuses.length > 0 ? selectedStatuses : STATUS_ORDER;
+
+
+  statusesToDisplayHeaders.forEach(status => {
+    const matchesToRender = groupedMatches[status] || [];
+    totalMatches += matchesToRender.length;
+    
+    // Tampilkan header jika status dicentang ATAU jika default (semua dicentang)
+    if (selectedStatuses.includes(status) || selectedStatuses.length === 0) {
+      
+        listHtml += `<h2 class="text-2xl font-bold mt-8 mb-4 text-slate-700">${status} Matches</h2>`;
+        
+        if (matchesToRender.length > 0) {
+            listHtml += `<div class="space-y-4 mb-8">`;
+            
+            matchesToRender.forEach(match => {
+                listHtml += renderMatchCard(match);
+            });
+            listHtml += `</div>`;
+        } else {
+            // Tampilkan pesan kosong spesifik di bawah header jika tidak ada match
+            listHtml += `<div class="bg-slate-50 border border-slate-200 p-3 rounded-lg text-center mb-8">
+                <p class="text-slate-600 text-sm">Tidak ada pertandingan ${status.toLowerCase()} yang ditemukan dengan filter ini.</p>
+            </div>`;
+        }
+    }
+  });
+
+  if (totalMatches === 0) {
+    const hasOtherActiveFilter = document.getElementById('search-input').value || 
+                                 document.getElementById('date-start-filter').value || 
+                                 document.getElementById('venue-filter').value;
+    
+    if (hasOtherActiveFilter || selectedStatuses.length === 0) {
+         // Jika filter non-status aktif ATAU semua status dicentang (default load)
+         // tampilkan grouped headers + empty message di bawahnya
+         container.innerHTML = listHtml;
+    } else {
+        // Jika hanya status yang dicentang dan hasilnya 0 (jarang terjadi)
+        container.innerHTML = `<p class='text-center text-red-500 py-8'>Tidak ditemukan pertandingan dengan filter tersebut.</p>`;
+    }
+  } else {
+    container.innerHTML = listHtml;
   }
 }
 
@@ -188,25 +216,25 @@ async function fetchFilteredMatches() {
   const dateEndFilter = document.getElementById('date-end-filter');
   const venueFilter = document.getElementById('venue-filter');
   
+  const selectedStatuses = Array.from(document.querySelectorAll('#status-checkbox-container input[name="status"]:checked'))
+                                .map(cb => cb.value)
+                                .join(','); 
+  
   const query = searchInput.value.trim();
   const dateMode = dateModeFilter.value;
   const dateStart = dateStartFilter.value;
   const dateEnd = dateEndFilter.value;
   const venue = venueFilter.value;
 
-  // Cek apakah ada filter yang aktif
-  const hasFilterInput = query.length >= 1 || dateStart || dateEnd || venue;
-
-  // Panggil fetch jika query kosong (untuk load awal) atau jika ada input filter
-  if (query.length === 0 || hasFilterInput) { 
+  if (true) { 
     
     debounceTimer = setTimeout(async () => {
       const url = "{% url 'matches:api_calendar' %}"; 
       
       const params = new URLSearchParams();
+      
       if (query) params.append('q', query);
       
-      // Logika Penentuan Filter Tanggal
       if (dateStart) {
           params.append('date_start', dateStart);
           if (dateMode === 'range' && dateEnd) {
@@ -215,6 +243,8 @@ async function fetchFilteredMatches() {
       }
 
       if (venue) params.append('venue', venue);
+      
+      if (selectedStatuses) params.append('status', selectedStatuses); 
 
       setLoadingState(true);
       
@@ -230,7 +260,6 @@ async function fetchFilteredMatches() {
         
         if (response.ok) {
           renderFilteredMatches(data);
-          // Update URL
           const newQueryString = params.toString() ? `?${params.toString()}` : `{% url 'matches:calendar' %}`;
           history.replaceState(null, '', newQueryString);
         } else {
@@ -247,43 +276,24 @@ async function fetchFilteredMatches() {
   }
 }
 
-
-// --- Fungsi untuk menangani Tab Click ---
-function handleTabClick(event) {
-    const newStatus = event.currentTarget.dataset.status;
-    
-    activeStatus = newStatus;
-    document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('text-blue-600', 'border-blue-600');
-        btn.classList.add('border-transparent');
-    });
-    event.currentTarget.classList.add('text-blue-600', 'border-blue-600');
-    
-    fetchFilteredMatches();
-}
-
-// --- Fungsi untuk menampilkan/menyembunyikan input tanggal akhir ---
 function toggleDateEndInput() {
     const dateModeFilter = document.getElementById('date-mode-filter');
     const dateEndFilter = document.getElementById('date-end-filter');
+    const gridContainer = document.querySelector('#search-filter-form > div:nth-child(2)');
+    
+    gridContainer.classList.remove('md:grid-cols-2', 'md:grid-cols-3', 'md:grid-cols-4');
     
     if (dateModeFilter.value === 'range') {
         dateEndFilter.classList.remove('hidden');
-        // Ubah grid untuk menampung 3 kolom
-        document.querySelector('#search-filter-form > div:nth-child(2)').classList.remove('md:grid-cols-2');
-        document.querySelector('#search-filter-form > div:nth-child(2)').classList.add('md:grid-cols-3');
+        gridContainer.classList.add('md:grid-cols-4'); 
     } else {
         dateEndFilter.classList.add('hidden');
-        dateEndFilter.value = ''; // Hapus nilai jika beralih ke single date
-        // Ubah grid kembali ke 2 kolom
-        document.querySelector('#search-filter-form > div:nth-child(2)').classList.remove('md:grid-cols-3');
-        document.querySelector('#search-filter-form > div:nth-child(2)').classList.add('md:grid-cols-2');
+        dateEndFilter.value = '';
+        gridContainer.classList.add('md:grid-cols-3');
     }
     
-    // Panggil fetch setiap kali mode berubah
     fetchFilteredMatches();
 }
-
 
 document.addEventListener('DOMContentLoaded', function() {
   const updateApiBtn = document.getElementById('update-api-btn');
@@ -293,47 +303,44 @@ document.addEventListener('DOMContentLoaded', function() {
   const dateStartFilter = document.getElementById('date-start-filter');
   const dateEndFilter = document.getElementById('date-end-filter');
   const venueFilter = document.getElementById('venue-filter');
-  const tabButtons = document.querySelectorAll('.tab-button');
+  const statusCheckboxes = document.querySelectorAll('#status-checkbox-container input[name="status"]');
   
-  // --- Inisialisasi State Awal dari URL ---
   const params = new URLSearchParams(window.location.search);
   const initialQuery = params.get('q') || '';
   const initialDateStart = params.get('date_start') || '';
   const initialDateEnd = params.get('date_end') || '';
   const initialVenue = params.get('venue') || '';
+  const initialStatus = params.get('status') || ''; 
 
-  // Tentukan mode awal berdasarkan parameter URL
   let initialMode = 'single';
   if (initialDateEnd) {
       initialMode = 'range';
   }
   
-  // Set nilai input dari URL
   searchInput.value = initialQuery;
   dateStartFilter.value = initialDateStart;
   venueFilter.value = initialVenue;
   
-  // Atur mode dan tampilkan/sembunyikan input end date
-  dateModeFilter.value = initialMode;
-  dateEndFilter.value = initialDateEnd;
-  toggleDateEndInput(); // Panggil ini untuk mengatur visibility & grid awal
-
-  // Inisialisasi Tab Aktif Pertama Kali
-  const urlStatus = params.get('status');
-  if (urlStatus && STATUS_ORDER.includes(urlStatus)) {
-      activeStatus = urlStatus;
-  }
-  const activeTab = document.querySelector(`.tab-button[data-status="${activeStatus}"]`);
-  if (activeTab) {
-      activeTab.classList.add('text-blue-600', 'border-blue-600');
+  if (!initialStatus && initialStatus !== 'none') { 
+      statusCheckboxes.forEach(cb => {
+          cb.checked = true;
+      });
   } else {
-      // Pastikan Upcoming aktif jika tidak ada status di URL
-      document.querySelector(`.tab-button[data-status="Upcoming"]`).classList.add('text-blue-600', 'border-blue-600');
+    const selectedStatuses = initialStatus.split(',');
+    statusCheckboxes.forEach(cb => {
+        if (selectedStatuses.includes(cb.value)) {
+            cb.checked = true;
+        } else {
+            cb.checked = false;
+        }
+    });
   }
   
+  dateModeFilter.value = initialMode;
+  dateEndFilter.value = initialDateEnd;
+  toggleDateEndInput();
 
 
-  // --- Logika Admin API Update (Tidak Berubah) ---
   if (updateApiBtn) {
     updateApiBtn.addEventListener('click', async function() {
       const url = "{% url 'matches:update_from_api' %}";
@@ -388,7 +395,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Event Listeners untuk Filter (Search, Date, Venue) dan Tabs
   searchInput.addEventListener('input', function() {
     fetchFilteredMatches();
   });
@@ -396,35 +402,41 @@ document.addEventListener('DOMContentLoaded', function() {
   dateStartFilter.addEventListener('change', fetchFilteredMatches);
   dateEndFilter.addEventListener('change', fetchFilteredMatches);
   venueFilter.addEventListener('change', fetchFilteredMatches);
+  
+  statusCheckboxes.forEach(cb => {
+      cb.addEventListener('change', fetchFilteredMatches);
+  });
 
-  // Event Listeners untuk Tabs
-  tabButtons.forEach(btn => btn.addEventListener('click', handleTabClick));
-
-
-  // Pemicu saat tombol 'back' ditekan (untuk memuat hasil filter yang benar)
   window.addEventListener('popstate', function(event) {
     const params = new URLSearchParams(window.location.search);
     const query = params.get('q') || '';
     const dateStart = params.get('date_start') || '';
     const dateEnd = params.get('date_end') || '';
     const venue = params.get('venue') || '';
+    const status = params.get('status') || '';
     
-    // Tentukan mode berdasarkan data URL
     let mode = 'single';
     if (dateEnd) mode = 'range';
     
-    // Update input field
     searchInput.value = query; 
     dateStartFilter.value = dateStart;
     dateEndFilter.value = dateEnd;
     venueFilter.value = venue;
     dateModeFilter.value = mode;
     
-    // Panggil fetch segera tanpa debounce saat popstate
+    const selectedStatuses = status.split(',');
+    
+    statusCheckboxes.forEach(cb => {
+        cb.checked = selectedStatuses.includes(cb.value);
+    });
+    if (!status) {
+        statusCheckboxes.forEach(cb => cb.checked = true);
+    }
+
+
     fetchFilteredMatches();
   });
   
-  // Pemuatan awal - SELALU panggil
   fetchFilteredMatches();
 });
 </script>
