@@ -1,15 +1,22 @@
+<!-- Extend dari template dasar yang berisi struktur HTML umum (navbar dan footer) -->
 {% extends "base.html" %}
+
+<!-- Set judul halaman yang ditampilkan di tab browser -->
 {% block title %}Daftar Berita - LigaPass{% endblock %}
 
+<!-- Blok konten utama halaman -->
 {% block content %}
+
+<!-- Judul besar halaman -->
 <h1 class="text-3xl font-bold mb-6">Daftar Berita</h1>
 
+<!-- Form filter: pencarian, kategori, unggulan, dan urutan (sort) -->
 <form method="get" class="mb-6 flex flex-wrap gap-4 items-center">
 
-  <!-- Search Input -->
+  <!-- Search Input judul berita -->
   <input type="text" name="search" placeholder="Cari judul..." class="px-4 py-2 border rounded-md" value="{{ request.GET.search }}">
 
-  <!-- Category Dropdown -->
+  <!-- Category Dropdown untuk memilih kategori berita -->
   <div class="relative">
     <select name="category" class="block appearance-none px-4 py-2 border rounded-md bg-white pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
       <option value="">Semua Kategori</option>
@@ -17,6 +24,7 @@
         <option value="{{ key }}" {% if request.GET.category == key %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
+    <!-- Ikon panah dropdown -->
     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
       <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -24,7 +32,7 @@
     </div>
   </div>
 
-  <!-- Featured Dropdown -->
+  <!-- Featured Dropdown berita unggulan atau bukan -->
   <div class="relative">
     <select name="is_featured" class="block appearance-none px-4 py-2 border rounded-md bg-white pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
       <option value="">Semua</option>
@@ -38,7 +46,7 @@
     </div>
   </div>
 
-  <!-- Sort Dropdown -->
+  <!-- Sort Dropdown urutan sortir berita: terbaru, diedit terakhir, atau populer -->
   <div class="relative">
     <select name="sort" class="block appearance-none px-4 py-2 border rounded-md bg-white pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
       <option value="created_at" {% if request.GET.sort == "created_at" %}selected{% endif %}>Terbaru</option>
@@ -58,6 +66,7 @@
   </button>
 </form>
 
+<!-- Tampilkan tombol tambah berita hanya jika user adalah jurnalis yang login -->
 {% if request.user.is_authenticated and request.user.role == 'journalist' %}
   <div class="mb-6">
     <a href="{% url 'news:news_create' %}" class="inline-block bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold shadow transition">
@@ -66,11 +75,17 @@
   </div>
 {% endif %}
 
+<!-- Tampilkan daftar berita dalam grid responsive (2-3 kolom) -->
 <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <!-- Loop semua berita -->
   {% for item in news_list %}
+    <!-- Render kartu berita dengan include template `news_card.html` -->
     {% include 'news/news_card.html' with news=item %}
+  <!-- Jika tidak ada berita ditemukan -->
   {% empty %}
     <li class="text-gray-500">Tidak ada berita ditemukan.</li>
   {% endfor %}
 </ul>
+
+<!-- Akhir dari blok konten utama -->
 {% endblock %}

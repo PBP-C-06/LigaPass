@@ -1,11 +1,16 @@
+<!-- Extend dari template dasar yang berisi struktur HTML umum (navbar dan footer) -->
 {% extends "base.html" %}
+
+<!-- Set judul halaman yang ditampilkan di tab browser -->
 {% block title %}{{ news.title }} - LigaPass{% endblock %}
 
+<!-- Blok konten utama halaman -->
 {% block content %}
 <a href="{% url 'news:news_list' %}" class="inline-flex items-center text-blue-600 hover:underline mb-4">
   ← Kembali ke Daftar Berita
 </a>
 
+<!-- Judul besar halaman -->
 <h1 class="text-3xl font-bold mb-2">{{ news.title }}</h1>
 
 <div class="flex flex-wrap items-center gap-2 text-sm mb-4">
@@ -152,6 +157,7 @@
 <script>
 let currentSort = "{{ sort|default:'latest' }}";
 
+// Fungsi untuk menyorot tombol sort yang aktif
 function highlightSortButton() {
   document.querySelectorAll("button[data-sort]").forEach(btn => {
     const isActive = btn.dataset.sort === currentSort;
@@ -161,6 +167,7 @@ function highlightSortButton() {
   });
 }
 
+// Fungsi untuk membuka modal konfirmasi hapus
 function openDeleteModal() {
     const modal = document.getElementById("deleteModal");
     if (modal) {
@@ -169,6 +176,7 @@ function openDeleteModal() {
     }
   }
 
+  // Fungsi untuk menutup modal konfirmasi hapus
   function closeDeleteModal() {
     const modal = document.getElementById("deleteModal");
     if (modal) {
@@ -177,6 +185,7 @@ function openDeleteModal() {
     }
   }
 
+  // Fungsi untuk mengonfirmasi hapus berita
   function confirmDelete() {
     fetch("{% url 'news:news_delete' news.pk %}", {
       method: "POST",
@@ -207,6 +216,7 @@ function openDeleteModal() {
 
   let commentIdToDelete = null;
 
+  // Fungsi untuk membuka modal hapus komentar
   function openDeleteCommentModal(commentId) {
   commentIdToDelete = commentId;
   const modal = document.getElementById("delete-comment-modal");
@@ -216,6 +226,7 @@ function openDeleteModal() {
   }
 }
 
+// Fungsi untuk menutup modal hapus komentar
 function closeDeleteCommentModal() {
   commentIdToDelete = null;
   const modal = document.getElementById("delete-comment-modal");
@@ -280,11 +291,11 @@ document.getElementById("confirm-delete-comment-btn").addEventListener("click", 
 
   const csrfToken = getCookie('csrftoken');
 
-  // === Event delegation untuk form balasan komentar
+  // Event delegation untuk form balasan komentar
   document.addEventListener("submit", async function (e) {
   const form = e.target;
 
-  // === Balasan komentar
+  // Balasan komentar
   if (form.matches(".reply-form")) {
     e.preventDefault();
     const parentId = form.dataset.commentId;
@@ -326,7 +337,7 @@ document.getElementById("confirm-delete-comment-btn").addEventListener("click", 
     }
   }
 
-  // === Like komentar
+  // Like komentar
   if (form.matches("form[data-like-form]")) {
     e.preventDefault();
 
@@ -360,7 +371,7 @@ document.getElementById("confirm-delete-comment-btn").addEventListener("click", 
     }
   }
 
-  // === Komentar utama
+  // Komentar utama
   if (form.matches("#main-comment-form")) {
     e.preventDefault();
 
@@ -427,7 +438,7 @@ document.getElementById("confirm-delete-comment-btn").addEventListener("click", 
       }
     }
 
-  // === Hapus komentar
+  // Hapus komentar
   if (form.matches("form[data-delete-form]")) {
     e.preventDefault();
 

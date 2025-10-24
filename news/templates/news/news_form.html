@@ -1,8 +1,13 @@
+<!-- Extend dari template dasar yang berisi struktur HTML umum (navbar dan footer) -->
 {% extends "base.html" %}
+
+<!-- Set judul halaman yang ditampilkan di tab browser -->
 {% block title %}{{ form_title }} - LigaPass{% endblock %}
 
+<!-- Blok konten utama halaman -->
 {% block content %}
 <div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+  <!-- Judul besar halaman -->
   <h1 class="text-2xl font-bold text-gray-800 mb-6">{{ form_title }}</h1>
 
   <form method="post" enctype="multipart/form-data" class="space-y-6">
@@ -89,12 +94,14 @@
 </div>
 
 <script>
+  // Preview dan hapus thumbnail
   const fileInput = document.getElementById('{{ form.thumbnail.id_for_label }}');
   const previewImage = document.getElementById('thumbnail-preview');
   const previewContainer = document.getElementById('thumbnail-preview-container');
   const deleteButton = document.getElementById('delete-thumbnail-button');
   const deleteFlag = document.getElementById('delete-thumbnail');
 
+  // Event listener untuk preview gambar
   if (fileInput) {
     fileInput.addEventListener('change', function () {
       const file = this.files[0];
@@ -110,6 +117,7 @@
     });
   }
 
+  // Event listener untuk menghapus gambar
   if (deleteButton) {
     deleteButton.addEventListener('click', function () {
       previewImage.src = "";
