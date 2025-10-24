@@ -57,6 +57,10 @@
     .toast.error { background-color: #dc2626; }
     .toast.info { background-color: #2563eb; }
     .toast.warning { background-color: #f59e0b; }
+    
+    #confirm-modal {
+      z-index: 100;
+    }
   </style>
 
   {% block extra_head %}{% endblock %}
@@ -75,10 +79,27 @@
     {% endblock %}
   </main>
 
+  <div id="confirm-modal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 transition-opacity" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="w-full max-w-md transform rounded-lg bg-white p-6 shadow-xl transition-all">
+      <h2 class="text-xl font-bold text-gray-800" id="confirm-modal-title">Konfirmasi Tindakan</h2>
+      <p class="my-4 text-gray-600" id="confirm-modal-text">
+        Ini adalah tindakan berisiko. Untuk melanjutkan, ketik <strong class="text-red-600">CONFIRM</strong> di bawah ini.
+      </p>
+      <input type="text" id="confirm-modal-input" class="w-full rounded border p-2" placeholder="CONFIRM" autocomplete="off">
+      <div class="mt-6 flex justify-end space-x-4">
+        <button type="button" id="confirm-modal-cancel" class="rounded bg-gray-200 px-4 py-2 font-bold text-gray-700 hover:bg-gray-300">
+          Batal
+        </button>
+        <button type="button" id="confirm-modal-ok" class="rounded bg-red-600 px-4 py-2 font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50" disabled>
+          Konfirmasi
+        </button>
+      </div>
+    </div>
+  </div>
+
   <footer class="bg-white/60 backdrop-blur-lg border-t border-slate-200 text-slate-700 py-6 mt-auto">
     <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 text-sm">
 
-      <!-- Left section -->
       <div class="flex flex-col">
         <h2 class="text-xl font-semibold text-slate-900 mb-1">LigaPass</h2>
         <div class="flex flex-wrap items-center gap-4 text-slate-600">
@@ -103,7 +124,6 @@
         </div>
       </div>
 
-      <!-- Right section -->
       <p class="text-slate-500 text-center sm:text-right mt-2 sm:mt-0">
         © 2025 LigaPass. All rights reserved.
       </p>
@@ -152,8 +172,54 @@
           });
         });
       }
+
+      const modal = document.getElementById('confirm-modal');
+      if (modal) {
+          const modalTitle = document.getElementById('confirm-modal-title');
+          const modalText = document.getElementById('confirm-modal-text');
+          const modalInput = document.getElementById('confirm-modal-input');
+          const modalOk = document.getElementById('confirm-modal-ok');
+          const modalCancel = document.getElementById('confirm-modal-cancel');
+          
+          let globalOnConfirmCallback = null;
+
+          window.showConfirmationModal = function(title, text, onConfirm) {
+              modalTitle.textContent = title;
+              modalText.innerHTML = text; 
+              globalOnConfirmCallback = onConfirm;
+              
+              modalInput.value = '';
+              modalOk.disabled = true;
+              modal.classList.remove('hidden');
+              modal.classList.add('flex');
+              modalInput.focus();
+          }
+
+          function hideModal() {
+              modal.classList.add('hidden');
+              modal.classList.remove('flex');
+              globalOnConfirmCallback = null;
+          }
+
+          modalInput.addEventListener('input', function() {
+              if (modalInput.value === 'CONFIRM') {
+                  modalOk.disabled = false;
+              } else {
+                  modalOk.disabled = true;
+              }
+          });
+
+          modalCancel.addEventListener('click', hideModal);
+
+          modalOk.addEventListener('click', function() {
+              if (modalInput.value === 'CONFIRM' && globalOnConfirmCallback) {
+                  globalOnConfirmCallback();
+              }
+              hideModal();
+          });
+      }
     });
   </script>
-  {% endblock %}
+{% endblock %}
 </body>
 </html>

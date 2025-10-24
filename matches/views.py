@@ -43,7 +43,6 @@ def _get_cleaned_messages(request):
         })
     return message_list
 
-# PERBAIKAN: Mengganti 'Past' menjadi 'Finished'
 def get_match_status(match_time):
     now = timezone.now()
     if match_time > now:
@@ -68,7 +67,6 @@ def _serialize_match(match):
     }
 
 # --- FUNCTION-BASED VIEWS ---
-
 def match_calendar_view(request):
     search_query = request.GET.get('q', '')
     
@@ -79,7 +77,6 @@ def match_calendar_view(request):
     }
     return render(request, 'matches/calendar.html', context)
 
-
 def api_match_list(request):
     queryset = Match.objects.select_related('home_team', 'away_team', 'venue').order_by('date')
     
@@ -87,7 +84,7 @@ def api_match_list(request):
     date_start_filter = request.GET.get('date_start', '')
     date_end_filter = request.GET.get('date_end', '')
     venue_filter = request.GET.get('venue', '')
-    status_filter = request.GET.get('status', '') # Ambil status filter
+    status_filter = request.GET.get('status', '')
 
     if search_query:
         queryset = queryset.filter(
@@ -114,35 +111,25 @@ def api_match_list(request):
         except ValueError:
             pass
 
-    # --- LOGIKA PENGELOMPOKAN DAN FILTER STATUS UNTUK CHECKBOX ---
-    # PERUBAHAN: Mengganti 'Past' menjadi 'Finished' di inisialisasi grouped_matches
     grouped_matches = {'Upcoming': [], 'Ongoing': [], 'Finished': []}
     
-    # PERBAIKAN: Jika status_filter kosong (tidak ada checkbox dicentang), gunakan semua status
     if status_filter:
         allowed_statuses = [s.strip() for s in status_filter.split(',') if s.strip()]
     else:
-        # DEFAULT: Jika filter kosong, anggap semua status diizinkan
         allowed_statuses = ['Upcoming', 'Ongoing', 'Finished'] 
     
-    # Kita perlu mengiterasi queryset untuk menentukan status
     for match in queryset:
         status = get_match_status(match.date)
         
-        # HANYA masukkan ke list jika statusnya ada di list yang diizinkan
         if status in allowed_statuses:
             match.status_key = status
-            # Masukkan ke dictionary pengelompokan (kunci harus sama dengan status)
             grouped_matches[status].append(_serialize_match(match))
-
-    # --- AKHIR LOGIKA PENGELOMPOKAN ---
 
     return JsonResponse({
         'grouped_matches': grouped_matches, 
         'search_query': search_query,
     })
 
-# ini gw ubah do (Jaysen)
 def match_details_view(request, match_id):
     match = get_object_or_404(
         Match.objects.select_related('home_team', 'away_team', 'venue'),
@@ -153,17 +140,14 @@ def match_details_view(request, match_id):
     ticket_prices = match.ticket_prices.all().order_by('price')
     match.status_key = status
 
-    # === Tambahan: load review kalau match sudah selesai ===
     reviews = []
     user_review = None
     can_review = False
     avg_rating = 0
 
     if status == "Past":
-        # Ambil semua review utk match ini
         reviews = Review.objects.filter(match=match).select_related("user").order_by("-created_at")
         avg_rating = reviews.aggregate(Avg("rating"))["rating__avg"] or 0
-        # Kalau user login, cek apakah dia punya tiket
         if request.user.is_authenticated:
             has_ticket = Ticket.objects.filter(
                 ticket_type__match=match,
@@ -191,17 +175,23 @@ def match_details_view(request, match_id):
 @user_passes_test(is_admin)
 def update_matches_view(request):
     print("Memicu pembaruan database dari API...")
-    sync_database_with_apis()
-    
-    message = 'Database pertandingan berhasil diperbarui dari API.'
+    message, sync_status = sync_database_with_apis()
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        
+        json_status = "error" if sync_status in ["error", "error_no_source"] else "success"
+
         return JsonResponse({
-            'status': 'success',
+            'status': json_status,
             'message': message,
+            'sync_source': sync_status
         })
 
-    messages.success(request, message)
+    if sync_status not in ["error", "error_no_source"]:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+        
     return redirect('matches:calendar') 
 
 def live_score_api(request, match_api_id):
@@ -336,6 +326,11 @@ class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
     template_name = 'matches/manage/match_form.html'
     success_url = reverse_lazy('matches:manage_matches')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_match_live_or_finished'] = False  # ✅ Tambahan agar template tidak error
+        return context
+
     def form_valid(self, form):
         self.object = form.save(commit=False)
         
@@ -372,6 +367,16 @@ class MatchUpdateView(AdminRequiredMixin, MatchCreateUpdateMixin, UpdateView):
     
     def get_queryset(self):
         return super().get_queryset().select_related('home_team', 'away_team')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        status = get_match_status(self.object.date) 
+        context['is_match_live_or_finished'] = status in ['Ongoing', 'Finished']
+        
+        context['is_update'] = True
+        context['messages_json'] = _get_cleaned_messages(self.request) 
+        return context
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
