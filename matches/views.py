@@ -65,7 +65,9 @@ def _serialize_match(match):
         'away_goals': match.away_goals if match.away_goals is not None else 0,
         'details_url': reverse('matches:details', args=[match.id]),
         'venue_name': match.venue.name if match.venue else 'N/A',
-        'venue_city': match.venue.city if match.venue else 'N/A'
+        'venue_city': match.venue.city if match.venue else 'N/A',
+        'edit_url': reverse('matches:edit_match', args=[match.id]),
+        'delete_url': reverse('matches:delete_match', args=[match.id])
     }
 
 
