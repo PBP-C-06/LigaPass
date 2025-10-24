@@ -233,6 +233,84 @@ def live_score_api(request, match_api_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+# --- VIEWS UTAMA MANAJEMEN ADMIN ---
+
+class ManageBaseView(AdminRequiredMixin, ListView):
+    """
+    View base untuk halaman /matches/manage/
+    Menampilkan daftar pertandingan secara default.
+    """
+    model = Match
+    template_name = 'matches/manage/match_list.html' 
+    context_object_name = 'matches'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['messages_json'] = _get_cleaned_messages(self.request)
+        context['current_page'] = 'matches' 
+        context['action_url'] = reverse('matches:add_match')
+        return context
+
+# --- MANAJEMEN VENUE (DITAMBAH) ---
+
+class VenueListView(AdminRequiredMixin, ListView):
+    model = Venue
+    template_name = 'matches/manage/venue_list.html'
+    context_object_name = 'venues'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['messages_json'] = _get_cleaned_messages(self.request)
+        context['current_page'] = 'venues'
+        context['action_url'] = reverse('matches:add_venue')
+        return context
+
+class VenueCreateView(AdminRequiredMixin, CreateView):
+    model = Venue
+    fields = ['name', 'city']
+    template_name = 'matches/manage/venue_form.html'
+    success_url = reverse_lazy('matches:manage_venues')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Venue "{form.instance.name}" berhasil ditambahkan.')
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_update'] = False
+        context['current_page'] = 'venues'
+        return context
+
+class VenueUpdateView(AdminRequiredMixin, UpdateView):
+    model = Venue
+    fields = ['name', 'city']
+    template_name = 'matches/manage/venue_form.html'
+    success_url = reverse_lazy('matches:manage_venues')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Venue "{form.instance.name}" berhasil diperbarui.')
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_update'] = True
+        context['current_page'] = 'venues'
+        return context
+    
+class VenueDeleteView(AdminRequiredMixin, DeleteView):
+    model = Venue
+    template_name = 'matches/manage/venue_confirm_delete.html'
+    success_url = reverse_lazy('matches:manage_venues')
+    
+    def form_valid(self, form):
+        messages.success(self.request, f'Venue "{self.object.name}" berhasil dihapus.')
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_page'] = 'venues'
+        return context
+
 # --- MANAJEMEN TIM ---
 
 class TeamListView(AdminRequiredMixin, ListView):
@@ -243,6 +321,7 @@ class TeamListView(AdminRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['messages_json'] = _get_cleaned_messages(self.request)
+        context['current_page'] = 'teams'
         return context
 
 class TeamCreateView(AdminRequiredMixin, CreateView):
@@ -260,6 +339,7 @@ class TeamCreateView(AdminRequiredMixin, CreateView):
         context = super().get_context_data(**kwargs)
         context['is_update'] = False
         context['messages_json'] = _get_cleaned_messages(self.request)
+        context['current_page'] = 'teams'
         return context
 
 class TeamUpdateView(AdminRequiredMixin, UpdateView):
@@ -277,6 +357,7 @@ class TeamUpdateView(AdminRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context['is_update'] = True
         context['messages_json'] = _get_cleaned_messages(self.request)
+        context['current_page'] = 'teams'
         return context
     
 class TeamDeleteView(AdminRequiredMixin, DeleteView):
@@ -292,6 +373,7 @@ class TeamDeleteView(AdminRequiredMixin, DeleteView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['messages_json'] = _get_cleaned_messages(self.request)
+        context['current_page'] = 'teams'
         return context
     
 # --- MANAJEMEN MATCH & MIXIN ---
@@ -304,6 +386,7 @@ class MatchListView(AdminRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['messages_json'] = _get_cleaned_messages(self.request)
+        context['current_page'] = 'matches'
         return context
 
 class MatchCreateUpdateMixin:
@@ -318,6 +401,7 @@ class MatchCreateUpdateMixin:
             
         context['is_update'] = is_update_mode
         context['messages_json'] = _get_cleaned_messages(self.request) 
+        context['current_page'] = 'matches'
         return context
 
 class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
@@ -328,7 +412,8 @@ class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['is_match_live_or_finished'] = False  # ✅ Tambahan agar template tidak error
+        context['is_match_live_or_finished'] = False
+        context['current_page'] = 'matches'
         return context
 
     def form_valid(self, form):
@@ -376,6 +461,7 @@ class MatchUpdateView(AdminRequiredMixin, MatchCreateUpdateMixin, UpdateView):
         
         context['is_update'] = True
         context['messages_json'] = _get_cleaned_messages(self.request) 
+        context['current_page'] = 'matches'
         return context
 
     def form_valid(self, form):
@@ -411,4 +497,5 @@ class MatchDeleteView(AdminRequiredMixin, DeleteView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['messages_json'] = _get_cleaned_messages(self.request)
+        context['current_page'] = 'matches'
         return context

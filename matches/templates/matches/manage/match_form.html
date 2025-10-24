@@ -1,7 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'matches/manage/admin_manage_base.html' %} 
 {% block title %}Manajemen Pertandingan - {% if is_update %}Edit{% else %}Tambah{% endif %}{% endblock %}
 
-{% block content %}
+{% block list_content %}
 <div class="max-w-4xl mx-auto bg-slate-800 p-8 rounded-lg shadow-xl">
   <h1 class="text-3xl font-bold mb-6 text-white">
     {% if is_update %}
@@ -47,10 +47,11 @@
 
     {{ formset.management_form }}
 
+    {# PESAN DUPLIKASI MUNCUL DI SINI #}
     {% if formset.non_form_errors %}
       <div class="bg-red-900 text-red-100 p-3 rounded">
         {% for error in formset.non_form_errors %}
-          <p>Error Formset: {{ error }}</p>
+          <p>{{ error }}</p>
         {% endfor %}
       </div>
     {% endif %}
@@ -87,6 +88,10 @@
               {% endif %}
             {% endfor %}
           </div>
+          
+          {# Render fields tersembunyi yang penting (ID dan Foreign Key) #}
+          {{ ticket_form.id }}
+          {{ ticket_form.match }}
 
           {{ ticket_form.DELETE }}
         </div>
@@ -113,6 +118,10 @@
             {% endif %}
           {% endfor %}
         </div>
+
+        {# Render fields tersembunyi untuk form baru #}
+        {{ formset.empty_form.id }}
+        {{ formset.empty_form.match }}
 
         {{ formset.empty_form.DELETE }}
       </div>
@@ -181,7 +190,7 @@ function addTicketForm(event) {
   
   // FIX KRITIS: Menggunakan ID yang benar dari log error Anda.
   const formsetDiv = document.getElementById('ticket-price-formset');
-  const totalForms = document.getElementById('id_ticket_prices-TOTAL_FORMS'); // <--- PERUBAHAN DI SINI!
+  const totalForms = document.getElementById('id_ticket_prices-TOTAL_FORMS'); 
   const emptyTemplate = document.getElementById('empty-form-template');
 
   if (!totalForms || !formsetDiv || !emptyTemplate) {
@@ -196,10 +205,6 @@ function addTicketForm(event) {
     
     // Ganti placeholder __prefix__ dengan index baru
     let newHtml = emptyTemplateHtml.replace(/__prefix__/g, currentCount);
-    
-    // Karena formset management form di-render menggunakan prefix: 'ticket_prices'
-    // Kita juga harus mengganti '__prefix__' di dalam HTML template input.
-    // Pastikan template HTML juga menggunakan prefix yang benar untuk input name/id jika ada hardcode
     
     // 3. Konversi string HTML menjadi elemen DOM
     const temp = document.createElement('div');
@@ -256,4 +261,4 @@ document.addEventListener('DOMContentLoaded', function () {
   updateCategoryNumbers();
 });
 </script>
-{% endblock %}
+{% endblock list_content %}
