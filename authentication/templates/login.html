@@ -2,7 +2,119 @@
 {% load static %}
 
 {% block content %}
+<style>
+  /* Lavalamp setting */
+  .lavalamp-blob {
+    position: absolute;
+    border-radius: 50%;
+    /* Gunakan gradien yang sama */
+    background: radial-gradient(circle at 30% 30%, var(--lavalamp-light) 0%, var(--lavalamp-dark) 100%);
+    /* Shadow internal untuk dimensi */
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.2);
+    animation: move-blob 35s infinite alternate ease-in-out; 
+    opacity: 0.8; /* Opacity lavalamp */
+  }
+
+  .lavalamp-blob-1 { 
+    --lavalamp-light: rgba(173, 216, 230, 0.7); 
+    --lavalamp-dark: rgba(100, 149, 237, 0.7); 
+    width: 550px; height: 550px; 
+    top: -250px; left: -250px; 
+    animation-duration: 57s;
+    animation-delay: -3s;
+  }
+  .lavalamp-blob-2 { 
+    --lavalamp-light: rgba(135, 206, 250, 0.6); 
+    --lavalamp-dark: rgba(70, 130, 180, 0.6); 
+    width: 450px; height: 450px; 
+    bottom: -200px; right: -200px; 
+    animation-duration: 51s; 
+    animation-delay: -1s;
+  }
+  .lavalamp-blob-3 { 
+    --lavalamp-light: rgba(126, 179, 232, 0.75); 
+    --lavalamp-dark: rgba(65, 105, 225, 0.75); 
+    width: 380px; height: 380px; 
+    top: 55%; left: 45%; 
+    transform: translate(-50%,-50%); 
+    animation-duration: 50s; 
+    animation-delay: -5s;
+  }
+  .lavalamp-blob-4 { 
+    --lavalamp-light: rgba(176, 224, 230, 0.5); 
+    --lavalamp-dark: rgba(95, 158, 160, 0.5); 
+    width: 300px; height: 300px; 
+    top: 15%; left: 60%; 
+    animation-duration: 45s; 
+    animation-delay: -7s;
+  }
+  .lavalamp-blob-5 { 
+    --lavalamp-light: rgba(119, 136, 153, 0.6); 
+    --lavalamp-dark: rgba(72, 61, 139, 0.6); 
+    width: 420px; height: 420px; 
+    bottom: 5%; left: 15%; 
+    animation-duration: 51s; 
+    animation-delay: -2s;
+  }
+  .lavalamp-blob-6 { 
+    --lavalamp-light: rgba(0, 191, 255, 0.7); 
+    --lavalamp-dark: rgba(30, 144, 255, 0.7); 
+    width: 280px; height: 280px; 
+    top: 65%; right: 15%; 
+    animation-duration: 43s; 
+    animation-delay: -4s;
+  }
+  .lavalamp-blob-7 { 
+    --lavalamp-light: rgba(173, 216, 230, 0.65); 
+    --lavalamp-dark: rgba(106, 90, 205, 0.65); 
+    width: 230px; height: 230px; 
+    bottom: 25%; right: 40%; 
+    animation-duration: 45s; 
+    animation-delay: -6s;
+  }
+  
+  /* Untuk gerakan */
+  @keyframes move-blob {
+    0% { 
+        transform: translate(0,0) scale(1) rotate(0deg); 
+        border-radius: 40% 60% 50% 50% / 60% 40% 60% 40%; 
+    }
+    20% { 
+        transform: translate(20vw, -15vh) scale(1.1) rotate(5deg); /* Gerak ke kanan atas */
+        border-radius: 50% 50% 60% 40% / 40% 60% 40% 60%; 
+    }
+    40% { 
+        transform: translate(-10vw, 18vh) scale(0.95) rotate(-5deg); /* Gerak ke kiri bawah */
+        border-radius: 60% 40% 50% 50% / 60% 40% 60% 40%; 
+    }
+    60% { 
+        transform: translate(5vw, 25vh) scale(1.05) rotate(8deg); /* Gerak ke bawah */
+        border-radius: 45% 55% 55% 45% / 55% 45% 55% 45%; 
+    }
+    80% { 
+        transform: translate(-20vw, -10vh) scale(0.9) rotate(-3deg); /* Gerak ke kiri atas */
+        border-radius: 55% 45% 45% 55% / 45% 55% 45% 55%; 
+    }
+    100% { 
+        transform: translate(0,0) scale(1) rotate(0deg); 
+        border-radius: 40% 60% 50% 50% / 60% 40% 60% 40%; 
+    }
+  }
+</style>
+
 <div class="flex justify-center items-center min-h-[80vh] px-4 py-8">
+
+    <!-- Lavalamp untuk di belakang card -->
+    <div class="absolute inset-0 overflow-hidden z-0">
+      <div class="lavalamp-blob lavalamp-blob-1"></div>
+      <div class="lavalamp-blob lavalamp-blob-2"></div>
+      <div class="lavalamp-blob lavalamp-blob-3"></div>
+      <div class="lavalamp-blob lavalamp-blob-4"></div>
+      <div class="lavalamp-blob lavalamp-blob-5"></div>
+      <div class="lavalamp-blob lavalamp-blob-6"></div>
+      <div class="lavalamp-blob lavalamp-blob-7"></div>
+    </div>
+
   <div class="bg-white/80 backdrop-blur-lg shadow-xl rounded-2xl p-8 w-full max-w-md border border-slate-200">
     <div class="text-center mb-4">
       <h2 class="text-xl font-semibold text-blue-600">LigaPass</h2>
