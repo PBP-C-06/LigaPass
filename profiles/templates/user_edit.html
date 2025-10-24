@@ -11,6 +11,7 @@
     <form id="profileForm" method="POST" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
 
+        <!-- Profile Picture -->
         <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-8 pb-6 border-b border-gray-200">
             <div class="flex-shrink-0">
                 {% if profile.profile_picture %} 
@@ -38,36 +39,42 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
+            <!-- Nama Depan -->
             <div>
                 <label for="first_name" class="block text-sm font-medium text-gray-700">Nama Depan</label>
                 <input type="text" id="first_name" name="first_name" value="{{ person.first_name|title }}" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
 
+            <!-- Nama Belakang -->
             <div>
                 <label for="last_name" class="block text-sm font-medium text-gray-700">Nama Belakang</label>
                 <input type="text" id="last_name" name="last_name" value="{{ person.last_name|title }}" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
             
+            <!-- Nama Pengguna -->
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-700">Nama Pengguna</label>
                 <input type="text" id="username" name="username" value="{{ person.username }}" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
 
+            <!-- Email -->
             <div>
                 <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
                 <input type="email" id="email" name="email" value="{{ person.email }}" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
 
+            <!-- Nomor Telepon -->
             <div>
                 <label for="phone" class="block text-sm font-medium text-gray-700">Nomor Telepon</label>
                 <input type="tel" id="phone" name="phone" value="{{ person.phone }}" required
                     class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
 
+            <!-- Tanggal Lahir -->
             <div>
                 <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
                 <input type="date" id="date_of_birth" name="date_of_birth" value="{{ profile.date_of_birth|date:'Y-m-d' }}" required
@@ -75,6 +82,7 @@
             </div>
         </div>
 
+        <!-- Button untuk konfirmasi -->
         <div class="flex justify-end space-x-4 pt-4">
             <button type="button" id="resetBtn"
                     class="py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-gray-700 font-semibold bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150">

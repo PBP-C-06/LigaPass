@@ -2,117 +2,112 @@
 {% load static %}
 
 {% block content %}
+
 <style>
-  .aura {
-    position: absolute;
-    border-radius: 50%;
-    opacity: 0.5;
-    filter: blur(80px);
+  .bubble {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.6; 
+      display: flex; justify-content: center;
+      align-items: center; flex-direction: column;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      transform-style: preserve-3d;
+      transition: transform 0.5s ease-out;
   }
 
-  .aura-1 {
-    background: linear-gradient(
-      #627ad1,#8392d6
-    );
-    width: 800px; height: 800px;
-    top: 100px; left: 400px;
-    animation: move-aura-1 30s infinite alternate ease-in-out;
-    filter: blur(60px);
+  .bubble-1 {
+    background: radial-gradient(
+      circle at 30% 30%, 
+      #1931e6 0%, #4D83FF 100%
+    ); 
+    width: 400px; height: 400px;
+    top: 15%; left: 25%;
+    animation: move-bubble-1 28s infinite alternate ease-in-out;
+    box-shadow: 0 0 30px rgba(132, 204, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4)
+  } 
+
+  .bubble-2 {
+      background: radial-gradient(
+        circle at 30% 30%,
+        #1931e6 0%, #305EC2 100%); 
+      width: 300px; height: 300px;
+      top: 70%; left: 75%;
+      animation: move-bubble-2 32s infinite alternate ease-in-out;
+      box-shadow: 0 0 30px rgba(132, 204, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4)
   }
 
-  .aura-2 {
-    background: linear-gradient(
-      #3147eb,#7a61d4
-    );
-    width: 600px; height: 600px;
-    top: 1000px; left: 900px;
-    animation: move-aura-2 30s infinite alternate ease-in-out;
-    filter: blur(60px);
+  .bubble-3 {
+      background: radial-gradient(
+        circle at 50% 50%, 
+        #1931e6 0%, #4D83FF 100%);
+      width: 350px; height: 350px;
+      top: 45%; left: 5%;
+      animation: move-bubble-3 30s infinite alternate ease-in-out;
+      box-shadow: 0 0 30px rgba(132, 204, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4)
   }
 
-  .aura-3 {
-    background: linear-gradient(
-      #8c9af5,#3246c2
-    );
-    width: 500px; height: 500px;
-    top: 1000px; left: 150px;
-    animation: move-aura-3 30s infinite alternate ease-in-out;
-    filter: blur(60px);
+  .bubble-4 {
+      background: radial-gradient(
+        circle at 30% 30%, 
+        #1931e6 0%, #386CCF 100%);
+      width: 450px; height: 450px;
+      top: 55%; left: 65%;
+      animation: move-bubble-4 35s infinite alternate ease-in-out;
+      box-shadow: 0 0 30px rgba(132, 204, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4)
   }
 
-  .aura-4 {
-    background: linear-gradient(
-      #1931e6,#1327bf
-    );
-    width: 600px; height: 600px;
-    top: 500px; left: 900px;
-    animation: move-aura-2 40s infinite alternate ease-in-out;
-    filter: blur(60px);
-  }
-  
-  @keyframes move-aura-1 {
-    0% { 
-      transform: translate(0,0) scale(1); 
-    }
-    25% { 
-      transform: translate(30vw, 10vh) scale(1.2); 
-    }
-    50% { 
-      transform: translate(-30vw, 50vh) scale(1.3); 
-    }
-    75% { 
-      transform: translate(-10vw, 40vh) scale(1.2); 
-    }
-    100% { 
-      transform: translate(0,0) scale(1); 
-    }
+  .bubble-5 {
+    background: radial-gradient(
+      circle at 30% 30%, 
+      #1931e6 0%, #386CCF 100%);
+    width: 250px; height: 250px;
+    top: 5%; left: 60%;
+    animation: move-bubble-1 35s infinite alternate ease-in-out;
+    box-shadow: 0 0 30px rgba(132, 204, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4)
+}
+
+  @keyframes move-bubble-1 {
+      0% { transform: translate(0,0) scale(1);}
+      25% { transform: translate(30vw, 10vh);}
+      50% { transform: translate(-30vw, 50vh);}
+      75% { transform: translate(-10vw, 40vh);}
+      100% { transform: translate(0,0) scale(1);}
   }
 
-  @keyframes move-aura-2 {
-    0% { 
-      transform: translate(0,0) scale(1); 
-    }
-    25% { 
-      transform: translate(-70vw, 10vh) scale(1.2); 
-    }
-    50% { 
-      transform: translate(-50vw, -50vh) scale(1.3); 
-    }
-    75% { 
-      transform: translate(40vw, -50vh) scale(1.1); 
-    }
-    100% { 
-      transform: translate(0,0) scale(1); 
-    }
+  @keyframes move-bubble-2 {
+      0% { transform: translate(0,0) scale(1);}
+      25% { transform: translate(-70vw, 10vh);}
+      50% { transform: translate(-50vw, -50vh);}
+      75% { transform: translate(40vw, -50vh);}
+      100% { transform: translate(0,0) scale(1);}
   }
 
-  @keyframes move-aura-3 {
-    0% { 
-      transform: translate(0,0) scale(1); 
-    }
-    25% { 
-      transform: translate(20vw, -50vh) scale(1.3); 
-    }
-    50% { 
-      transform: translate(70vw, -30vh) scale(1.6); 
-    }
-    75% { 
-      transform: translate(60vw, -70vh) scale(1.1); 
-    }
-    100% { 
-      transform: translate(0,0) scale(1); 
-    }
+  @keyframes move-bubble-3 {
+      0% { transform: translate(0,0) scale(1);}
+      25% { transform: translate(20vw, -50vh) scale(1.2);}
+      50% { transform: translate(70vw, -30vh) scale(1.3);}
+      75% { transform: translate(60vw, -70vh) scale(1.1);}
+      100% { transform: translate(0,0) scale(1);}
+  }
+
+  @keyframes move-bubble-4 {
+      0% { transform: translate(0,0) scale(1);}
+      25% { transform: translate(-20vw, 30vh) scale(1.15);}
+      50% { transform: translate(10vw, -40vh) scale(1.25);}
+      75% { transform: translate(40vw, 20vh) scale(1.05);}
+      100% { transform: translate(0,0) scale(1);}
   }
 </style>
 
 <div class="flex justify-center items-center min-h-[80vh] px-4 py-8">
 
-    <!-- Aura untuk di belakang card -->
+    <!-- Bubbles untuk di belakang card -->
     <div class="absolute inset-0 overflow-hidden z-0">
-      <div class="aura aura-1"></div>
-      <div class="aura aura-2"></div>
-      <div class="aura aura-3"></div>
-      <div class="aura aura-4"></div> <!-- Bubble tambahan supaya lebih rame -->
+      <div class="bubble bubble-1"></div>
+      <div class="bubble bubble-2"></div>
+      <div class="bubble bubble-3"></div>
+      <div class="bubble bubble-4"></div> 
+      <div class="bubble bubble-5"></div>
     </div>
 
   <div class="bg-white/80 backdrop-blur-lg shadow-xl rounded-2xl p-8 w-full max-w-md border border-slate-200">
