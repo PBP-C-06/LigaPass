@@ -8,10 +8,10 @@
     </a>
 
     <div class="hidden md:flex space-x-14">
-      <a href="/" class="font-semibold text-slate-800 hover:text-blue-600 transition">HOME</a>
-      <a href="/matches/" class="font-semibold text-slate-800 hover:text-blue-600 transition">MATCHES</a>
-      <a href="/news/" class="font-semibold text-slate-800 hover:text-blue-600 transition">NEWS</a>
-      
+      <a id="nav-home" href="/" class="font-semibold text-slate-800 hover:text-blue-600 transition">HOME</a>
+      <a id="nav-matches" href="/matches/" class="font-semibold text-slate-800 hover:text-blue-600 transition">MATCHES</a>
+      <a id="nav-news" href="/news/" class="font-semibold text-slate-800 hover:text-blue-600 transition">NEWS</a>
+      <a id="navbar-manage-link" href="/matches/manage/" class="font-semibold text-red-600 hover:text-red-700 transition hidden">MANAGE</a>
     </div>
 
     <div id="navbar-user-section" class="hidden md:flex items-center space-x-6">
@@ -39,9 +39,10 @@
     </button>
 
     <div id="mobile-menu" class="w-full md:hidden hidden mt-3">
-      <a href="/" class="block py-2 px-3 text-base font-semibold text-slate-800 rounded-md hover:bg-gray-100">HOME</a>
-      <a href="/matches/" class="block py-2 px-3 text-base font-semibold text-slate-800 rounded-md hover:bg-gray-100">MATCHES</a>
-      <a href="/news/" class="block py-2 px-3 text-base font-semibold text-slate-800 rounded-md hover:bg-gray-100">NEWS</a>
+      <a id="mobile-nav-home" href="/" class="block py-2 px-3 text-base font-semibold text-slate-800 rounded-md hover:bg-gray-100">HOME</a>
+      <a id="mobile-nav-matches" href="/matches/" class="block py-2 px-3 text-base font-semibold text-slate-800 rounded-md hover:bg-gray-100">MATCHES</a>
+      <a id="mobile-nav-news" href="/news/" class="block py-2 px-3 text-base font-semibold text-slate-800 rounded-md hover:bg-gray-100">NEWS</a>
+      <a id="mobile-manage-link" href="/matches/manage/" class="block py-2 px-3 text-base font-semibold text-red-600 rounded-md hover:bg-gray-100 hidden">MANAGE</a>
       
       <div class="border-t border-gray-200 my-2"></div>
 
@@ -110,7 +111,7 @@ async function handleLogout() {
 document.addEventListener("DOMContentLoaded", async () => {
   const DUMMY_USER_IMAGE = "{% static 'images/default-profile-picture.png' %}";
   
-  // Elemen untuk desktop
+  // === Elemen User Desktop ===
   const userInfo = document.getElementById("navbar-user-info");
   const usernameEl = document.getElementById("navbar-username");
   const profilePic = document.getElementById("navbar-profile-picture");
@@ -118,7 +119,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const registerLink = document.getElementById("navbar-register-link");
   const profileLink = document.getElementById("navbar-profile-link");
   const logoutBtn = document.getElementById("logoutButton");
+  const manageLink = document.getElementById("navbar-manage-link"); 
 
+  // === Elemen User Mobile ===
   const mobileMenuButton = document.getElementById("mobile-menu-button");
   const mobileMenu = document.getElementById("mobile-menu");
   const mobileAuth = document.getElementById("mobile-user-auth");
@@ -127,11 +130,72 @@ document.addEventListener("DOMContentLoaded", async () => {
   const mobileProfilePic = document.getElementById("mobile-profile-picture");
   const mobileProfileLink = document.getElementById("mobile-profile-link");
   const mobileLogoutBtn = document.getElementById("mobile-logoutButton");
+  const mobileManageLink = document.getElementById("mobile-manage-link"); 
 
   mobileMenuButton?.addEventListener("click", () => {
     mobileMenu.classList.toggle("hidden");
   });
 
+  // === Logika Highlight Navigasi Aktif ===
+  const currentPath = window.location.pathname;
+
+  // Target Link Navigasi
+  const navHome = document.getElementById("nav-home");
+  const navMatches = document.getElementById("nav-matches");
+  const navNews = document.getElementById("nav-news");
+  const navManage = document.getElementById("navbar-manage-link"); // Sudah ada
+
+  const mobileNavHome = document.getElementById("mobile-nav-home");
+  const mobileNavMatches = document.getElementById("mobile-nav-matches");
+  const mobileNavNews = document.getElementById("mobile-nav-news");
+  const mobileNavManage = document.getElementById("mobile-manage-link"); // Sudah ada
+
+  // Definisikan Kelas Aktif/Inaktif
+  const activeDesktopClass = "text-blue-600";
+  const inactiveDesktopClass = "text-slate-800";
+  
+  const activeMobileClass = "text-blue-600 bg-blue-50";
+  const inactiveMobileClass = "text-slate-800";
+  
+  const activeManageDesktopClass = "text-red-700";
+  const inactiveManageDesktopClass = "text-red-600";
+  
+  const activeManageMobileClass = "text-red-700 bg-red-50";
+  const inactiveManageMobileClass = "text-red-600";
+
+  // Logika Penyesuaian (mulai dari yang paling spesifik)
+  if (currentPath.startsWith("/matches/manage/")) {
+    navManage?.classList.remove(inactiveManageDesktopClass, "hover:text-red-700");
+    navManage?.classList.add(activeManageDesktopClass);
+    
+    mobileNavManage?.classList.remove(inactiveManageMobileClass, "hover:bg-gray-100");
+    mobileNavManage?.classList.add(...activeManageMobileClass.split(" "));
+
+  } else if (currentPath.startsWith("/matches/")) {
+    navMatches?.classList.remove(inactiveDesktopClass, "hover:text-blue-600");
+    navMatches?.classList.add(activeDesktopClass);
+    
+    mobileNavMatches?.classList.remove(inactiveMobileClass, "hover:bg-gray-100");
+    mobileNavMatches?.classList.add(...activeMobileClass.split(" "));
+
+  } else if (currentPath.startsWith("/news/")) {
+    navNews?.classList.remove(inactiveDesktopClass, "hover:text-blue-600");
+    navNews?.classList.add(activeDesktopClass);
+    
+    mobileNavNews?.classList.remove(inactiveMobileClass, "hover:bg-gray-100");
+    mobileNavNews?.classList.add(...activeMobileClass.split(" "));
+
+  } else if (currentPath === "/") {
+    navHome?.classList.remove(inactiveDesktopClass, "hover:text-blue-600");
+    navHome?.classList.add(activeDesktopClass);
+    
+    mobileNavHome?.classList.remove(inactiveMobileClass, "hover:bg-gray-100");
+    mobileNavHome?.classList.add(...activeMobileClass.split(" "));
+  }
+  // === [AKHIR BARU] Logika Highlight Navigasi Aktif ===
+
+
+  // === Logika fetch user ===
   try {
     const response = await fetch("{% url 'profiles:current_user_json' %}");
     const data = await response.json();
@@ -155,6 +219,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       profileLink.href = userProfileUrl;
       mobileProfileLink.href = userProfileUrl;
+
+      // Tampilkan tombol Manage jika admin
+      if (data.role === "admin") {
+        manageLink.classList.remove("hidden");
+        mobileManageLink.classList.remove("hidden");
+      }
 
     } else {
       loginLink.classList.remove("hidden");
