@@ -2,11 +2,21 @@ from django import forms
 from django.forms.models import inlineformset_factory, BaseInlineFormSet
 from django.core.exceptions import ValidationError
 from .models import Team, Match, TicketPrice, Venue
+from django.utils import timezone
+
+class TicketPriceForm(forms.ModelForm):
+    class Meta:
+        model = TicketPrice
+        fields = ['seat_category', 'price', 'quantity_available']
+        
+    def validate_unique(self):
+        pass
 
 class BaseTicketPriceFormSet(BaseInlineFormSet):
     
     def clean(self):
         super().clean()
+        
         if any(self.errors):
             return
 
@@ -15,10 +25,12 @@ class BaseTicketPriceFormSet(BaseInlineFormSet):
             if form.cleaned_data and not form.cleaned_data.get('DELETE'):
                 seat_category = form.cleaned_data.get('seat_category')
                 
-                if seat_category in seat_categories:
-                    raise ValidationError("Duplikasi Kategori Tiket Ditemukan. Setiap pertandingan hanya boleh memiliki satu kategori VVIP, VIP, dan Regular.")
-                
-                seat_categories.append(seat_category)
+                if seat_category:
+                    if seat_category in seat_categories:
+                        raise ValidationError("Kategori tiket tidak boleh duplikat. Pastikan setiap kategori (VVIP, VIP, Regular) hanya ada satu.")
+                    
+                    seat_categories.append(seat_category)
+
                 
 class TeamForm(forms.ModelForm):
     class Meta:
@@ -53,17 +65,23 @@ class MatchForm(forms.ModelForm):
         cleaned_data = super().clean()
         home_team = cleaned_data.get("home_team")
         away_team = cleaned_data.get("away_team")
+        match_date = cleaned_data.get("date")
 
         if home_team and away_team and home_team == away_team:
             raise ValidationError(
                 "Tim Tuan Rumah (Home Team) tidak boleh sama dengan Tim Tamu (Away Team)."
             )
 
+        if match_date and match_date > timezone.now():
+            cleaned_data['home_goals'] = None
+            cleaned_data['away_goals'] = None
+
         return cleaned_data
     
 TicketPriceFormSet = inlineformset_factory(
     Match, 
     TicketPrice, 
+    form=TicketPriceForm, 
     formset=BaseTicketPriceFormSet,
     fields=['seat_category', 'price', 'quantity_available'], 
     extra=0,
