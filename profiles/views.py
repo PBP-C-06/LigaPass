@@ -107,7 +107,6 @@ def show_json_admin(request):
         admin = User.objects.filter(role='admin').first()
         admin_profile = getattr(admin, 'adminjournalistprofile', None)
 
-        # Petakan data 
         data = {
             "username": "admin",
             "profile_picture": admin_profile.profile_picture if admin_profile else None,
@@ -125,7 +124,6 @@ def show_json_journalist(request):
         journalist = User.objects.filter(role='journalist').first()
         journalist_profile = getattr(journalist, 'adminjournalistprofile', None)
 
-        # Petakan data
         data = {
             "username": "journalist",
             "profile_picture": journalist_profile.profile_picture if journalist_profile else None,
