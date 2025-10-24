@@ -27,19 +27,66 @@
     {% endif %}
 
     {% for field in form %}
-      <div class="field-wrapper">
-        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
-          {{ field.label }}
-        </label>
-        {{ field }}
-        {% if field.help_text %}
-          <p class="text-xs text-slate-500 mt-1">{{ field.help_text }}</p>
-        {% endif %}
-        {% for error in field.errors %}
-          <p class="text-xs text-red-600 mt-1">{{ error }}</p>
-        {% endfor %}
-      </div>
+      {% if field.name == 'home_goals' %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="field-wrapper">
+
+            {% if is_update and object.home_team %}
+              <div class="flex justify-center mb-2">
+                <img src="{{ object.home_team.display_logo_url }}" alt="{{ object.home_team.name }} logo" class="h-16 w-16 object-contain">
+              </div>
+            {% endif %}
+            
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+              {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+              <p class="text-xs text-slate-500 mt-1">{{ field.help_text }}</p>
+            {% endif %}
+            {% for error in field.errors %}
+              <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+      
+      {% elif field.name == 'away_goals' %}
+          <div class="field-wrapper">
+
+            {% if is_update and object.away_team %}
+              <div class="flex justify-center mb-2">
+                <img src="{{ object.away_team.display_logo_url }}" alt="{{ object.away_team.name }} logo" class="h-16 w-16 object-contain">
+              </div>
+            {% endif %}
+
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+              {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+              <p class="text-xs text-slate-500 mt-1">{{ field.help_text }}</p>
+            {% endif %}
+            {% for error in field.errors %}
+              <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div> 
+
+      {% else %}
+        <div class="field-wrapper">
+          <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+            {{ field.label }}
+          </label>
+          {{ field }}
+          {% if field.help_text %}
+            <p class="text-xs text-slate-500 mt-1">{{ field.help_text }}</p>
+          {% endif %}
+          {% for error in field.errors %}
+            <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
     {% endfor %}
+
 
     <h2 class="text-xl font-semibold text-blue-600 border-b border-slate-200 pb-2 pt-4">
       Harga Tiket
@@ -62,7 +109,6 @@
             ✕
           </button>
 
-          <!-- pertahankan 'text-white' untuk selektor JS; override warna di kelas berikutnya -->
           <p class="text-sm font-medium text-white text-slate-800">Kategori #{{ forloop.counter }}</p>
 
           {% if ticket_form.non_field_errors %}
@@ -103,7 +149,6 @@
           ✕
         </button>
 
-        <!-- pertahankan 'text-white' untuk selektor JS; override warna di kelas berikutnya -->
         <p class="text-sm font-medium text-white text-slate-800">Kategori #__prefix__</p>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -177,7 +222,7 @@ function updateCategoryNumbers() {
     if (form.style.display !== 'none') {
       const label = form.querySelector('p.text-sm.font-medium.text-white');
       if (label) {
-        label.textContent = `Kategori #${counter}`;
+        label.textContent = \`Kategori #${counter}\`;
         counter++;
       }
     }
