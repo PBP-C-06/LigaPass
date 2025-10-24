@@ -3,8 +3,12 @@
 
 <!-- Set judul halaman yang ditampilkan di tab browser -->
 {% block title %}{{ news.title }} - LigaPass{% endblock %}
+<<<<<<< HEAD
 
 <!-- Blok konten utama halaman -->
+=======
+{% load static %}
+>>>>>>> 2dbde66e09625f0490ddc275baff4f05b1984896
 {% block content %}
 <a href="{% url 'news:news_list' %}" class="inline-flex items-center text-blue-600 hover:underline mb-4">
   ← Kembali ke Daftar Berita
@@ -48,12 +52,15 @@
   </span>
 </div>
 
-{% if news.thumbnail %}
-  <div class="w-full max-w-xl my-4 overflow-hidden rounded shadow group mx-auto">
+<div class="w-full max-w-xl my-4 overflow-hidden rounded shadow group mx-auto">
+  {% if news.thumbnail and news.thumbnail.name != 'default.jpg' %}
     <img src="{{ news.thumbnail.url }}" alt="thumbnail"
-         class="w-full transition-transform duration-300 ease-in-out group-hover:scale-105 object-cover">
-  </div>
-{% endif %}
+         class="w-full h-[400px] object-cover transition-transform duration-300 ease-in-out group-hover:scale-105">
+  {% else %}
+    <img src="{% static 'images/thumbnail_placeholder.png' %}" alt="placeholder thumbnail"
+         class="w-full h-[400px] object-cover opacity-90">
+  {% endif %}
+</div>
 
 <div class="prose max-w-none leading-relaxed">
   {{ news.content|safe }}

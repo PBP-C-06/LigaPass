@@ -1,91 +1,39 @@
-{% extends 'base.html' %}
+{% extends "components/base_profiles.html" %}
 {% load static %}
 
-{% block content %}
-<div class="max-w-6xl mx-auto py-10 px-6">
-    <h1 class="text-3xl font-bold mb-8">User Analytics</h1>
+{% block profile_content %}
+<h2 class="text-2xl font-bold mb-6">Analytics</h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-2xl p-6 shadow-md">
-            <h2 class="text-lg font-semibold mb-4">Total Pengeluaran per Bulan</h2>
-            <canvas id="spendingChart" width="400" height="250"></canvas>
-        </div>
-
-        <div class="bg-white rounded-2xl p-6 shadow-md">
-            <h2 class="text-lg font-semibold mb-4">Distribusi Kategori Tiket Dibeli</h2>
-            <canvas id="seatChart" width="400" height="250"></canvas>
-        </div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <!-- Kehadiran -->
+  <div class="bg-white p-6 rounded-2xl shadow">
+    <h3 class="font-semibold text-gray-700 mb-3">Your Matches</h3>
+    <canvas id="attendanceChart" height="220"></canvas>
+    <div class="mt-4 space-y-1 text-center text-sm text-gray-700">
+      <p><span class="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>Hadir</p>
+      <p><span class="inline-block w-3 h-3 bg-gray-300 rounded-full mr-2"></span>Tidak Hadir</p>
     </div>
+  </div>
+
+  <!-- Pengeluaran -->
+  <div class="bg-white p-6 rounded-2xl shadow">
+    <div class="flex justify-between mb-3 items-center">
+      <h3 class="font-semibold text-gray-700">Purchasing Graphics</h3>
+      <select id="spendingPeriod" class="border rounded px-2 py-1 text-sm">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+    <canvas id="spendingChart" height="220"></canvas>
+  </div>
 </div>
 
-<!-- Tambahkan Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+<script src="{% static 'js/analytics.js' %}"></script>
 <script>
-document.addEventListener("DOMContentLoaded", async () => {
-    try {
-        // Ambil data dari API kamu
-        const res = await fetch("/reviews/analytics/user/data/");
-        const data = await res.json();
-
-        console.log("✅ Data Analytics:", data);
-
-        // =======================
-        // 📊 Chart 1 - Spending
-        // =======================
-        const spendingLabels = data.spendingData.map(item => {
-            const monthNames = [
-                "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", 
-                "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
-            ];
-            return monthNames[item.month - 1] + " " + item.year;
-        });
-        const spendingValues = data.spendingData.map(item => parseFloat(item.total_spent));
-
-        new Chart(document.getElementById("spendingChart"), {
-            type: "bar",
-            data: {
-                labels: spendingLabels,
-                datasets: [{
-                    label: "Total Pengeluaran (Rp)",
-                    data: spendingValues,
-                    backgroundColor: "#2563EB",
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true, ticks: { callback: v => "Rp " + v.toLocaleString() } }
-                }
-            }
-        });
-
-        // =======================
-        // 🍰 Chart 2 - Seat Count
-        // =======================
-        const seatLabels = data.seatCount.map(item => item.ticket_type__seat_category);
-        const seatValues = data.seatCount.map(item => item.count);
-
-        new Chart(document.getElementById("seatChart"), {
-            type: "pie",
-            data: {
-                labels: seatLabels,
-                datasets: [{
-                    data: seatValues,
-                    backgroundColor: ["#2563EB", "#F59E0B", "#10B981", "#EF4444"],
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: "bottom" } }
-            }
-        });
-
-    } catch (err) {
-        console.error("❌ Gagal memuat data analytics:", err);
-    }
+document.addEventListener("DOMContentLoaded", () => {
+  initUserAnalytics();
 });
 </script>
-{% endblock %}
+{% endblock profile_content %}

@@ -558,12 +558,12 @@
 
 <div id="success-modal-overlay" class="modal-overlay hidden">
   <div class="modal-box">
-    <img src="{% static 'image/success-icon.png' %}" alt="Success" class="modal-icon">
+    <img src="{% static 'images/success-icon.png' %}" alt="Success" class="modal-icon">
     <h2>Pembayaran Berhasil!</h2>
     <p>Tiket Anda sudah diterbitkan dan dapat dilihat di halaman profil.</p>
     <div class="modal-buttons">
-      <a href="#" class="btn-secondary">Lihat Tiket</a>
-      <a href="{% url 'matches:calendar' %}" class="btn-primary">Kembali ke Home</a>
+      <a href="{% url 'profiles:user_tickets_page' user.id %}" class="btn-secondary">Lihat Tiket</a>
+      <a href="{% url 'main:home' %}" class="btn-primary">Kembali ke Home</a>
     </div>
   </div>
 </div>

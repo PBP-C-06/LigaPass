@@ -54,7 +54,7 @@
         {% endif %}
     </div>
 
-    <!-- Untuk admin action  -->
+    <!-- Untuk admin action (mengubah status) -->
     <div id="admin-actions" class="mt-10 border-t pt-6 hidden">
         <h3 class="text-lg font-semibold text-gray-800 mb-3">Ubah Status User</h3>
         <div class="flex space-x-4 items-center">
@@ -140,30 +140,38 @@
                 });
     
                 const btn = document.getElementById("change-status-btn");
-                btn.addEventListener("click", async () => {
-                    if (!confirm(`Ubah status pengguna menjadi "${select.value}"?`)) return;
-                    try {
-                        const res = await fetch(`/profiles/admin/edit/${profileId}/`, {
-                            method: "POST",
-                            headers: {
-                                "X-CSRFToken": "{{ csrf_token }}",
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({ status: select.value })
-                        });
-                        if (!res.ok) throw new Error("Gagal memperbarui status pengguna.");
-                        const resData = await res.json();
-                        showToast(`Status pengguna berhasil diubah menjadi "${resData.status}".`, "success");
-                    } catch (err) {
-                        console.error(err);
-                        showToast("Terjadi kesalahan saat memperbarui status pengguna.", "error");
-                    }
-                });
-            }
-        } catch (error) {
-            console.error(error);
-            showToast("Terjadi kesalahan: " + error.message, "error");
+btn.addEventListener("click", async () => {
+    if (!confirm(`Ubah status pengguna menjadi "${select.value}"?`)) return;
+
+    try {
+        const res = await fetch(`/profiles/admin/edit/${profileId}/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status: select.value })
+        });
+
+        const resData = await res.json();
+
+        if (res.ok && resData.ok) {
+            // Menampilkan toast sukses dari message backend
+            showToast(resData.message, "success");
+        } else {
+            // Jika gagal (misal status invalid atau permission denied)
+            showToast(resData.message || "Terjadi kesalahan saat memperbarui status.", "error");
         }
+        } catch (err) {
+            console.error(err);
+            showToast("Terjadi kesalahan saat memperbarui status pengguna.", "error");
+        }
+    });
+    }
+    } catch (error) {
+        console.error(error);
+        showToast("Terjadi kesalahan: " + error.message, "error");
+    }
     });    
 </script>
 {% endblock profile_content %}

@@ -1,52 +1,74 @@
 <!-- Menampilkan journalist profile -->
 
-{% extends "base_profiles.html" %}
+{% extends "components/base_profiles.html" %}
 {% load static %}
 
 {% block profile_content %}
 <div class="bg-white p-8 md:p-10 rounded-xl shadow-xl max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8 pb-3 border-b">Profil Journalist</h1>
 
     <!-- Journalist Profile Section -->
-    <div class="mb-10 border-b pb-6">
+    <div class="mb-7 border-b pb-6">
         <div class="flex items-center gap-6">
             <div class="relative">
                 <img id="profile-picture" src="" alt="Foto Profil Journalist"
                     class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md">
             </div>
+            <!-- Username -->
             <div>
-                <h2 class="text-3xl font-semibold text-gray-800 mb-1">
+                <h2 class="text-3xl font-semibold text-gray-800 mb-1 capitalize">
                     <span id="username"></span>
                 </h2>
             </div>
         </div>
     </div>
+
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Informasi Tentang Journalist</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 ">
+        <!-- News Count -->
+        <div>
+            <p class="text-sm text-gray-500 font-medium">Jumlah Berita</p>
+            <p class="mt-1 text-gray-800 font-semibold" id="news-count">0</p>
+        </div>
+        <!-- Username -->
+        <div>
+            <p class="text-sm text-gray-500 font-medium">Jumlah Pembaca</p>
+            <p class="mt-1 text-gray-800 font-semibold" id="total-views">0</p>
+        </div>
+    </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async function () {
+        const STATIC_URL = "{% static '' %}";
+        const DUMMY_USER_IMAGE = STATIC_URL + 'images/Journalist.png';
+    
+        const profilePicture = document.getElementById("profile-picture");
+        const usernameEl = document.getElementById("username");
+        const newsCountEl = document.getElementById("news-count");
+        const totalViewsEl = document.getElementById("total-views");
+    
+        // Fetch journalist profile
+        try {
+            const response = await fetch(`/profiles/json/journalist/`);
+            if (!response.ok) throw new Error("Gagal mengambil data journalist dari server.");
+            const data = await response.json();
+    
+            usernameEl.textContent = data.username;
+            profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
+            profilePicture.alt = "Foto Profil journalist";
+    
+            // News infos
+            newsCountEl.textContent = data.total_news ?? 0;
+            totalViewsEl.textContent = data.total_views ?? 0;
+        } catch (error) {
+            console.error("Terjadi kesalahan saat memuat profil journalist:", error);
+            showToast("Terjadi kesalahan saat memuat profil journalist.", "error");
+        }
+    });
+</script>
 {% endblock profile_content %}
 
-{% block scripts %}
-{{ block.super }}
-<script>
-document.addEventListener("DOMContentLoaded", async function () {
-    const STATIC_URL = "{% static '' %}";
-    const DUMMY_USER_IMAGE = STATIC_URL + 'images/default-profile-picture.png';
 
-    const profilePicture = document.getElementById("profile-picture");
-    const usernameEl = document.getElementById("username");
-
-    // --- Fetch Journalist Profile ---
-    try {
-        const response = await fetch(`/profiles/json/adminjournalist/`);
-        if (!response.ok) throw new Error("Gagal mengambil data journalist dari server.");
-        const data = await response.json();
-
-        usernameEl.textContent = data.username;
-        profilePicture.src = data.profile_picture ? STATIC_URL + data.profile_picture : DUMMY_USER_IMAGE;
-        profilePicture.alt = "Foto Profil journalist";
-    } catch (error) {
-        console.error("Terjadi kesalahan saat memuat profil journalist:", error);
-        showToast("Terjadi kesalahan saat memuat profil journalist.", "error");
-    }
-});
-</script>
-{% endblock scripts %}
 

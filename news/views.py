@@ -16,7 +16,7 @@ class PlainFileInput(ClearableFileInput):
 
 # Cek apakah user memiliki role 'journalist'
 def is_journalist(user):
-    return user.role == 'journalist'
+    return getattr(user, "is_authenticated", False) and getattr(user, "role", None) == "journalist"
 
 # Snippet berita terbaru untuk menampilkan 3 berita terbaru di sidebar atau widget lain
 def latest_news_snippet(request):

@@ -16,7 +16,7 @@ from django.views.decorators.http import require_POST
 def register_user(request):
     
     if request.user.is_authenticated:
-        return redirect(reverse("matches:calendar"))
+        return redirect(reverse("main:home"))
     
     form = RegisterForm()
     if request.method == "POST":
@@ -42,13 +42,25 @@ def register_user(request):
 # Non Google login
 def login_user(request):
     if request.user.is_authenticated:
-        return redirect(reverse("matches:calendar"))
+        return redirect(reverse("main:home"))
     
     if request.method == "POST":
         form = AuthenticationForm(data=request.POST)
         if form.is_valid():
             user = form.get_user()
 
+            if user.role == "journalist":
+                login(request, user)
+                response = JsonResponse({
+                    "status": "success",
+                    "message": "Login successful",
+                    "redirect_url": reverse("news:news_list"),
+                    "warning": "Login sukses",
+                    "profile_status": "active"
+                })
+                response.set_cookie('last_login', str(datetime.datetime.now()))
+                return response
+        
             # Cek status profil kalau role = user
             if hasattr(user, "profile"):
                 profile_status = user.profile.status
@@ -70,11 +82,11 @@ def login_user(request):
 
             if user.role == "user":
                 if hasattr(user, 'profile'):
-                    redirect_url = reverse("matches:calendar")
+                    redirect_url = reverse("main:home")
                 else:
                     redirect_url = reverse("profiles:create_profile")
             else:
-                redirect_url = reverse("matches:calendar")
+                redirect_url = reverse("main:home")
 
             response = JsonResponse({
                 "status": "success",

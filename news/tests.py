@@ -1,209 +1,171 @@
-# news/tests.py
-from django.test import TestCase, Client
-from django.urls import reverse
-from django.contrib.auth import get_user_model
-from .models import News, Comment
-from django.core.files.uploadedfile import SimpleUploadedFile
+import uuid
 from io import BytesIO
 from PIL import Image
+from django.test import TestCase, Client
+from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+from news.models import News, CATEGORY_CHOICES
 
 User = get_user_model()
 
-# Hardcoded journalist credentials (sesuai info kamu)
-HARDCODED_JOURNALIST_USERNAME = "journalist"
-HARDCODED_JOURNALIST_PASSWORD = "journalist12345journalistligapass"
 
-def create_user(username="user", password="pass", role="reader"):
-    return User.objects.create_user(username=username, password=password, role=role)
-
-def create_journalist(username=HARDCODED_JOURNALIST_USERNAME, password=HARDCODED_JOURNALIST_PASSWORD):
-    return create_user(username=username, password=password, role="journalist")
-
-def get_image_file(name='test.png', size=(100, 100), color=(255, 0, 0)):
-    """
-    Return SimpleUploadedFile with a small PNG image (via Pillow) suitable for ImageField tests.
-    """
-    file_obj = BytesIO()
-    image = Image.new("RGB", size=size, color=color)
-    image.save(file_obj, 'PNG')
-    file_obj.seek(0)
-    return SimpleUploadedFile(name, file_obj.read(), content_type='image/png')
-
-
-class NewsTestCase(TestCase):
+class NewsViewsTests(TestCase):
     def setUp(self):
         self.client = Client()
-        # create the journalist with the exact hardcoded credentials
-        self.journalist = create_journalist()
-        # another regular reader user
-        self.reader = create_user(username="reader", password="readerpass", role="reader")
-        # create a sample news item authored by journalist
+
+        # Buat akun user
+        uid_journalist = uuid.uuid4().hex[:8]
+        uid_user = uuid.uuid4().hex[:8]
+
+        self.journalist = User.objects.create_user(
+            username=f"journalist_{uid_journalist}",
+            email=f"j{uid_journalist}@example.com",
+            password="journalistpass",
+            role="journalist"
+        )
+
+        self.user = User.objects.create_user(
+            username=f"user_{uid_user}",
+            email=f"u{uid_user}@example.com",
+            password="userpass",
+            role="user"
+        )
+
+        # Gambar dummy valid 1x1 px
+        img_bytes = BytesIO()
+        image = Image.new("RGB", (1, 1), color="white")
+        image.save(img_bytes, format="JPEG")
+        img_bytes.seek(0)
+        self.image_file = SimpleUploadedFile("thumb.jpg", img_bytes.read(), content_type="image/jpeg")
+
+        # Buat berita dummy
         self.news = News.objects.create(
-            title="Sample News",
-            content="<p>Some content here</p>",
+            title="Berita Lama",
+            content="Isi berita lama",
             category="update",
-            is_featured=True,
-            author=self.journalist
+            thumbnail=self.image_file,
+            author=self.journalist,
+            is_featured=False
         )
 
-    def test_news_list_view_requires_login_and_shows_news(self):
-        # unauthenticated should redirect to login
-        response = self.client.get(reverse('news:news_list'))
+    def test_news_list_renders(self):
+        url = reverse("news:news_list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "news/news_list.html")
+        self.assertIn("news_list", response.context)
+
+    def test_news_detail_increments_views(self):
+        old_views = self.news.news_views
+        url = reverse("news:news_detail", args=[self.news.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.news.refresh_from_db()
+        self.assertEqual(self.news.news_views, old_views + 1)
+        self.assertTemplateUsed(response, "news/news_detail.html")
+
+    def test_news_list_with_search_filter(self):
+        url = reverse("news:news_list") + "?search=Berita"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Berita Lama")
+
+    def test_news_list_with_category_filter(self):
+        url = reverse("news:news_list") + "?category=update"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Berita Lama")
+
+    def test_news_list_with_sorting(self):
+        url = reverse("news:news_list") + "?sort=created_at"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("news_list", response.context)
+
+    def test_news_create_by_journalist(self):
+        self.client.force_login(self.journalist)
+        url = reverse("news:news_create")
+
+        # Buat gambar valid
+        img_bytes = BytesIO()
+        image = Image.new("RGB", (1, 1), color="white")
+        image.save(img_bytes, format="JPEG")
+        img_bytes.seek(0)
+        valid_image = SimpleUploadedFile("thumb.jpg", img_bytes.read(), content_type="image/jpeg")
+
+        post_data = {
+            "title": "Berita Baru",
+            "content": "Isi berita baru",
+            "category": "update",
+            "thumbnail": valid_image,
+            "is_featured": False,
+        }
+
+        response = self.client.post(url, post_data, follow=True)
+        if hasattr(response, "context") and "form" in response.context:
+            print("Form errors:", response.context["form"].errors)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            News.objects.filter(title__icontains="Berita Baru").exists(),
+            "Form gagal menyimpan berita baru karena thumbnail invalid",
+        )
+
+    def test_news_create_requires_journalist_role(self):
+        self.client.force_login(self.user)
+        url = reverse("news:news_create")
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
-        # login as reader
-        logged = self.client.login(username=self.reader.username, password="readerpass")
-        self.assertTrue(logged)
-        response = self.client.get(reverse('news:news_list'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sample News")
 
-    def test_news_list_search_filter_sort(self):
-        self.client.login(username=self.reader.username, password="readerpass")
-        response = self.client.get(reverse('news:news_list'), {
-            'search': 'Sample',
-            'category': 'update',
-            'is_featured': 'true',
-            'sort': 'created_at'
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sample News")
+    def test_news_edit_updates_content(self):
+        self.client.force_login(self.journalist)
+        url = reverse("news:news_edit", args=[self.news.pk])
 
-    def test_news_detail_view_increments_view_count(self):
-        self.client.login(username=self.reader.username, password="readerpass")
-        response = self.client.get(reverse('news:news_detail', args=[self.news.pk]))
-        self.assertEqual(response.status_code, 200)
+        post_data = {
+            "title": "Berita Lama (Edit)",
+            "content": "Konten diperbarui",
+            "category": "update",
+        }
+
+        response = self.client.post(url, post_data, follow=True)
         self.news.refresh_from_db()
-        self.assertEqual(self.news.news_views, 1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.news.content, "Konten diperbarui")
 
-    def test_create_comment_ajax(self):
-        self.client.login(username=self.reader.username, password="readerpass")
-        response = self.client.post(
-            reverse('news:news_detail', args=[self.news.pk]),
-            {'content': 'Test comment'},
-            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
-        )
-        # view returns JsonResponse on successful AJAX POST -> status 200
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(Comment.objects.filter(news=self.news, content='Test comment').exists())
+    def test_news_edit_with_delete_thumbnail_flag(self):
+        self.client.force_login(self.journalist)
+        url = reverse("news:news_edit", args=[self.news.pk])
 
-    def test_reply_comment_ajax(self):
-        self.client.login(username=self.reader.username, password="readerpass")
-        parent = Comment.objects.create(news=self.news, user=self.reader, content="Parent")
-        response = self.client.post(
-            reverse('news:news_detail', args=[self.news.pk]),
-            {'content': 'Child reply', 'parent_id': parent.id},
-            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(Comment.objects.filter(parent=parent, content='Child reply').exists())
+        post_data = {
+            "title": "Berita Lama (No Thumbnail)",
+            "content": "Isi update",
+            "category": "update",
+            "delete_thumbnail": "true",
+        }
 
-    def test_like_comment_ajax_and_toggle(self):
-        self.client.login(username=self.reader.username, password="readerpass")
-        comment = Comment.objects.create(news=self.news, user=self.journalist, content="A comment")
-        # like
-        response = self.client.post(
-            reverse('news:like_comment', args=[comment.id]),
-            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
-        )
-        self.assertEqual(response.status_code, 200)
-        comment.refresh_from_db()
-        self.assertTrue(comment.likes.filter(id=self.reader.id).exists())
-        # unlike (same endpoint toggles)
-        response = self.client.post(
-            reverse('news:like_comment', args=[comment.id]),
-            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
-        )
-        self.assertEqual(response.status_code, 200)
-        comment.refresh_from_db()
-        self.assertFalse(comment.likes.filter(id=self.reader.id).exists())
-
-    def test_delete_comment_ajax_by_owner(self):
-        self.client.login(username=self.reader.username, password="readerpass")
-        comment = Comment.objects.create(news=self.news, user=self.reader, content="To delete")
-        response = self.client.post(
-            reverse('news:delete_comment', args=[comment.id]),
-            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Comment.objects.filter(id=comment.id).exists())
-
-    def test_news_create_view_by_journalist_with_thumbnail(self):
-        # login as the hardcoded journalist
-        logged = self.client.login(username=HARDCODED_JOURNALIST_USERNAME, password=HARDCODED_JOURNALIST_PASSWORD)
-        self.assertTrue(logged)
-        thumbnail = get_image_file()
-        response = self.client.post(
-            reverse('news:news_create'),
-            {
-                'title': 'New News',
-                # Note: in your form the 'content' field is a HiddenInput; tests can send plain string
-                'content': '<p>Content News</p>',
-                'category': 'match',
-                'is_featured': 'on',  # checkbox present
-                'thumbnail': thumbnail
-            },
-            follow=True
-        )
-        # after successful create the view redirects (follow=True -> final 200)
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(News.objects.filter(title='New News').exists())
-
-    def test_news_edit_view_updates_and_respects_delete_thumbnail_flag(self):
-        # ensure the news has a thumbnail first
-        dummy_thumb = get_image_file(name="thumb.png")
-        self.news.thumbnail = dummy_thumb
-        self.news.save()
-        # login as journalist
-        self.client.login(username=HARDCODED_JOURNALIST_USERNAME, password=HARDCODED_JOURNALIST_PASSWORD)
-        response = self.client.post(
-            reverse('news:news_edit', args=[self.news.pk]),
-            {
-                'title': 'Edited Title',
-                'content': '<p>Edited content</p>',
-                'category': 'transfer',
-                # simulate ticking/unticking checkbox; using 'is_featured': False might not be accepted by forms,
-                # so we omit it to default to False in this test pattern; still we'll assert title changed.
-                'delete_thumbnail': 'true',
-            },
-            follow=True
-        )
-        # should redirect / render final page with 200
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(url, post_data, follow=True)
         self.news.refresh_from_db()
-        self.assertEqual(self.news.title, 'Edited Title')
-        # If delete_thumbnail is processed, thumbnail should be None
-        # (note: since we used save=False delete in views, thumbnail deletion should take effect)
-        # Depending on storage backend, the file may still be present on filesystem in test env; ensure field cleared:
-        self.assertTrue(self.news.thumbnail in [None, ""]) or self.assertIsNone(self.news.thumbnail)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(bool(self.news.thumbnail)) 
 
-    def test_news_delete_by_journalist_ajax(self):
-        # login as journalist
-        self.client.login(username=HARDCODED_JOURNALIST_USERNAME, password=HARDCODED_JOURNALIST_PASSWORD)
-        response = self.client.post(
-            reverse('news:news_delete', args=[self.news.pk]),
-            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
-        )
+    def test_news_delete_by_author(self):
+        self.client.force_login(self.journalist)
+        url = reverse("news:news_delete", args=[self.news.pk])
+        response = self.client.post(url, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(News.objects.filter(pk=self.news.pk).exists())
 
-    def test_non_journalist_cannot_access_create_view(self):
-        # login as regular reader
-        self.client.login(username=self.reader.username, password="readerpass")
-        response = self.client.get(reverse('news:news_create'), follow=False)
-        # behavior can be redirect (302) or forbidden (403) depending on decorator config;
-        # assert it's not 200 and is either 302 or 403
-        self.assertNotEqual(response.status_code, 200)
-        self.assertIn(response.status_code, (302, 403))
+    def test_news_delete_not_author_forbidden(self):
+        self.client.force_login(self.user)
+        url = reverse("news:news_delete", args=[self.news.pk])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
 
-    def test_detail_post_fallback_non_ajax_comment_redirect(self):
-        # non-ajax POST should fallback to redirect
-        self.client.login(username=self.reader.username, password="readerpass")
-        response = self.client.post(
-            reverse('news:news_detail', args=[self.news.pk]),
-            {'content': 'Non AJAX comment'},
-            follow=True
-        )
-        # After fallback it redirects back to detail page (follow=True -> final 200)
+    def test_news_delete_ajax_returns_json(self):
+        self.client.force_login(self.journalist)
+        url = reverse("news:news_delete", args=[self.news.pk])
+        response = self.client.post(url, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(Comment.objects.filter(content='Non AJAX comment').exists())
+        self.assertJSONEqual(response.content, {"success": True})

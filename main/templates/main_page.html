@@ -53,35 +53,14 @@ function showSlide(index) {
     dot.classList.toggle("bg-white/60", i !== currentSlide);
   });
 }
-
-// Auto-slide every 5 seconds
 let autoSlide = setInterval(() => showSlide(currentSlide + 1), 3000);
-
-// Manual controls
-document.getElementById("nextSlide").addEventListener("click", () => {
-  showSlide(currentSlide + 1);
-  resetAutoSlide();
-});
-document.getElementById("prevSlide").addEventListener("click", () => {
-  showSlide(currentSlide - 1);
-  resetAutoSlide();
-});
-
-// Dot click navigation
-dots.forEach((dot, i) => {
-  dot.addEventListener("click", () => {
-    showSlide(i);
-    resetAutoSlide();
-  });
-});
-
-// Reset auto-slide timer
 function resetAutoSlide() {
   clearInterval(autoSlide);
   autoSlide = setInterval(() => showSlide(currentSlide + 1), 5000);
 }
-
-// Initialize
+document.getElementById("nextSlide").addEventListener("click", () => { showSlide(currentSlide + 1); resetAutoSlide(); });
+document.getElementById("prevSlide").addEventListener("click", () => { showSlide(currentSlide - 1); resetAutoSlide(); });
+dots.forEach((dot, i) => dot.addEventListener("click", () => { showSlide(i); resetAutoSlide(); }));
 showSlide(0);
 </script>
 
@@ -102,26 +81,5 @@ showSlide(0);
 </section>
 
 <!-- === LATEST NEWS === -->
-<section class="py-12 px-10 bg-white">
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-3xl font-bold text-gray-800">Berita Terbaru</h2>
-    <a href="/news/" class="border border-slate-800 px-4 py-2 rounded-lg hover:bg-slate-800 hover:text-white transition">Lihat Selengkapnya</a>
-  </div>
-
-  <div class="grid md:grid-cols-3 gap-6">
-    {% for article in latest_news %}
-      <div class="bg-gray-100 rounded-lg overflow-hidden shadow hover:shadow-lg transition">
-        <img src="{{ article.image.url }}" alt="{{ article.title }}" class="h-48 w-full object-cover">
-        <div class="p-4">
-          <p class="text-sm text-slate-500 mb-1">Posted: {{ article.published_at|date:"M d, Y" }}</p>
-          <h3 class="font-semibold text-lg mb-2">{{ article.title }}</h3>
-          <p class="text-slate-700 text-sm line-clamp-3">{{ article.summary }}</p>
-        </div>
-      </div>
-    {% empty %}
-      <p class="text-gray-500">No news available.</p>
-    {% endfor %}
-  </div>
-</section>
-
+{% include 'news/latest_news_snippets.html' %}
 {% endblock %}
