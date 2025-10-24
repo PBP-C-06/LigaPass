@@ -23,7 +23,10 @@ urlpatterns = [
     # Untuk admin edit status user
     path("admin/edit/<uuid:id>/", admin_change_status, name="admin_change_status"),
     
+    # Untuk base profile
     path("current_user_json/", current_user_json, name="current_user_json"),
+
+    # Untuk ticket
     path("<uuid:id>/tickets/", user_tickets_page, name="user_tickets_page"),
     path("<uuid:id>/tickets/json/", user_tickets_json, name="user_tickets_json"),
 ]
