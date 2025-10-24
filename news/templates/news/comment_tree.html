@@ -1,6 +1,4 @@
-<!-- Wrapper utama komentar. 
- Setiap blok komentar diberi ID agar bisa dihapus/dimodifikasi lewat JavaScript. 
--->>
+<!-- Wrapper utama komentar. Setiap blok komentar diberi ID agar bisa dihapus/dimodifikasi lewat JavaScript. -->
 <div class="{% if not is_child %}mb-6{% else %}ml-6 mt-4 border-l-2 border-gray-300 pl-4{% endif %} comment-block" id="comment-{{ comment.id }}">
   
   <!-- Baris utama yang mengatur layout horizontal komentar (avatar + isi komentar) -->
@@ -44,9 +42,9 @@
         </button>
       {% endif %}
 
-      <!
- Tampilkan tombol balas dan form balasan jika user login       {% if request.user.is_authenticated %}
-        <button onclick="toggleReplyForm('{{ comment.id }}')" class="text-sm text-blue-600 hover:unde---->rline mt-2">Balas</button>
+      <!----Tampilkan tombol balas dan form balasan jika user login---->       
+      {% if request.user.is_authenticated %}
+        <button onclick="toggleReplyForm('{{ comment.id }}')" class="text-sm text-blue-600 hover:underline mt-2">Balas</button>
         <!-- Form balasan komentar (hidden secara default), akan muncul saat tombol "Balas" diklik -->
         <form method="post" class="hidden mt-2 reply-form" id="reply-form-{{ comment.id }}" data-comment-id="{{ comment.id }}">
           {% csrf_token %}

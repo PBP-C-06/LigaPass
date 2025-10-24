@@ -25,7 +25,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "test-secret-key-abc123")
 
 # API KEYS untuk data Footbal dari api-football dan rapid-api
 API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY") 
