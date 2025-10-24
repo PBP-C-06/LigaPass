@@ -159,7 +159,7 @@ def match_details_view(request, match_id):
     can_review = False
     avg_rating = 0
 
-    if status == "Past":
+    if status == "Finished":
         # Ambil semua review utk match ini
         reviews = Review.objects.filter(match=match).select_related("user").order_by("-created_at")
         avg_rating = reviews.aggregate(Avg("rating"))["rating__avg"] or 0

@@ -81,7 +81,7 @@ class AuthenticationViewsTests(TestCase):
         self.client.login(username="testuser", password="password123")
         response = self.client.get(self.login_url)
         self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse("matches:calendar"), response.url)
+        self.assertIn(reverse("main:home"), response.url)
 
     # ---------- LOGOUT ----------
     def test_logout_get(self):
