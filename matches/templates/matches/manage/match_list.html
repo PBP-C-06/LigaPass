@@ -185,14 +185,14 @@ document.addEventListener('DOMContentLoaded', function() {
             dateStartFilter.classList.remove('md:col-span-2');
             dateStartFilter.classList.add('md:col-span-1');
             dateEndFilter.classList.remove('hidden');
-            statusContainer.classList.remove('md:col-span-2'); // Seharusnya tidak ada col-span-2 di sini
+            statusContainer.classList.remove('md:col-span-2');
             statusContainer.classList.add('md:col-span-1');
         } else {
             dateStartFilter.classList.remove('md:col-span-1');
             dateStartFilter.classList.add('md:col-span-2');
             dateEndFilter.classList.add('hidden');
-            statusContainer.classList.remove('md:col-span-2'); // Hapus ini jika ada
-            statusContainer.classList.add('md:col-span-1'); // Status selalu 1 kolom
+            statusContainer.classList.remove('md:col-span-2');
+            statusContainer.classList.add('md:col-span-1');
         }
     }
 
@@ -283,14 +283,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let statusChipHtml = '';
         const statusKey = match.status_key || 'N/A';
-        let statusColorClasses = 'bg-gray-100 text-gray-700'; // Default color
+        let statusColorClasses = 'bg-gray-100 text-gray-700';
 
         if (statusKey === 'Upcoming') {
             statusColorClasses = 'bg-blue-100 text-blue-700';
         } else if (statusKey === 'Ongoing') {
             statusColorClasses = 'bg-green-100 text-green-700';
         } else if (statusKey === 'Finished') {
-            statusColorClasses = 'bg-red-500 text-white'; // Warna "nge jreng"
+            statusColorClasses = 'bg-red-500 text-white';
         }
 
         statusChipHtml = `<span class="text-xs font-semibold px-2.5 py-0.5 rounded ${statusColorClasses}">${statusKey}</span>`;
