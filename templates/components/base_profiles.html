@@ -19,7 +19,6 @@
             
             <!-- Navigation links -->
             <nav id="sidebar-menu" class="space-y-1">
-                <!-- Menu akan di-render via JS -->
             </nav>
 
         </div>
@@ -45,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             // Render menu
             const menuContainer = document.getElementById("sidebar-menu");
-            menuContainer.innerHTML = ""; // kosongkan dulu
+            menuContainer.innerHTML = ""; 
 
             const currentPath = window.location.pathname;
 
@@ -54,7 +53,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 link.href = item.url;
                 link.className = "block p-3 text-base font-medium rounded-lg transition-colors";
 
-                // Highlight menu aktif
+                // Highlight menu yang sedang aktif
                 if (currentPath === new URL(item.url, window.location.origin).pathname) {
                     link.classList.add("bg-red-50", "text-red-600");
                 } else {

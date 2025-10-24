@@ -284,7 +284,7 @@ def current_user_json(request):
     login_page = reverse("authentication:login") 
     
     if not user.is_authenticated:
-        # Anonymous user redirect ke login
+        # Anonymous user akan redirect ke login
         return JsonResponse({
             "authenticated": False,
             "username": "Anonymous",
@@ -313,7 +313,7 @@ def current_user_json(request):
         menu = [
             {"name": "Profil", "url": my_profile_url},
         ]
-    else:  # Regular user
+    else:  
         profile_picture_url = profile.profile_picture.url if profile and profile.profile_picture else static("images/default-profile-picture.png")
         my_profile_url = reverse("profiles:user_view", args=[user.id])
         menu = [
@@ -335,7 +335,6 @@ def current_user_json(request):
 @login_required
 def user_tickets_page(request, id):
     return render(request, "tickets.html", {})
-
 
 @login_required
 def user_tickets_json(request, id):

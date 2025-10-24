@@ -60,7 +60,7 @@
         const filterSelect = document.getElementById('filterSelect');
         const profilesContainer = document.getElementById('profilesContainer');
     
-        // --- Fetch admin profile ---
+        // Fetch admin profile
         try {
             const response = await fetch(`/profiles/json/admin/`);
             if (!response.ok) throw new Error("Gagal mengambil data admin dari server.");
@@ -74,7 +74,7 @@
             showToast("Terjadi kesalahan saat memuat profil admin.", "error");
         }
     
-        // --- Fetch user profiles ---
+        // Fetch user profiles 
         async function fetchProfiles() {
             const search = searchInput.value;
             const filter = filterSelect.value;
