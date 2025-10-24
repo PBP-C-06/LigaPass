@@ -199,26 +199,19 @@ MEDIA_ROOT = BASE_DIR / 'media'
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 JOURNALIST_PASSWORD = os.getenv("JOURNALIST_PASSWORD")
 
-# Caching Configuration
-CACHE_DIR = os.path.join(BASE_DIR, 'local_django_cache')
+# # Caching Configuration
+# CACHE_DIR = os.path.join(BASE_DIR, 'local_django_cache')
 
-if not os.path.exists(CACHE_DIR):
-    os.makedirs(CACHE_DIR)
+# if not os.path.exists(CACHE_DIR):
+#     os.makedirs(CACHE_DIR)
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        
-        # 2. Tentukan direktori penyimpanan cache
-        # Ini akan membuat file-file cache di dalam folder 'local_django_cache'
-        'LOCATION': CACHE_DIR, 
-        
-        # Timeout harus sama dengan yang Anda atur di sync_data.py (24 jam)
-        'TIMEOUT': 60 * 60 * 24, 
-        
-        'OPTIONS': {
-            # Batas jumlah file yang disimpan sebelum pembersihan dimulai
-            'MAX_ENTRIES': 1000, 
-        }
-    }
-}
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+#         'LOCATION': CACHE_DIR, 
+#         'TIMEOUT': 60 * 60 * 24, 
+#         'OPTIONS': {
+#             'MAX_ENTRIES': 1000, 
+#         }
+#     }
+# }
