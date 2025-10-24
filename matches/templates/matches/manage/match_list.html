@@ -10,7 +10,71 @@
     + Tambah Pertandingan Baru
   </a>
 
-  <div class="space-y-4 mt-4">
+  <form id="search-filter-form" class="mb-8 mt-6 space-y-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="text" name="q" id="search-input" placeholder="Cari nama tim" value="{{ search_query|default:'' }}"
+            class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400">
+
+        <select name="per_page" id="per-page-select" class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
+            <option value="10" selected>10 entri per halaman</option>
+            <option value="25">25 entri per halaman</option>
+            <option value="50">50 entri per halaman</option>
+        </select>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <select id="date-mode-filter" class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none md:col-span-1">
+          <option value="single" {% if date_mode == 'single' %}selected{% endif %}>Tanggal Tertentu</option>
+          <option value="range" {% if date_mode == 'range' %}selected{% endif %}>Rentang Tanggal</option>
+      </select>
+
+      <input type="date" name="date_start" id="date-start-filter" value="{{ date_start|default:'' }}"
+        class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400 md:col-span-2">
+
+      <input type="date" name="date_end" id="date-end-filter" value="{{ date_end|default:'' }}"
+        class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400 md:col-span-1 {% if date_mode != 'range' %}hidden{% endif %}"
+        placeholder="Tanggal Akhir">
+
+      <div id="status-checkbox-container" class="md:col-span-1 p-3 bg-white rounded-lg border border-slate-300 space-y-1">
+          <p class="text-xs font-semibold text-slate-600 mb-1">Filter Status:</p>
+          <div class="flex items-center space-x-2">
+              <input type="checkbox" id="status-upcoming" name="status" value="Upcoming" class="filter-change form-checkbox h-4 w-4" {% if 'Upcoming' in selected_statuses %}checked{% endif %}>
+              <label for="status-upcoming" class="text-sm text-slate-800">Upcoming</label>
+          </div>
+          <div class="flex items-center space-x-2">
+              <input type="checkbox" id="status-ongoing" name="status" value="Ongoing" class="filter-change form-checkbox h-4 w-4" {% if 'Ongoing' in selected_statuses %}checked{% endif %}>
+              <label for="status-ongoing" class="text-sm text-slate-800">Ongoing</label>
+          </div>
+          <div class="flex items-center space-x-2">
+              <input type="checkbox" id="status-finished" name="status" value="Finished" class="filter-change form-checkbox h-4 w-4" {% if 'Finished' in selected_statuses %}checked{% endif %}>
+              <label for="status-finished" class="text-sm text-slate-800">Finished</label>
+          </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1">
+        <select name="venue" id="venue-filter"
+          class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <option value="">Semua Tempat</option>
+          {% for venue in venues %}
+              <option value="{{ venue.id }}" {% if selected_venue == venue.id|stringformat:"s" %}selected{% endif %}>
+                {{ venue.name }}, {{ venue.city }}
+              </option>
+          {% endfor %}
+        </select>
+    </div>
+
+    <div class="flex justify-end gap-3">
+        <button type="button" id="reset-filters" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2 rounded-lg font-semibold shadow transition">
+            Reset
+        </button>
+    </div>
+
+  </form>
+
+  <div id="match-list-container" class="space-y-4 mt-4">
     {% for match in matches %}
     <div class="bg-slate-50 p-4 rounded-lg shadow-sm hover:bg-slate-100 transition-colors duration-200 border border-slate-200">
       <div class="flex items-center justify-between">
@@ -18,36 +82,32 @@
           <img src="{{ match.home_team.display_logo_url }}" alt="{{ match.home_team.name }} logo" class="w-16 h-16 object-contain mb-2">
           <span class="text-lg font-bold text-slate-800">{{ match.home_team.name }}</span>
         </div>
-
         <div class="flex flex-col items-center justify-center w-1/3 text-center">
           <div class="flex items-center justify-center space-x-2">
             <span class="text-3xl font-extrabold text-blue-600">
-              {% if match.home_goals is not None and match.away_goals is not None %}
+              {% if match.home_goals is not None %}
                 {{ match.home_goals }}
               {% else %}
                 &mdash;
               {% endif %}
             </span>
-
             <span class="text-lg font-extrabold text-slate-500">VS</span>
-
             <span class="text-3xl font-extrabold text-blue-600">
-              {% if match.home_goals is not None and match.away_goals is not None %}
+              {% if match.away_goals is not None %}
                 {{ match.away_goals }}
               {% else %}
                 &mdash;
               {% endif %}
             </span>
           </div>
-          <span class="text-sm font-medium text-slate-500 -mt-1">{{ match.status_short }}</span>
+          {# Ini bagian status yang lama, kita akan ganti di JavaScript #}
+          {# <span class="text-sm font-medium text-slate-500 -mt-1">{{ match.status_short }}</span> #}
         </div>
-
         <div class="flex flex-col items-center w-1/3 text-center">
           <img src="{{ match.away_team.display_logo_url }}" alt="{{ match.away_team.name }} logo" class="w-16 h-16 object-contain mb-2">
           <span class="text-lg font-bold text-slate-800">{{ match.away_team.name }}</span>
         </div>
       </div>
-
       <div class="mt-4 pt-4 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
         <div class="text-center sm:text-left">
           <p class="text-sm font-semibold text-slate-700">
@@ -55,7 +115,6 @@
           </p>
           <p class="text-xs text-slate-500">{{ match.venue.name|default:"N/A" }}, {{ match.venue.city|default:"N/A" }}</p>
         </div>
-
         <div class="flex space-x-3">
           <a href="{% url 'matches:edit_match' match.id %}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
             Edit
@@ -67,10 +126,288 @@
       </div>
     </div>
     {% empty %}
-    <div class="bg-slate-50 p-6 rounded-lg text-center border border-slate-200">
+    <div id="no-matches-found" class="bg-slate-50 p-6 rounded-lg text-center border border-slate-200">
       <p class="text-slate-600">Belum ada pertandingan yang terdaftar.</p>
     </div>
     {% endfor %}
   </div>
+
+  <div id="pagination-container" class="mt-8 flex justify-center items-center space-x-2">
+    {% if page_obj.has_other_pages %}
+        {% if page_obj.has_previous %}
+            <a href="?page=1&{{ request.GET.urlencode|cut:'page=' }}" data-page="1" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">&laquo;</a>
+            <a href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode|cut:'page=' }}" data-page="{{ page_obj.previous_page_number }}" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">Prev</a>
+        {% endif %}
+        {% for num in page_obj.paginator.get_elided_page_range %}
+            {% if page_obj.number == num %}
+                <span class="px-3 py-1 rounded border border-blue-600 bg-blue-600 text-white">{{ num }}</span>
+            {% elif num == page_obj.paginator.ELLIPSIS %}
+                <span class="px-3 py-1 text-slate-500">...</span>
+            {% else %}
+                <a href="?page={{ num }}&{{ request.GET.urlencode|cut:'page=' }}" data-page="{{ num }}" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode|cut:'page=' }}" data-page="{{ page_obj.next_page_number }}" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}&{{ request.GET.urlencode|cut:'page=' }}" data-page="{{ page_obj.paginator.num_pages }}" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">&raquo;</a>
+        {% endif %}
+    {% endif %}
+  </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search-input');
+    const dateModeFilter = document.getElementById('date-mode-filter');
+    const dateStartFilter = document.getElementById('date-start-filter');
+    const dateEndFilter = document.getElementById('date-end-filter');
+    const venueFilter = document.getElementById('venue-filter');
+    const statusCheckboxes = document.querySelectorAll('input[name="status"]');
+    const perPageSelect = document.getElementById('per-page-select');
+    const otherFilters = document.querySelectorAll('.filter-change');
+    const resetBtn = document.getElementById('reset-filters');
+
+    const matchListContainer = document.getElementById('match-list-container');
+    const paginationContainer = document.getElementById('pagination-container');
+
+    const apiMatchListUrl = "{% url 'matches:api_calendar' %}";
+    const dummyUuidPlaceholder = '00000000-0000-0000-0000-000000000000';
+    const matchEditUrlBase = "{% url 'matches:edit_match' '00000000-0000-0000-0000-000000000000' %}".replace(dummyUuidPlaceholder, '');
+    const matchDeleteUrlBase = "{% url 'matches:delete_match' '00000000-0000-0000-0000-000000000000' %}".replace(dummyUuidPlaceholder, '');
+
+    let searchTimeout;
+
+    function updateDateLayout() {
+        const mode = dateModeFilter.value;
+        const statusContainer = document.getElementById('status-checkbox-container');
+
+        if (mode === 'range') {
+            dateStartFilter.classList.remove('md:col-span-2');
+            dateStartFilter.classList.add('md:col-span-1');
+            dateEndFilter.classList.remove('hidden');
+            statusContainer.classList.remove('md:col-span-2'); // Seharusnya tidak ada col-span-2 di sini
+            statusContainer.classList.add('md:col-span-1');
+        } else {
+            dateStartFilter.classList.remove('md:col-span-1');
+            dateStartFilter.classList.add('md:col-span-2');
+            dateEndFilter.classList.add('hidden');
+            statusContainer.classList.remove('md:col-span-2'); // Hapus ini jika ada
+            statusContainer.classList.add('md:col-span-1'); // Status selalu 1 kolom
+        }
+    }
+
+    function handleDateModeChange() {
+        updateDateLayout();
+        if (dateModeFilter.value === 'single') {
+            dateEndFilter.value = '';
+        }
+        fetchMatches(1);
+    }
+
+    async function fetchMatches(page = 1) {
+        const query = searchInput.value;
+        const dateStart = dateStartFilter.value;
+        const dateEnd = dateModeFilter.value === 'range' ? dateEndFilter.value : '';
+        const venue = venueFilter.value;
+        const perPage = perPageSelect.value;
+
+        const selectedStatuses = [];
+        statusCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                selectedStatuses.push(checkbox.value);
+            }
+        });
+        const status = selectedStatuses.join(',');
+
+        const filterParams = new URLSearchParams();
+        if (query) filterParams.append('q', query);
+        if (dateStart) filterParams.append('date_start', dateStart);
+        if (dateEnd) filterParams.append('date_end', dateEnd);
+        if (venue) filterParams.append('venue', venue);
+        if (status) filterParams.append('status', status);
+        if (perPage) filterParams.append('per_page', perPage);
+
+        const apiParams = new URLSearchParams(filterParams);
+        apiParams.append('page', page);
+
+        const url = `${apiMatchListUrl}?${apiParams.toString()}`;
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`Network response was not ok (Status: ${response.status})`);
+            }
+            const data = await response.json();
+            renderMatches(data.matches);
+            renderPagination(data.pagination, filterParams);
+
+        } catch (error) {
+            console.error('Error fetching matches:', error);
+            matchListContainer.innerHTML = `<div class="bg-red-100 p-4 rounded-lg text-center border border-red-300">
+                <p class="text-red-700">Gagal memuat data pertandingan. Silakan coba lagi. Error: ${error.message}</p>
+            </div>`;
+        }
+    }
+
+    function renderMatches(matches) {
+        matchListContainer.innerHTML = '';
+
+        if (!matches || matches.length === 0) {
+            matchListContainer.innerHTML = `<div id="no-matches-found" class="bg-slate-50 p-6 rounded-lg text-center border border-slate-200">
+                <p class="text-slate-600">Tidak ada pertandingan yang ditemukan sesuai filter.</p>
+            </div>`;
+            return;
+        }
+
+        matches.forEach(match => {
+            const matchCard = createMatchCard(match);
+            matchListContainer.innerHTML += matchCard;
+        });
+    }
+
+    function createMatchCard(match) {
+        const homeGoals = (match.home_goals !== null) ? match.home_goals : '&mdash;';
+        const awayGoals = (match.away_goals !== null) ? match.away_goals : '&mdash;';
+
+        const matchDate = match.date ? match.date.split('@')[0].trim() : 'N/A';
+        const matchTime = match.date && match.date.includes('@') ? match.date.split('@')[1].trim() : '';
+
+        const editUrl = `${matchEditUrlBase}${match.id}/`;
+        const deleteUrl = `${matchDeleteUrlBase}${match.id}/`;
+
+        const placeholderImageUrl = '{% static "images/thumbnail_placeholder.png" %}';
+
+        let statusChipHtml = '';
+        const statusKey = match.status_key || 'N/A';
+        let statusColorClasses = 'bg-gray-100 text-gray-700'; // Default color
+
+        if (statusKey === 'Upcoming') {
+            statusColorClasses = 'bg-blue-100 text-blue-700';
+        } else if (statusKey === 'Ongoing') {
+            statusColorClasses = 'bg-green-100 text-green-700';
+        } else if (statusKey === 'Finished') {
+            statusColorClasses = 'bg-red-500 text-white'; // Warna "nge jreng"
+        }
+
+        statusChipHtml = `<span class="text-xs font-semibold px-2.5 py-0.5 rounded ${statusColorClasses}">${statusKey}</span>`;
+
+
+        return `
+        <div class="bg-slate-50 p-4 rounded-lg shadow-sm hover:bg-slate-100 transition-colors duration-200 border border-slate-200">
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col items-center w-1/3 text-center">
+              <img src="${match.home_logo_url || placeholderImageUrl}" alt="${match.home_team_name} logo" class="w-16 h-16 object-contain mb-2">
+              <span class="text-lg font-bold text-slate-800">${match.home_team_name}</span>
+            </div>
+            <div class="flex flex-col items-center justify-center w-1/3 text-center">
+              <div class="flex items-center justify-center space-x-2">
+                <span class="text-3xl font-extrabold text-blue-600">${homeGoals}</span>
+                <span class="text-lg font-extrabold text-slate-500">VS</span>
+                <span class="text-3xl font-extrabold text-blue-600">${awayGoals}</span>
+              </div>
+              <div class="mt-1">${statusChipHtml}</div> 
+            </div>
+            <div class="flex flex-col items-center w-1/3 text-center">
+              <img src="${match.away_logo_url || placeholderImageUrl}" alt="${match.away_team_name} logo" class="w-16 h-16 object-contain mb-2">
+              <span class="text-lg font-bold text-slate-800">${match.away_team_name}</span>
+            </div>
+          </div>
+          <div class="mt-4 pt-4 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+            <div class="text-center sm:text-left">
+              <p class="text-sm font-semibold text-slate-700">
+                ${matchDate} @ ${matchTime}
+              </p>
+              <p class="text-xs text-slate-500">${match.venue_name || 'N/A'}, ${match.venue_city || 'N/A'}</p>
+            </div>
+            <div class="flex space-x-3">
+              <a href="${editUrl}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
+                Edit
+              </a>
+              <a href="${deleteUrl}" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
+                Delete
+              </a>
+            </div>
+          </div>
+        </div>
+        `;
+    }
+
+    function renderPagination(pagination, filters) {
+        paginationContainer.innerHTML = '';
+        if (!pagination.total_pages || pagination.total_pages <= 1) {
+            return;
+        }
+
+        let paginationHtml = '';
+        const queryString = filters.toString() ? `&${filters.toString()}` : '';
+
+        if (pagination.has_previous) {
+            paginationHtml += `<a href="?page=1${queryString}" data-page="1" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">&laquo;</a>`;
+            paginationHtml += `<a href="?page=${pagination.current_page - 1}${queryString}" data-page="${pagination.current_page - 1}" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">Prev</a>`;
+        }
+
+        pagination.page_range.forEach(num => {
+            if (pagination.current_page == num) {
+                paginationHtml += `<span class="px-3 py-1 rounded border border-blue-600 bg-blue-600 text-white">${num}</span>`;
+            } else if (num === '...') {
+                paginationHtml += `<span class="px-3 py-1 text-slate-500">...</span>`;
+            } else {
+                paginationHtml += `<a href="?page=${num}${queryString}" data-page="${num}" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">${num}</a>`;
+            }
+        });
+
+        if (pagination.has_next) {
+            paginationHtml += `<a href="?page=${pagination.current_page + 1}${queryString}" data-page="${pagination.current_page + 1}" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">Next</a>`;
+            paginationHtml += `<a href="?page=${pagination.total_pages}${queryString}" data-page="${pagination.total_pages}" class="pagination-link px-3 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50">&raquo;</a>`;
+        }
+
+        paginationContainer.innerHTML = paginationHtml;
+    }
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            fetchMatches(1);
+        }, 300);
+    });
+
+    otherFilters.forEach(filter => {
+        filter.addEventListener('change', () => {
+            fetchMatches(1);
+        });
+    });
+
+    perPageSelect.addEventListener('change', () => {
+        fetchMatches(1);
+    });
+
+    paginationContainer.addEventListener('click', function(e) {
+        if (e.target.tagName === 'A' && e.target.classList.contains('pagination-link')) {
+            e.preventDefault();
+            const page = e.target.dataset.page;
+            if (page) {
+                fetchMatches(page);
+            }
+        }
+    });
+
+    resetBtn.addEventListener('click', () => {
+        document.getElementById('search-filter-form').reset();
+        perPageSelect.value = '10';
+        statusCheckboxes.forEach(cb => cb.checked = true);
+        dateModeFilter.value = 'single'; 
+        handleDateModeChange();
+    });
+    
+    dateModeFilter.addEventListener('change', handleDateModeChange);
+    
+    updateDateLayout(); 
+    fetchMatches(1);
+
+});
+</script>
 {% endblock list_content %}
