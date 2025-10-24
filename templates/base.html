@@ -239,11 +239,23 @@
               }
               hideModal();
           });
+
+          modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+              hideModal();
+            }
+          });
+
+          window.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+              hideModal();
+            }
+          });
       }
     });
 
     document.addEventListener('trix-file-accept', function (e) {
-      e.preventDefault(); // blok upload file
+      e.preventDefault(); 
     });
 
     document.addEventListener("trix-initialize", function (event) {

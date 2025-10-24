@@ -291,9 +291,9 @@ def current_user_json(request):
             "id": None,
             "profile_picture": static("images/default-profile-picture.png"),
             "menu": [
-                {"name": "Profil", "url": login_page},
-                {"name": "Tiket Saya", "url": login_page},
-                {"name": "Analisis", "url": login_page},
+                {"name": "📷 Profil", "url": login_page},
+                {"name": "🎫 Tiket Saya", "url": login_page},
+                {"name": "📊 Analisis", "url": login_page},
             ]
         })
     
@@ -302,22 +302,22 @@ def current_user_json(request):
         profile_picture_url = static("images/Admin.png")
         my_profile_url = reverse("profiles:admin_view")
         menu = [
-            {"name": "Profil", "url": my_profile_url},
-            {"name": "Analytics", "url": reverse("reviews:admin_analytics_page")},
+            {"name": "📷 Profil", "url": my_profile_url},
+            {"name": "📊 Analisis", "url": reverse("reviews:admin_analytics_page")},
         ]
     elif user.role == "journalist":
         profile_picture_url = static("images/Journalist.png")
         my_profile_url = reverse("profiles:journalist_view")
         menu = [
-            {"name": "Profil", "url": my_profile_url},
+            {"name": "📷 Profil", "url": my_profile_url},
         ]
     else:  
         profile_picture_url = profile.profile_picture.url if profile and profile.profile_picture else static("images/default-profile-picture.png")
         my_profile_url = reverse("profiles:user_view", args=[user.id])
         menu = [
-            {"name": "Profil", "url": my_profile_url},
-            {"name": "My Tickets", "url": reverse("profiles:user_tickets_page", args=[user.id])},
-            {"name": "Analytics", "url": reverse("reviews:user_analytics_page")},
+            {"name": "📷 Profil", "url": my_profile_url},
+            {"name": "🎫 Tiket Saya", "url": reverse("profiles:user_tickets_page", args=[user.id])},
+            {"name": "📊 Analisis", "url": reverse("reviews:user_analytics_page")},
         ]
     
     return JsonResponse({

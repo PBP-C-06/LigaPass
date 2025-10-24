@@ -25,7 +25,6 @@ from .models import Team, Match, Venue, TicketPrice
 from .forms import TeamForm, MatchForm, TicketPriceFormSet
 from .services import sync_database_with_apis
 
-# --- AUTHENTICATION & HELPER FUNCTIONS ---
 
 def is_admin(user):
     return user.is_authenticated and user.role == 'admin'
@@ -64,10 +63,14 @@ def _serialize_match(match):
         'status_key': get_match_status(match.date),
         'home_goals': match.home_goals if match.home_goals is not None else 0,
         'away_goals': match.away_goals if match.away_goals is not None else 0,
-        'details_url': reverse('matches:details', args=[match.id])
+        'details_url': reverse('matches:details', args=[match.id]),
+        'venue_name': match.venue.name if match.venue else 'N/A',
+        'venue_city': match.venue.city if match.venue else 'N/A',
+        'edit_url': reverse('matches:edit_match', args=[match.id]),
+        'delete_url': reverse('matches:delete_match', args=[match.id])
     }
 
-# --- FUNCTION-BASED VIEWS ---
+
 def match_calendar_view(request):
     search_query = request.GET.get('q', '')
 
@@ -189,7 +192,6 @@ def match_details_view(request, match_id):
     avg_rating = 0
 
     if status == "Finished":
-        # Ambil semua review utk match ini
         reviews = Review.objects.filter(match=match).select_related("user").order_by("-created_at")
         avg_rating = reviews.aggregate(Avg("rating"))["rating__avg"] or 0
         if request.user.is_authenticated:
@@ -277,13 +279,8 @@ def live_score_api(request, match_api_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-# --- VIEWS UTAMA MANAJEMEN ADMIN ---
 
 class ManageBaseView(AdminRequiredMixin, ListView):
-    """
-    View base untuk halaman /matches/manage/
-    Menampilkan daftar pertandingan secara default.
-    """
     model = Match
     template_name = 'matches/manage/match_list.html'
     context_object_name = 'matches'
@@ -295,7 +292,6 @@ class ManageBaseView(AdminRequiredMixin, ListView):
         context['action_url'] = reverse('matches:add_match')
         return context
 
-# --- MANAJEMEN VENUE ---
 
 class VenueListView(AdminRequiredMixin, ListView):
     model = Venue
@@ -355,7 +351,6 @@ class VenueDeleteView(AdminRequiredMixin, DeleteView):
         context['current_page'] = 'venues'
         return context
 
-# --- MANAJEMEN TIM ---
 
 class TeamListView(AdminRequiredMixin, ListView):
     model = Team
@@ -420,17 +415,87 @@ class TeamDeleteView(AdminRequiredMixin, DeleteView):
         context['current_page'] = 'teams'
         return context
 
-# --- MANAJEMEN MATCH & MIXIN ---
 
 class MatchListView(AdminRequiredMixin, ListView):
     model = Match
     template_name = 'matches/manage/match_list.html'
     context_object_name = 'matches'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related('home_team', 'away_team', 'venue').order_by('-date')
+
+        request = self.request
+        search_query = request.GET.get('q', '')
+        date_start_filter = request.GET.get('date_start', '')
+        date_end_filter = request.GET.get('date_end', '')
+        venue_filter = request.GET.get('venue', '')
+        status_filter_raw = request.GET.get('status', '')
+
+        if search_query:
+            queryset = queryset.filter(
+                Q(home_team__name__icontains=search_query) |
+                Q(away_team__name__icontains=search_query)
+            )
+
+        if venue_filter:
+            queryset = queryset.filter(venue__id=venue_filter)
+
+        if date_start_filter:
+            try:
+                start_date = dt.strptime(date_start_filter, '%Y-%m-%d').date()
+                start_datetime = timezone.make_aware(dt.combine(start_date, time.min))
+
+                if date_end_filter:
+                    end_date = dt.strptime(date_end_filter, '%Y-%m-%d').date()
+                    end_datetime = timezone.make_aware(dt.combine(end_date, time.max))
+                    queryset = queryset.filter(date__range=(start_datetime, end_datetime))
+                else:
+                    end_datetime = timezone.make_aware(dt.combine(start_date, time.max))
+                    queryset = queryset.filter(date__range=(start_datetime, end_datetime))
+            except ValueError:
+                pass
+
+        if status_filter_raw:
+            allowed_statuses = [s.strip() for s in status_filter_raw.split(',') if s.strip()]
+            q_filter_status = Q()
+            now = timezone.now()
+
+            if 'Upcoming' in allowed_statuses:
+                q_filter_status |= Q(date__gt=now)
+            if 'Ongoing' in allowed_statuses:
+                q_filter_status |= Q(date__lte=now, date__gt=now - timedelta(hours=2.5))
+            if 'Finished' in allowed_statuses:
+                q_filter_status |= Q(date__lte=now - timedelta(hours=2.5))
+            
+            if q_filter_status != Q():
+                queryset = queryset.filter(q_filter_status)
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['messages_json'] = _get_cleaned_messages(self.request)
+        request = self.request
+        
+        context['messages_json'] = _get_cleaned_messages(request)
         context['current_page'] = 'matches'
+        
+        context['venues'] = Venue.objects.all().order_by('name')
+        
+        context['search_query'] = request.GET.get('q', '')
+        context['selected_venue'] = request.GET.get('venue', '')
+        context['date_start'] = request.GET.get('date_start', '')
+        context['date_end'] = request.GET.get('date_end', '')
+        context['selected_statuses'] = [s.strip() for s in request.GET.get('status', '').split(',') if s.strip()]
+
+        if request.GET.get('date_end', ''):
+             context['date_mode'] = 'range'
+        else:
+             context['date_mode'] = 'single'
+             
+        if not context['selected_statuses'] and 'status' not in request.GET:
+            context['selected_statuses'] = ['Upcoming', 'Ongoing', 'Finished']
+
         return context
 
 class MatchCreateUpdateMixin:

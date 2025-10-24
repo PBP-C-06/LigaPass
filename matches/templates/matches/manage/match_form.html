@@ -2,8 +2,8 @@
 {% block title %}Manajemen Pertandingan - {% if is_update %}Edit{% else %}Tambah{% endif %}{% endblock %}
 
 {% block list_content %}
-<div class="max-w-4xl mx-auto bg-slate-800 p-8 rounded-lg shadow-xl">
-  <h1 class="text-3xl font-bold mb-6 text-white">
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+  <h1 class="text-3xl font-bold mb-6 text-blue-600">
     {% if is_update %}
       Edit Pertandingan: {{ object.home_team.name|default:'N/A' }} vs {{ object.away_team.name|default:'N/A' }}
     {% else %}
@@ -14,12 +14,12 @@
   <form method="post" enctype="multipart/form-data" class="space-y-6">
     {% csrf_token %}
 
-    <h2 class="text-xl font-semibold text-blue-400 border-b border-slate-700 pb-2">
+    <h2 class="text-xl font-semibold text-blue-600 border-b border-slate-200 pb-2">
       Detail Pertandingan
     </h2>
 
     {% if form.non_field_errors %}
-      <div class="bg-red-900 text-red-100 p-3 rounded">
+      <div class="bg-red-50 text-red-700 border border-red-200 p-3 rounded-lg">
         {% for error in form.non_field_errors %}
           <p>{{ error }}</p>
         {% endfor %}
@@ -27,29 +27,75 @@
     {% endif %}
 
     {% for field in form %}
-      <div class="field-wrapper">
-        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-1">
-          {{ field.label }}
-        </label>
-        {{ field }}
-        {% if field.help_text %}
-          <p class="text-xs text-slate-400 mt-1">{{ field.help_text }}</p>
-        {% endif %}
-        {% for error in field.errors %}
-          <p class="text-xs text-red-400 mt-1">{{ error }}</p>
-        {% endfor %}
-      </div>
+      {% if field.name == 'home_goals' %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="field-wrapper">
+
+            {% if is_update and object.home_team %}
+              <div class="flex justify-center mb-2">
+                <img src="{{ object.home_team.display_logo_url }}" alt="{{ object.home_team.name }} logo" class="h-16 w-16 object-contain">
+              </div>
+            {% endif %}
+            
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+              {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+              <p class="text-xs text-slate-500 mt-1">{{ field.help_text }}</p>
+            {% endif %}
+            {% for error in field.errors %}
+              <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+      
+      {% elif field.name == 'away_goals' %}
+          <div class="field-wrapper">
+
+            {% if is_update and object.away_team %}
+              <div class="flex justify-center mb-2">
+                <img src="{{ object.away_team.display_logo_url }}" alt="{{ object.away_team.name }} logo" class="h-16 w-16 object-contain">
+              </div>
+            {% endif %}
+
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+              {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+              <p class="text-xs text-slate-500 mt-1">{{ field.help_text }}</p>
+            {% endif %}
+            {% for error in field.errors %}
+              <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div> 
+
+      {% else %}
+        <div class="field-wrapper">
+          <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+            {{ field.label }}
+          </label>
+          {{ field }}
+          {% if field.help_text %}
+            <p class="text-xs text-slate-500 mt-1">{{ field.help_text }}</p>
+          {% endif %}
+          {% for error in field.errors %}
+            <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
     {% endfor %}
 
-    <h2 class="text-xl font-semibold text-blue-400 border-b border-slate-700 pb-2 pt-4">
+
+    <h2 class="text-xl font-semibold text-blue-600 border-b border-slate-200 pb-2 pt-4">
       Harga Tiket
     </h2>
 
     {{ formset.management_form }}
 
-    {# PESAN DUPLIKASI MUNCUL DI SINI #}
     {% if formset.non_form_errors %}
-      <div class="bg-red-900 text-red-100 p-3 rounded">
+      <div class="bg-red-50 text-red-700 border border-red-200 p-3 rounded-lg">
         {% for error in formset.non_form_errors %}
           <p>{{ error }}</p>
         {% endfor %}
@@ -58,15 +104,15 @@
 
     <div id="ticket-price-formset" class="space-y-4">
       {% for ticket_form in formset %}
-        <div class="ticket-price-form p-4 border border-slate-700 rounded-lg space-y-2 relative bg-slate-700/40 transition-all">
-          <button type="button" class="delete-ticket absolute top-2 right-3 text-red-400 hover:text-red-300 text-sm font-semibold">
+        <div class="ticket-price-form p-4 border border-slate-200 rounded-lg space-y-2 relative bg-slate-50 transition-all">
+          <button type="button" class="delete-ticket absolute top-2 right-3 text-red-600 hover:text-red-700 text-sm font-semibold">
             ✕
           </button>
 
-          <p class="text-sm font-medium text-white">Kategori #{{ forloop.counter }}</p>
+          <p class="text-sm font-medium text-white text-slate-800">Kategori #{{ forloop.counter }}</p>
 
           {% if ticket_form.non_field_errors %}
-            <div class="bg-red-900 text-red-100 p-2 rounded">
+            <div class="bg-red-50 text-red-700 border border-red-200 p-2 rounded-lg">
               {% for error in ticket_form.non_field_errors %}
                 <p>{{ error }}</p>
               {% endfor %}
@@ -77,40 +123,39 @@
             {% for field in ticket_form.visible_fields %}
               {% if field.name != 'DELETE' %}
                 <div class="field-wrapper">
-                  <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-1">
+                  <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
                     {{ field.label }}
                   </label>
                   {{ field }}
                   {% for error in field.errors %}
-                    <p class="text-xs text-red-400 mt-1">{{ error }}</p>
+                    <p class="text-xs text-red-600 mt-1">{{ error }}</p>
                   {% endfor %}
                 </div>
               {% endif %}
             {% endfor %}
           </div>
-          
-          {# Render fields tersembunyi yang penting (ID dan Foreign Key) #}
+
           {{ ticket_form.id }}
           {{ ticket_form.match }}
 
-          {{ ticket_form.DELETE }}
+          <div class="hidden">{{ ticket_form.DELETE }}</div>
         </div>
       {% endfor %}
     </div>
 
     <div id="empty-form-template" class="hidden">
-      <div class="ticket-price-form p-4 border border-slate-700 rounded-lg space-y-2 relative bg-slate-700/40 transition-all">
-        <button type="button" class="delete-ticket absolute top-2 right-3 text-red-400 hover:text-red-300 text-sm font-semibold">
+      <div class="ticket-price-form p-4 border border-slate-200 rounded-lg space-y-2 relative bg-slate-50 transition-all">
+        <button type="button" class="delete-ticket absolute top-2 right-3 text-red-600 hover:text-red-700 text-sm font-semibold">
           ✕
         </button>
 
-        <p class="text-sm font-medium text-white">Kategori #__prefix__</p>
+        <p class="text-sm font-medium text-white text-slate-800">Kategori #__prefix__</p>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           {% for field in formset.empty_form.visible_fields %}
             {% if field.name != 'DELETE' %}
               <div class="field-wrapper">
-                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-1">
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
                   {{ field.label }}
                 </label>
                 {{ field }}
@@ -119,16 +164,15 @@
           {% endfor %}
         </div>
 
-        {# Render fields tersembunyi untuk form baru #}
         {{ formset.empty_form.id }}
         {{ formset.empty_form.match }}
 
-        {{ formset.empty_form.DELETE }}
+        <div class="hidden">{{ formset.empty_form.DELETE }}</div>
       </div>
     </div>
 
     <div class="flex justify-end mt-3">
-      <button type="button" id="add-ticket-row" class="bg-slate-700 hover:bg-slate-600 text-blue-400 hover:text-blue-300 font-medium py-2 px-4 rounded-lg transition-colors border border-slate-600">
+      <button type="button" id="add-ticket-row" class="bg-slate-100 hover:bg-slate-200 text-blue-600 hover:text-blue-700 font-medium py-2 px-4 rounded-lg transition-colors border border-slate-200">
         + Tambah Kategori
       </button>
     </div>
@@ -140,16 +184,22 @@
         width: 100%;
         padding: 10px;
         border-radius: 6px;
-        background-color: #334155;
-        border: 1px solid #475569;
-        color: white;
-        transition: border-color 0.2s;
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #0f172a;
+        transition: border-color 0.2s, box-shadow 0.2s;
       }
       .field-wrapper input:focus,
       .field-wrapper textarea:focus,
       .field-wrapper select:focus {
         border-color: #3b82f6;
         outline: none;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+      }
+      .field-wrapper input:disabled {
+          background-color: #f3f4f6;
+          cursor: not-allowed;
+          color: #9ca3af;
       }
     </style>
 
@@ -159,20 +209,19 @@
   </form>
 
   <div class="mt-4 text-center">
-    <a href="{% url 'matches:manage_matches' %}" class="text-slate-400 hover:text-slate-300 text-sm">
+    <a href="{% url 'matches:manage_matches' %}" class="text-slate-600 hover:text-slate-800 text-sm">
       Kembali ke Daftar Pertandingan
     </a>
   </div>
 </div>
 
 <script>
-// Fungsi untuk memperbarui nomor urut kategori
 function updateCategoryNumbers() {
   const formsetDiv = document.getElementById('ticket-price-formset');
   if (!formsetDiv) return;
 
   let counter = 1;
-  
+
   formsetDiv.querySelectorAll('.ticket-price-form').forEach((form) => {
     if (form.style.display !== 'none') {
       const label = form.querySelector('p.text-sm.font-medium.text-white');
@@ -184,13 +233,11 @@ function updateCategoryNumbers() {
   });
 }
 
-// Fungsi utama untuk menambah form baru
 function addTicketForm(event) {
   event.preventDefault();
-  
-  // FIX KRITIS: Menggunakan ID yang benar dari log error Anda.
+
   const formsetDiv = document.getElementById('ticket-price-formset');
-  const totalForms = document.getElementById('id_ticket_prices-TOTAL_FORMS'); 
+  const totalForms = document.getElementById('id_ticket_prices-TOTAL_FORMS');
   const emptyTemplate = document.getElementById('empty-form-template');
 
   if (!totalForms || !formsetDiv || !emptyTemplate) {
@@ -200,48 +247,54 @@ function addTicketForm(event) {
 
   try {
     const currentCount = parseInt(totalForms.value);
-    
     const emptyTemplateHtml = emptyTemplate.innerHTML;
-    
-    // Ganti placeholder __prefix__ dengan index baru
     let newHtml = emptyTemplateHtml.replace(/__prefix__/g, currentCount);
-    
-    // 3. Konversi string HTML menjadi elemen DOM
+
     const temp = document.createElement('div');
     temp.innerHTML = newHtml.trim();
     const newForm = temp.firstElementChild;
 
-    // 4. Reset nilai input/select/textarea pada form baru
     newForm.querySelectorAll('input, select, textarea').forEach(el => {
       if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
-      else el.value = '';
+      else if (el.type !== 'hidden') {
+          el.value = '';
+      }
+      
+      if (el.name.endsWith('-id')) {
+          el.value = '';
+      }
     });
+    
+    newForm.style.display = '';
 
-    // 5. Tambahkan ke DOM dan update total
     formsetDiv.appendChild(newForm);
-    totalForms.value = currentCount + 1; // Increment TOTAL_FORMS
-    
+    totalForms.value = currentCount + 1;
+
     updateCategoryNumbers();
-    
+
   } catch (error) {
     console.error('Error saat menambahkan kategori baru:', error);
     alert('Terjadi kesalahan saat menambah kategori.');
   }
 }
 
-// Fungsi untuk menangani penghapusan form
 function deleteTicketForm(e) {
   if (e.target.classList.contains('delete-ticket')) {
     e.preventDefault();
     const form = e.target.closest('.ticket-price-form');
-    
-    // Name attribute untuk DELETE harus dicari dengan benar
-    const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
-    
-    if (deleteInput) {
-      deleteInput.checked = true;
-      form.style.display = 'none';
-      updateCategoryNumbers();
+
+    const idInput = form.querySelector('input[type="hidden"][name$="-id"]');
+
+    if (idInput && idInput.value) {
+        const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (deleteInput) {
+          deleteInput.checked = true;
+          form.style.display = 'none';
+          updateCategoryNumbers();
+        }
+    } else {
+        form.remove();
+        updateCategoryNumbers();
     }
   }
 }
@@ -249,16 +302,145 @@ function deleteTicketForm(e) {
 document.addEventListener('DOMContentLoaded', function () {
   const addButton = document.getElementById('add-ticket-row');
   const formsetDiv = document.getElementById('ticket-price-formset');
-  
+
   if (addButton) {
     addButton.addEventListener('click', addTicketForm);
   }
-  
+
   if (formsetDiv) {
     formsetDiv.addEventListener('click', deleteTicketForm);
   }
-  
+
   updateCategoryNumbers();
+
+  const dateInput = document.getElementById('id_date');
+  const homeGoalsInput = document.getElementById('id_home_goals');
+  const awayGoalsInput = document.getElementById('id_away_goals');
+
+  function checkMatchDate() {
+      if (!dateInput || !homeGoalsInput || !awayGoalsInput) return;
+
+      try {
+          const matchDate = new Date(dateInput.value);
+          const now = new Date();
+
+          if (dateInput.value && matchDate > now) {
+              homeGoalsInput.value = 0;
+              homeGoalsInput.disabled = true;
+              
+              awayGoalsInput.value = 0;
+              awayGoalsInput.disabled = true;
+          } else {
+              homeGoalsInput.disabled = false;
+              awayGoalsInput.disabled = false;
+          }
+      } catch (e) {
+          homeGoalsInput.disabled = false;
+          awayGoalsInput.disabled = false;
+      }
+  }
+
+  if (dateInput) {
+      checkMatchDate();
+      dateInput.addEventListener('input', checkMatchDate);
+  }
+
+  const isMatchLiveOrFinished = {{ is_match_live_or_finished|yesno:"true,false" }};
+  const matchForm = document.querySelector('form[method="post"]');
+  
+  if (!isMatchLiveOrFinished || !matchForm) {
+    return;
+  }
+
+  const venueSelect = document.getElementById('id_venue');
+  const originalVenueId = venueSelect ? venueSelect.value : '';
+  
+  let originalTicketValues = {};
+
+  function captureOriginalTicketValues() {
+    originalTicketValues = {};
+    const formsetContainer = document.getElementById('ticket-price-formset');
+    if (formsetContainer) {
+      formsetContainer.querySelectorAll('.ticket-price-form').forEach((form) => {
+        const priceInput = form.querySelector('input[name$="-price"]');
+        const idInput = form.querySelector('input[name$="-id"]');
+        
+        if (idInput && idInput.value) {
+          originalTicketValues[idInput.value] = {
+            price: priceInput ? priceInput.value : ''
+          };
+        }
+      });
+    }
+  }
+  captureOriginalTicketValues(); 
+
+  function checkForProtectedChanges() {
+    let venueChanged = false;
+    if (venueSelect && venueSelect.value !== originalVenueId) {
+      venueChanged = true;
+    }
+    
+    let ticketsChanged = false;
+    const formsetContainer = document.getElementById('ticket-price-formset');
+    if (formsetContainer) {
+      formsetContainer.querySelectorAll('.ticket-price-form').forEach(form => {
+          const priceInput = form.querySelector('input[name$="-price"]');
+          const idInput = form.querySelector('input[name$="-id"]');
+          const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
+          
+          if (ticketsChanged) return; 
+
+          if (deleteInput && deleteInput.checked) { 
+              ticketsChanged = true;
+          } else if (idInput && !idInput.value && priceInput && priceInput.value) { 
+              ticketsChanged = true;
+          } else if (idInput && idInput.value) { 
+              const original = originalTicketValues[idInput.value];
+              if (original && priceInput && priceInput.value !== original.price) {
+                  ticketsChanged = true;
+              }
+          }
+      });
+    }
+    
+    return { venueChanged, ticketsChanged };
+  }
+
+  matchForm.addEventListener('submit', function(e) {
+    
+    if (typeof showConfirmationModal !== 'function') {
+        console.error("Fungsi showConfirmationModal() tidak ditemukan.");
+        alert("Terjadi error: Fungsi modal konfirmasi tidak ditemukan. Silakan refresh halaman dan coba lagi.");
+        e.preventDefault(); 
+        return;
+    }
+
+    const changes = checkForProtectedChanges();
+
+    if (changes.venueChanged || changes.ticketsChanged) {
+      e.preventDefault(); 
+
+      let warningMessage = 'Anda mengubah ';
+      if (changes.venueChanged && changes.ticketsChanged) {
+          warningMessage += 'venue dan harga tiket';
+      } else if (changes.venueChanged) {
+          warningMessage += 'venue';
+      } else {
+          warningMessage += 'harga tiket';
+      }
+      warningMessage += ' untuk pertandingan yang sedang/sudah selesai. Ini dapat memengaruhi data booking yang ada. <br><br>Ketik <strong>CONFIRM</strong> untuk melanjutkan.';
+
+      showConfirmationModal(
+        '⚠️ Peringatan',
+        warningMessage,
+        function() {
+          matchForm.submit();
+        }
+      );
+    }
+  });
+
 });
 </script>
 {% endblock list_content %}
