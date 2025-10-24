@@ -184,15 +184,15 @@
         width: 100%;
         padding: 10px;
         border-radius: 6px;
-        background-color: #ffffff;           /* terang */
-        border: 1px solid #cbd5e1;          /* slate-300-ish */
-        color: #0f172a;                      /* slate-900 */
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #0f172a;
         transition: border-color 0.2s, box-shadow 0.2s;
       }
       .field-wrapper input:focus,
       .field-wrapper textarea:focus,
       .field-wrapper select:focus {
-        border-color: #3b82f6;               /* blue-500 */
+        border-color: #3b82f6;
         outline: none;
         box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
       }
@@ -211,7 +211,6 @@
 </div>
 
 <script>
-// Fungsi untuk memperbarui nomor urut kategori
 function updateCategoryNumbers() {
   const formsetDiv = document.getElementById('ticket-price-formset');
   if (!formsetDiv) return;
@@ -222,18 +221,16 @@ function updateCategoryNumbers() {
     if (form.style.display !== 'none') {
       const label = form.querySelector('p.text-sm.font-medium.text-white');
       if (label) {
-        label.textContent = \`Kategori #${counter}\`;
+        label.textContent = `Kategori #${counter}`;
         counter++;
       }
     }
   });
 }
 
-// Fungsi utama untuk menambah form baru
 function addTicketForm(event) {
   event.preventDefault();
 
-  // FIX KRITIS: Menggunakan ID yang benar dari log error Anda.
   const formsetDiv = document.getElementById('ticket-price-formset');
   const totalForms = document.getElementById('id_ticket_prices-TOTAL_FORMS');
   const emptyTemplate = document.getElementById('empty-form-template');
@@ -245,26 +242,28 @@ function addTicketForm(event) {
 
   try {
     const currentCount = parseInt(totalForms.value);
-
     const emptyTemplateHtml = emptyTemplate.innerHTML;
-
-    // Ganti placeholder __prefix__ dengan index baru
     let newHtml = emptyTemplateHtml.replace(/__prefix__/g, currentCount);
 
-    // 3. Konversi string HTML menjadi elemen DOM
     const temp = document.createElement('div');
     temp.innerHTML = newHtml.trim();
     const newForm = temp.firstElementChild;
 
-    // 4. Reset nilai input/select/textarea pada form baru
     newForm.querySelectorAll('input, select, textarea').forEach(el => {
       if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
-      else el.value = '';
+      else if (el.type !== 'hidden') {
+          el.value = '';
+      }
+      
+      if (el.name.endsWith('-id')) {
+          el.value = '';
+      }
     });
+    
+    newForm.style.display = '';
 
-    // 5. Tambahkan ke DOM dan update total
     formsetDiv.appendChild(newForm);
-    totalForms.value = currentCount + 1; // Increment TOTAL_FORMS
+    totalForms.value = currentCount + 1;
 
     updateCategoryNumbers();
 
@@ -274,19 +273,23 @@ function addTicketForm(event) {
   }
 }
 
-// Fungsi untuk menangani penghapusan form
 function deleteTicketForm(e) {
   if (e.target.classList.contains('delete-ticket')) {
     e.preventDefault();
     const form = e.target.closest('.ticket-price-form');
 
-    // Name attribute untuk DELETE harus dicari dengan benar
-    const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
+    const idInput = form.querySelector('input[type="hidden"][name$="-id"]');
 
-    if (deleteInput) {
-      deleteInput.checked = true;
-      form.style.display = 'none';
-      updateCategoryNumbers();
+    if (idInput && idInput.value) {
+        const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (deleteInput) {
+          deleteInput.checked = true;
+          form.style.display = 'none';
+          updateCategoryNumbers();
+        }
+    } else {
+        form.remove();
+        updateCategoryNumbers();
     }
   }
 }
