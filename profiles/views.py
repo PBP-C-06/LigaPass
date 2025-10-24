@@ -16,6 +16,12 @@ def create_profile(request):
     if request.method == "GET":
         return render(request, "create_profile.html")
     elif request.method == "POST":
+        user = request.user
+
+        # Validasi supaya admin dan journalist tidak dapat membuat profile lagi 
+        if user.role == "admin" or user.role == "journalist":
+            return JsonResponse({"ok": False, "message": "Profil sudah terdaftar sebelumnya."}, status=400)
+        
         # Validasi supaya profile tidak lebih dari satu
         if (hasattr(request.user, 'profile')):
             return JsonResponse({"ok": False, "message": "Profil sudah terdaftar sebelumnya."}, status=400)
@@ -94,27 +100,44 @@ def show_json_by_id(request, id):
     except User.DoesNotExist:
         return JsonResponse({'error':'User Not Found'}, status=404)
 
-# Menampilkan JSON admin dan journalist (tanpa argumen id)
-@login_required
-def show_json_admin_journalist(request):
+# Menampilkan JSON admin
+def show_json_admin(request):
     try:
-        user = request.user
-        if user.role == 'admin' or user.role == 'journalist':
-            profile = getattr(user, 'adminjournalistprofile', None)
-            data = {
-                "username": user.username,
-                "profile_picture": profile.profile_picture if profile and profile.profile_picture else None,
-                "total_news": profile.news_count if profile else 0,
-                "total_views": profile.total_news_views if profile else 0
-            }
-            return JsonResponse(data)
-        else:
-            return JsonResponse({'error' : 'Forbidden'}, status=403)
-    except Exception:
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
+        # Ambil hardcode admin
+        admin = User.objects.filter(role='admin').first()
+        admin_profile = getattr(admin, 'adminjournalistprofile', None)
+
+        # Petakan data 
+        data = {
+            "username": "admin",
+            "profile_picture": admin_profile.profile_picture if admin_profile else None,
+            "total_news": admin_profile.news_count if admin_profile else 0,
+            "total_views": admin_profile.total_news_views if admin_profile else 0
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+# Menampilkan JSON untuk journalist
+def show_json_journalist(request):
+    try:
+        # Ambil hardcode journalist
+        journalist = User.objects.filter(role='journalist').first()
+        journalist_profile = getattr(journalist, 'adminjournalistprofile', None)
+
+        # Petakan data
+        data = {
+            "username": "journalist",
+            "profile_picture": journalist_profile.profile_picture if journalist_profile else None,
+            "total_news": journalist_profile.news_count if journalist_profile else 0,
+            "total_views": journalist_profile.total_news_views if journalist_profile else 0
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 # JSON untuk search dan filter pada admin view
-def admin_view_json(request):
+def admin_search_filter(request):
     search = request.GET.get("search", "")
     filter_type = request.GET.get("filter", "all")
 
@@ -169,12 +192,10 @@ def user_view(request, id):
     return render(request, "user_profile.html", context)
 
 # Untuk menampilkan admin_profile.html
-@login_required
 def admin_view(request):
     return render(request, "admin_profile.html")
 
 # Untuk menampilkan journalist_profile.html
-@login_required
 def journalist_view(request):
     return render(request, "journalist_profile.html")
 
@@ -295,7 +316,7 @@ def current_user_json(request):
         menu = [
             {"name": "Profil", "url": my_profile_url},
         ]
-    else:  # regular user
+    else:  # Regular user
         profile_picture_url = profile.profile_picture.url if profile and profile.profile_picture else static("images/default-profile-picture.png")
         my_profile_url = reverse("profiles:user_view", args=[user.id])
         menu = [
