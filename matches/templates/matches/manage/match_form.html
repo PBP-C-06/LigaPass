@@ -307,6 +307,103 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   updateCategoryNumbers();
+
+  const isMatchLiveOrFinished = {{ is_match_live_or_finished|yesno:"true,false" }};
+  const matchForm = document.querySelector('form[method="post"]');
+  
+  if (!isMatchLiveOrFinished || !matchForm) {
+    return;
+  }
+
+  const venueSelect = document.getElementById('id_venue');
+  const originalVenueId = venueSelect ? venueSelect.value : '';
+  
+  let originalTicketValues = {};
+
+  function captureOriginalTicketValues() {
+    originalTicketValues = {};
+    const formsetContainer = document.getElementById('ticket-price-formset');
+    if (formsetContainer) {
+      formsetContainer.querySelectorAll('.ticket-price-form').forEach((form) => {
+        const priceInput = form.querySelector('input[name$="-price"]');
+        const idInput = form.querySelector('input[name$="-id"]');
+        
+        if (idInput && idInput.value) {
+          originalTicketValues[idInput.value] = {
+            price: priceInput ? priceInput.value : ''
+          };
+        }
+      });
+    }
+  }
+  captureOriginalTicketValues(); 
+
+  function checkForProtectedChanges() {
+    let venueChanged = false;
+    if (venueSelect && venueSelect.value !== originalVenueId) {
+      venueChanged = true;
+    }
+    
+    let ticketsChanged = false;
+    const formsetContainer = document.getElementById('ticket-price-formset');
+    if (formsetContainer) {
+      formsetContainer.querySelectorAll('.ticket-price-form').forEach(form => {
+          const priceInput = form.querySelector('input[name$="-price"]');
+          const idInput = form.querySelector('input[name$="-id"]');
+          const deleteInput = form.querySelector('input[type="checkbox"][name$="-DELETE"]');
+          
+          if (ticketsChanged) return; 
+
+          if (deleteInput && deleteInput.checked) { 
+              ticketsChanged = true;
+          } else if (idInput && !idInput.value && priceInput && priceInput.value) { 
+              ticketsChanged = true;
+          } else if (idInput && idInput.value) { 
+              const original = originalTicketValues[idInput.value];
+              if (original && priceInput && priceInput.value !== original.price) {
+                  ticketsChanged = true;
+              }
+          }
+      });
+    }
+    
+    return { venueChanged, ticketsChanged };
+  }
+
+  matchForm.addEventListener('submit', function(e) {
+    
+    if (typeof showConfirmationModal !== 'function') {
+        console.error("Fungsi showConfirmationModal() tidak ditemukan.");
+        alert("Terjadi error: Fungsi modal konfirmasi tidak ditemukan. Silakan refresh halaman dan coba lagi.");
+        e.preventDefault(); 
+        return;
+    }
+
+    const changes = checkForProtectedChanges();
+
+    if (changes.venueChanged || changes.ticketsChanged) {
+      e.preventDefault(); 
+
+      let warningMessage = 'Anda mengubah ';
+      if (changes.venueChanged && changes.ticketsChanged) {
+          warningMessage += 'venue dan harga tiket';
+      } else if (changes.venueChanged) {
+          warningMessage += 'venue';
+      } else {
+          warningMessage += 'harga tiket';
+      }
+      warningMessage += ' untuk pertandingan yang sedang/sudah selesai. Ini dapat memengaruhi data booking yang ada. <br><br>Ketik <strong>CONFIRM</strong> untuk melanjutkan.';
+
+      showConfirmationModal(
+        '⚠️ Peringatan',
+        warningMessage,
+        function() {
+          matchForm.submit();
+        }
+      );
+    }
+  });
+
 });
 </script>
 {% endblock list_content %}
