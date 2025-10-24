@@ -46,6 +46,7 @@ def _load_from_api_cache():
         return None
 
 # --- LOGIKA JSON (DB FIXTURE FALLBACK) ---
+
 def _load_from_fixture_json():
     """Memuat dan mentransformasi data dari file fixture db_backup.json."""
     if not DB_FIXTURE_PATH.exists():
@@ -274,7 +275,7 @@ def _get_sync_data():
             print(f"-> STATUS: Normalisasi API berhasil untuk {len(all_matches)} pertandingan.")
             _save_to_api_cache(all_matches) # Simpan ke cache API
             print("-> SUMBER DATA: Menggunakan data dari API.")
-            return all_matches
+            return all_matches, "api_live"
         else:
             print("-> PERINGATAN: Data API ada tapi tidak valid setelah normalisasi. Mencoba JSON Backup (API Cache)...")
     else:
@@ -284,7 +285,7 @@ def _get_sync_data():
     data_from_json = _load_from_api_cache() # Ini membaca 'matches_backup.json'
     if data_from_json:
         print("-> SUMBER DATA: Menggunakan data dari JSON Backup (API Cache).")
-        return data_from_json
+        return data_from_json, "api_cache"
 
     # 3 - Fallback ke DB Fixture JSON (db_backup.json)
     print(f"-> STATUS: API Cache ({API_CACHE_FILE_PATH.name}) tidak ditemukan. Mencoba memuat dari DB Fixture ({DB_FIXTURE_PATH.name})...")
@@ -295,11 +296,11 @@ def _get_sync_data():
         # Simpan data yang baru di-load dari fixture ini ke dalam file cache API (matches_backup.json)
         # agar pada run berikutnya, kita tidak perlu mem-parse fixture lagi.
         _save_to_api_cache(data_from_fixture)
-        return data_from_fixture
+        return data_from_fixture, "db_fixture"
     
     # 4 - Final failure
     print("-> ERROR: Gagal mendapatkan data dari semua sumber (API, API Cache, DB Fixture).")
-    return []
+    return [], "error_no_source"
 
 # --- FUNGSI UTAMA SINKRONISASI ---
 def sync_database_with_apis():
@@ -307,14 +308,16 @@ def sync_database_with_apis():
     print("=========================================")
     print("Memulai sinkronisasi database...")
     
-    data_to_sync = _get_sync_data()
+    data_to_sync, source_key = _get_sync_data()
     
     if not data_to_sync:
         print("-> DB: Tidak ada data valid untuk disinkronisasi. Proses DB Write dilewati.")
         print("=========================================")
         print("Sinkronisasi database selesai (tidak ada perubahan).")
         print("=========================================\n")
-        return
+        if source_key == "error_no_source":
+            return "Gagal mendapatkan data dari semua sumber (API, Cache, Fixture).", "error"
+        return "Tidak ada data baru untuk disinkronisasi (sumber: " + source_key + ").", source_key
     
     print(f"-> DB: Memulai pembaruan/pembuatan {len(data_to_sync)} entri database...")
     
@@ -449,3 +452,14 @@ def sync_database_with_apis():
     print("=========================================")
     print("Sinkronisasi database selesai.")
     print("=========================================\n")
+
+    if source_key == "api_live":
+        message = "Database berhasil disinkronkan dari API (Live)."
+    elif source_key == "api_cache":
+        message = "Database berhasil disinkronkan dari Cache API (matches_backup.json)."
+    elif source_key == "db_fixture":
+        message = "Database berhasil disinkronkan dari DB Fixture (db_backup.json)."
+    else:
+        message = "Sinkronisasi selesai."
+
+    return message, source_key
