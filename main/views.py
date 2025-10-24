@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from django.templatetags.static import static
 from django.utils import timezone
-from matches.models import Match
+from django.templatetags.static import static
+from matches.models import Match, Team
 from news.models import News
 
 def home(request):
@@ -48,8 +48,11 @@ def home(request):
         },
     ]
 
+    all_teams = Team.objects.all()
+
     return render(request, "main_page.html", {
         "hero_slides": hero_slides,
         "upcoming_matches": upcoming_matches,
         "latest_news": latest_news,
+        "teams": all_teams,
     })
