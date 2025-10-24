@@ -98,7 +98,6 @@
 
 <script>
     const initialValues = {};
-
     // Simpan nilai awal ketika page di load
     window.addEventListener('DOMContentLoaded', () => {
         const fields = ['first_name', 'last_name', 'username', 'email', 'phone', 'date_of_birth'];
@@ -112,19 +111,18 @@
 
     // Reset button 
     document.getElementById('resetBtn').addEventListener('click', function () {
-        // Reset text/date inputs
+        // Reset input
         for (const [key, value] of Object.entries(initialValues)) {
             const element = document.getElementById(key);
             if (element) {
                 element.value = value;
             }
         }
-        // Reset file input
+        // Reset profile picture
         const profilePictureInput = document.getElementById('profile_picture');
         if (profilePictureInput) {
             profilePictureInput.value = ''; 
         }
-
         // Notify user bahwa berhasil
         showToast("Berhasil membatalkan perubahan.", "info");
     });
@@ -149,8 +147,6 @@
 
         if (data.ok) {
             showToast(data.message, "success");
-
-            // Reload page untuk menampilkan perubahan
             setTimeout(() => window.location.reload(), 1000);
         } else {
             showToast(data.message || "Terjadi kesalahan saat menyimpan profil.", "error");

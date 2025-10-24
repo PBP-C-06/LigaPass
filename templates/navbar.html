@@ -23,7 +23,7 @@
           <div class="flex items-center gap-3">
             <h2 class="text-lg font-medium text-gray-800">Hi, <span id="navbar-username"></span></h2>
             <img id="navbar-profile-picture" src="" alt="Profile Picture"
-                 class="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md">
+              class="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md">
           </div>
         </a>
         <button id="logoutButton" class="text-red-500 hover:text-red-600 font-medium transition">
@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     mobileMenu.classList.toggle("hidden");
   });
 
-  // === [BARU] Logika Highlight Navigasi Aktif ===
+  // === Logika Highlight Navigasi Aktif ===
   const currentPath = window.location.pathname;
 
   // Target Link Navigasi
@@ -201,17 +201,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const data = await response.json();
 
     if (data.authenticated) {
-      // Tampilkan info user di Desktop
+      // Tampilkan info user di desktop
       userInfo.classList.remove("hidden");
       usernameEl.textContent = data.username;
       profilePic.src = data.profile_picture || DUMMY_USER_IMAGE;
 
-      // Tampilkan info user di Mobile
+      // Tampilkan info user di mobile
       mobileAuth.classList.remove("hidden");
       mobileUsernameEl.textContent = data.username;
       mobileProfilePic.src = data.profile_picture || DUMMY_USER_IMAGE;
       
-      // Set link profile untuk Desktop & Mobile
+      // Set link profile untuk desktop dan mobile
       let userProfileUrl = "#";
       if (data.role === "user") userProfileUrl = `/profiles/user/${data.id}/`;
       else if (data.role === "admin") userProfileUrl = `/profiles/admin/`;
