@@ -95,7 +95,7 @@
         
             if (response.ok && data.ok) {
                 showToast(data.message, "success");
-                
+                // Jika sudah sukses maka redirect ke home
                 setTimeout(() => {
                     window.location.href = "{% url 'main:home' %}";
                 }, 800);
