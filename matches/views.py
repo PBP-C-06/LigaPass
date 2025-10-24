@@ -18,6 +18,7 @@ from datetime import time
 from reviews.models import Review
 from bookings.models import Ticket
 from django.db.models import Avg
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 from .models import Team, Match, Venue, TicketPrice
@@ -111,23 +112,60 @@ def api_match_list(request):
         except ValueError:
             pass
 
-    grouped_matches = {'Upcoming': [], 'Ongoing': [], 'Finished': []}
+    now = timezone.now()
+    q_filter_status = Q()
     
+    allowed_statuses = []
     if status_filter:
         allowed_statuses = [s.strip() for s in status_filter.split(',') if s.strip()]
-    else:
-        allowed_statuses = ['Upcoming', 'Ongoing', 'Finished'] 
     
-    for match in queryset:
-        status = get_match_status(match.date)
-        
-        if status in allowed_statuses:
-            match.status_key = status
-            grouped_matches[status].append(_serialize_match(match))
+    if not allowed_statuses:
+        q_filter_status = Q(pk=None) 
+    else:
+        if 'Upcoming' in allowed_statuses:
+            q_filter_status |= Q(date__gt=now)
+        if 'Ongoing' in allowed_statuses:
+            q_filter_status |= Q(date__lte=now, date__gt=now - timedelta(hours=2.5))
+        if 'Finished' in allowed_statuses:
+            q_filter_status |= Q(date__lte=now - timedelta(hours=2.5))
+            
+    queryset = queryset.filter(q_filter_status)
+
+
+    page = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10) # Default 10 item per halaman
+    try:
+        per_page = int(per_page)
+        if per_page not in [5, 10, 25, 50]: # Batasi pilihan per_page
+            per_page = 10
+    except ValueError:
+        per_page = 10
+
+    paginator = Paginator(queryset, per_page)
+    try:
+        matches_page = paginator.page(page)
+    except PageNotAnInteger:
+        matches_page = paginator.page(1)
+    except EmptyPage:
+        matches_page = paginator.page(paginator.num_pages)
+
+    matches_list = []
+    
+    for match in matches_page.object_list:
+        matches_list.append(_serialize_match(match))
 
     return JsonResponse({
-        'grouped_matches': grouped_matches, 
+        'matches': matches_list, 
         'search_query': search_query,
+        'pagination': {
+            'total_pages': paginator.num_pages,
+            'current_page': matches_page.number,
+            'has_previous': matches_page.has_previous(),
+            'has_next': matches_page.has_next(),
+            'total_items': paginator.count,
+            'per_page': per_page,
+            'page_range': list(paginator.get_elided_page_range(number=matches_page.number, on_each_side=1, on_ends=1)),
+        }
     })
 
 def match_details_view(request, match_id):
@@ -251,7 +289,7 @@ class ManageBaseView(AdminRequiredMixin, ListView):
         context['action_url'] = reverse('matches:add_match')
         return context
 
-# --- MANAJEMEN VENUE (DITAMBAH) ---
+# --- MANAJEMEN VENUE ---
 
 class VenueListView(AdminRequiredMixin, ListView):
     model = Venue
