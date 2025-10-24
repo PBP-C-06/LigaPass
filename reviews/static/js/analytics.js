@@ -14,87 +14,102 @@ async function fetchJSON(url, params = {}) {
 // ====================================
 
 function initAdminAnalytics() {
-  const matchSelect = document.getElementById("matchFilter");
-  const seatSelect = document.getElementById("seatFilter");
+  const ticketSelect = document.getElementById("ticketPeriod"); // dropdown kiri
+  const revenueSelect = document.getElementById("revenuePeriod"); // dropdown kanan
 
   let revenueChart = null;
-  let occupancyChart = null;
-  let isUpdating = false;
+  let ticketChart = null;
 
-  async function updateCharts() {
-    if (isUpdating) return;
-    isUpdating = true;
-
+  // --- Update Total Tiket Terjual ---
+  async function updateTicketChart() {
+    const period = ticketSelect.value.toLowerCase();
     try {
-      const data = await fetchJSON("/reviews/analytics/admin/data/", {
-        match_id: matchSelect.value,
-        seat: seatSelect.value,
-      });
+      const data = await fetchJSON("/reviews/analytics/admin/data/", { period });
+      const labels = data.ticketsData.map((d) => d.date);
+      const values = data.ticketsData.map((d) => d.tickets_sold);
 
-      const labels = data.revenue_data.map(
-        (d) =>
-          `${d.ticket_type__match__home_team__name} vs ${d.ticket_type__match__away_team__name}`
-      );
-      const revenues = data.revenue_data.map((d) => d.total_revenue);
-      const occupancies = data.occupancy_data.map((d) => d.occupancy);
+      if (ticketChart) ticketChart.destroy();
+      const ctx = document.getElementById("ticketChart").getContext("2d");
 
-      // Hancurkan chart lama dulu agar tidak error “Canvas is already in use”
-      if (revenueChart) {
-        revenueChart.destroy();
-        revenueChart = null;
-      }
-      if (occupancyChart) {
-        occupancyChart.destroy();
-        occupancyChart = null;
-      }
-
-      // === CHART 1: Revenue Chart ===
-      const ctx1 = document.getElementById("revenueChart").getContext("2d");
-      revenueChart = new Chart(ctx1, {
+      ticketChart = new Chart(ctx, {
         type: "bar",
         data: {
           labels,
           datasets: [
             {
-              label: "Pendapatan (Rp)",
-              data: revenues,
-              backgroundColor: "#60a5fa",
+              label: "Tiket Terjual",
+              data: values,
+              backgroundColor: "#3b82f6",
+              borderRadius: 8,
             },
           ],
         },
         options: {
           responsive: true,
           plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } },
         },
-      });
-
-      // === CHART 2: Occupancy Chart ===
-      const ctx2 = document.getElementById("occupancyChart").getContext("2d");
-      occupancyChart = new Chart(ctx2, {
-        type: "doughnut",
-        data: {
-          labels: data.occupancy_data.map((d) => `${d.seat_category}`),
-          datasets: [
-            {
-              data: occupancies,
-              backgroundColor: ["#3b82f6", "#10b981", "#f59e0b"],
-            },
-          ],
-        },
-        options: { responsive: true },
       });
     } catch (err) {
-      console.error("❌ Gagal memuat data admin analytics:", err);
-    } finally {
-      isUpdating = false;
+      console.error("❌ Gagal load tiket analytics:", err);
     }
   }
 
-  matchSelect.addEventListener("change", updateCharts);
-  seatSelect.addEventListener("change", updateCharts);
-  updateCharts();
-}
+  // --- Update Total Pendapatan ---
+  async function updateRevenueChart() {
+    const period = revenueSelect.value.toLowerCase();
+    try {
+      const data = await fetchJSON("/reviews/analytics/admin/data/", { period });
+      const labels = data.revenueData.map((d) => d.date);
+      const values = data.revenueData.map((d) => d.total_revenue);
 
+      if (revenueChart) revenueChart.destroy();
+      const ctx = document.getElementById("revenueChart").getContext("2d");
+
+      revenueChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Pendapatan (Rp)",
+              data: values,
+              backgroundColor: "#10b981",
+              borderRadius: 8,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `Rp ${ctx.parsed.y.toLocaleString("id-ID")}`,
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: (v) => `Rp ${v.toLocaleString("id-ID")}` },
+            },
+          },
+        },
+      });
+    } catch (err) {
+      console.error("❌ Gagal load revenue analytics:", err);
+    }
+  }
+
+  // Listener terpisah
+  ticketSelect.addEventListener("change", updateTicketChart);
+  revenueSelect.addEventListener("change", updateRevenueChart);
+
+  // Load awal
+  updateTicketChart();
+  updateRevenueChart();
+}
 // ====================================
 // === USER ANALYTICS =================
 // ====================================
