@@ -2,7 +2,6 @@
 {% load static %}
 {% block content %}
 
-<!-- === HERO SECTION === -->
 <div class="relative w-full overflow-hidden group">
   <div id="hero-slider" class="flex transition-transform duration-700">
     {% for slide in hero_slides %}
@@ -21,7 +20,6 @@
     {% endfor %}
   </div>
 
-  <!-- Navigation Buttons -->
   <button id="prevSlide"
           class="absolute left-5 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 opacity-0 group-hover:opacity-100 transition">
     &#10094;
@@ -31,7 +29,6 @@
     &#10095;
   </button>
 
-  <!-- Dot Indicators -->
   <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2">
     {% for slide in hero_slides %}
       <span class="dot w-3 h-3 bg-white/60 rounded-full cursor-pointer transition hover:bg-white"></span>
@@ -64,7 +61,6 @@ dots.forEach((dot, i) => dot.addEventListener("click", () => { showSlide(i); res
 showSlide(0);
 </script>
 
-<!-- === UPCOMING MATCHES === -->
 <section class="py-12 px-10 bg-gray-50">
   <div class="flex justify-between items-center mb-6">
     <h2 class="text-3xl font-bold text-gray-800">Pertandingan Mendatang</h2>
@@ -80,6 +76,90 @@ showSlide(0);
   </div>
 </section>
 
-<!-- === LATEST NEWS === -->
+<style>
+@keyframes scroll-right-infinite {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.slider-track {
+  display: flex;
+  width: auto;
+  animation: scroll-right-infinite 60s linear infinite;
+}
+
+.slider-container {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+}
+
+.slider-container:hover .slider-track {
+  animation-play-state: paused;
+}
+
+.slider-item {
+  flex-shrink: 0;
+  width: auto; 
+  padding: 0 2rem;
+  height: 6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  position: relative;
+  z-index: 1;
+}
+
+.slider-item:hover {
+  z-index: 10;
+}
+
+.slider-item img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  filter: brightness(1.1) grayscale(80%);
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+.slider-item:hover img {
+  filter: none;
+  opacity: 1;
+  transform: scale(1.1);
+}
+</style>
+
+<section class="py-10 px-10 bg-gray-50">
+  <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Tim Liga 1</h2>
+  
+  <div class="slider-container w-full overflow-hidden relative py-4">
+    <div class="slider-track">
+      
+      <div class="flex min-w-full justify-between flex-shrink-0">
+        {% for team in teams %}
+          <div class="slider-item">
+            <img src="{{ team.display_logo_url }}" alt="{{ team.name }} Logo">
+          </div>
+        {% empty %}
+          <p class="text-gray-500 p-8">Belum ada tim yang terdaftar.</p>
+        {% endfor %}
+      </div>
+
+      <div class="flex min-w-full justify-between flex-shrink-0">
+        {% for team in teams %}
+          <div class="slider-item">
+            <img src="{{ team.display_logo_url }}" alt="{{ team.name }} Logo">
+          </div>
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+</section>
 {% include 'news/latest_news_snippets.html' %}
 {% endblock %}
