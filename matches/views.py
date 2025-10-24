@@ -39,8 +39,8 @@ def _get_cleaned_messages(request):
     message_list = []
     for message in django_messages:
         message_list.append({
-            'message': str(message), 
-            'tags': message.tags  
+            'message': str(message),
+            'tags': message.tags
         })
     return message_list
 
@@ -70,17 +70,18 @@ def _serialize_match(match):
 # --- FUNCTION-BASED VIEWS ---
 def match_calendar_view(request):
     search_query = request.GET.get('q', '')
-    
+
     context = {
         'messages_json': _get_cleaned_messages(request),
         'search_query': search_query,
         'venues': Venue.objects.all().order_by('name'),
+        'teams': Team.objects.all().order_by('name')
     }
     return render(request, 'matches/calendar.html', context)
 
 def api_match_list(request):
     queryset = Match.objects.select_related('home_team', 'away_team', 'venue').order_by('date')
-    
+
     search_query = request.GET.get('q', '')
     date_start_filter = request.GET.get('date_start', '')
     date_end_filter = request.GET.get('date_end', '')
@@ -92,7 +93,7 @@ def api_match_list(request):
             Q(home_team__name__icontains=search_query) |
             Q(away_team__name__icontains=search_query)
         )
-    
+
     if venue_filter:
         queryset = queryset.filter(venue__id=venue_filter)
 
@@ -100,7 +101,7 @@ def api_match_list(request):
         try:
             start_date = dt.strptime(date_start_filter, '%Y-%m-%d').date()
             start_datetime = timezone.make_aware(dt.combine(start_date, time.min))
-            
+
             if date_end_filter:
                 end_date = dt.strptime(date_end_filter, '%Y-%m-%d').date()
                 end_datetime = timezone.make_aware(dt.combine(end_date, time.max))
@@ -108,35 +109,39 @@ def api_match_list(request):
             else:
                 end_datetime = timezone.make_aware(dt.combine(start_date, time.max))
                 queryset = queryset.filter(date__range=(start_datetime, end_datetime))
-                
+
         except ValueError:
             pass
 
     now = timezone.now()
     q_filter_status = Q()
-    
+    status_filter = request.GET.get('status', '')
+
     allowed_statuses = []
     if status_filter:
         allowed_statuses = [s.strip() for s in status_filter.split(',') if s.strip()]
-    
-    if not allowed_statuses:
-        q_filter_status = Q(pk=None) 
-    else:
+
+    if allowed_statuses:
         if 'Upcoming' in allowed_statuses:
             q_filter_status |= Q(date__gt=now)
         if 'Ongoing' in allowed_statuses:
             q_filter_status |= Q(date__lte=now, date__gt=now - timedelta(hours=2.5))
         if 'Finished' in allowed_statuses:
             q_filter_status |= Q(date__lte=now - timedelta(hours=2.5))
-            
-    queryset = queryset.filter(q_filter_status)
+
+        if q_filter_status != Q():
+             queryset = queryset.filter(q_filter_status)
+        else:
+             pass
+    else:
+        pass
 
 
     page = request.GET.get('page', 1)
-    per_page = request.GET.get('per_page', 10) # Default 10 item per halaman
+    per_page = request.GET.get('per_page', 10)
     try:
         per_page = int(per_page)
-        if per_page not in [5, 10, 25, 50]: # Batasi pilihan per_page
+        if per_page not in [5, 10, 25, 50]:
             per_page = 10
     except ValueError:
         per_page = 10
@@ -150,12 +155,12 @@ def api_match_list(request):
         matches_page = paginator.page(paginator.num_pages)
 
     matches_list = []
-    
+
     for match in matches_page.object_list:
         matches_list.append(_serialize_match(match))
 
     return JsonResponse({
-        'matches': matches_list, 
+        'matches': matches_list,
         'search_query': search_query,
         'pagination': {
             'total_pages': paginator.num_pages,
@@ -214,9 +219,9 @@ def match_details_view(request, match_id):
 def update_matches_view(request):
     print("Memicu pembaruan database dari API...")
     message, sync_status = sync_database_with_apis()
-    
+
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        
+
         json_status = "error" if sync_status in ["error", "error_no_source"] else "success"
 
         return JsonResponse({
@@ -229,8 +234,8 @@ def update_matches_view(request):
         messages.success(request, message)
     else:
         messages.error(request, message)
-        
-    return redirect('matches:calendar') 
+
+    return redirect('matches:calendar')
 
 def live_score_api(request, match_api_id):
     cache_key = f"live_score_single_{match_api_id}"
@@ -241,22 +246,22 @@ def live_score_api(request, match_api_id):
         return JsonResponse(cached_data)
 
     print(f"Mengambil live score untuk match {match_api_id} dari Free API (Single Match).")
-    
+
     url = "https://free-api-live-football-data.p.rapidapi.com/football-get-match"
     headers = {
         'x-rapidapi-key': settings.RAPID_API_KEY,
         'x-rapidapi-host': 'free-api-live-football-data.p.rapidapi.com'
     }
     params = {'matchid': match_api_id}
-    
+
     try:
         response = requests.get(url, headers=headers, params=params, timeout=10)
         response.raise_for_status()
         api_data = response.json().get('response', {}).get('match', None)
-        
+
         if not api_data:
             return JsonResponse({'error': 'Match not found in API'}, status=404)
-        
+
         live_data = {
             'home_goals': api_data['home']['score'],
             'away_goals': api_data['away']['score'],
@@ -264,7 +269,7 @@ def live_score_api(request, match_api_id):
             'status_long': api_data['status']['long'],
             'elapsed': api_data['status']['liveTime'].get('long', '0:00') if api_data['status'].get('liveTime') else '0:00',
         }
-        
+
         cache.set(cache_key, live_data, timeout=10)
         return JsonResponse(live_data)
 
@@ -279,13 +284,13 @@ class ManageBaseView(AdminRequiredMixin, ListView):
     Menampilkan daftar pertandingan secara default.
     """
     model = Match
-    template_name = 'matches/manage/match_list.html' 
+    template_name = 'matches/manage/match_list.html'
     context_object_name = 'matches'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['messages_json'] = _get_cleaned_messages(self.request)
-        context['current_page'] = 'matches' 
+        context['current_page'] = 'matches'
         context['action_url'] = reverse('matches:add_match')
         return context
 
@@ -328,18 +333,18 @@ class VenueUpdateView(AdminRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, f'Venue "{form.instance.name}" berhasil diperbarui.')
         return super().form_valid(form)
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_update'] = True
         context['current_page'] = 'venues'
         return context
-    
+
 class VenueDeleteView(AdminRequiredMixin, DeleteView):
     model = Venue
     template_name = 'matches/manage/venue_confirm_delete.html'
     success_url = reverse_lazy('matches:manage_venues')
-    
+
     def form_valid(self, form):
         messages.success(self.request, f'Venue "{self.object.name}" berhasil dihapus.')
         return super().form_valid(form)
@@ -369,7 +374,7 @@ class TeamCreateView(AdminRequiredMixin, CreateView):
     success_url = reverse_lazy('matches:manage_teams')
 
     def form_valid(self, form):
-        self.object = form.save() 
+        self.object = form.save()
         messages.success(self.request, f'Tim "{self.object.name}" berhasil ditambahkan.')
         return redirect(self.get_success_url())
 
@@ -397,23 +402,23 @@ class TeamUpdateView(AdminRequiredMixin, UpdateView):
         context['messages_json'] = _get_cleaned_messages(self.request)
         context['current_page'] = 'teams'
         return context
-    
+
 class TeamDeleteView(AdminRequiredMixin, DeleteView):
     model = Team
     template_name = 'matches/manage/team_confirm_delete.html'
     success_url = reverse_lazy('matches:manage_teams')
-    
+
     def form_valid(self, form):
         team_name = self.object.name
         messages.success(self.request, f'Tim "{team_name}" berhasil dihapus.')
         return super().form_valid(form)
-        
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['messages_json'] = _get_cleaned_messages(self.request)
         context['current_page'] = 'teams'
         return context
-    
+
 # --- MANAJEMEN MATCH & MIXIN ---
 
 class MatchListView(AdminRequiredMixin, ListView):
@@ -431,20 +436,20 @@ class MatchCreateUpdateMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         is_update_mode = self.object is not None and self.object.pk is not None
-        
+
         if self.request.POST:
             context['formset'] = TicketPriceFormSet(self.request.POST, self.request.FILES, instance=self.object)
         else:
             context['formset'] = TicketPriceFormSet(instance=self.object)
-            
+
         context['is_update'] = is_update_mode
-        context['messages_json'] = _get_cleaned_messages(self.request) 
+        context['messages_json'] = _get_cleaned_messages(self.request)
         context['current_page'] = 'matches'
         return context
 
 class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
     model = Match
-    form_class = MatchForm 
+    form_class = MatchForm
     template_name = 'matches/manage/match_form.html'
     success_url = reverse_lazy('matches:manage_matches')
 
@@ -456,16 +461,16 @@ class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
-        
+
         if not self.object.pk:
             self.object.api_id = None
             self.object.status_short = "NS"
             self.object.status_long = "Not Started"
             self.object.home_goals = None
             self.object.away_goals = None
-            
+
         self.object.save()
-        form.save_m2m() 
+        form.save_m2m()
 
         formset = TicketPriceFormSet(self.request.POST, self.request.FILES, instance=self.object)
 
@@ -476,10 +481,10 @@ class MatchCreateView(AdminRequiredMixin, MatchCreateUpdateMixin, CreateView):
             return redirect(self.get_success_url())
         else:
             messages.error(self.request, "Gagal menambahkan harga tiket. Pertandingan yang dibuat telah dihapus. Silakan coba lagi.")
-            self.object.delete() 
-            
+            self.object.delete()
+
             context = self.get_context_data(form=form)
-            context['formset'] = formset 
+            context['formset'] = formset
             return self.render_to_response(context)
 
 class MatchUpdateView(AdminRequiredMixin, MatchCreateUpdateMixin, UpdateView):
@@ -487,18 +492,18 @@ class MatchUpdateView(AdminRequiredMixin, MatchCreateUpdateMixin, UpdateView):
     form_class = MatchForm
     template_name = 'matches/manage/match_form.html'
     success_url = reverse_lazy('matches:manage_matches')
-    
+
     def get_queryset(self):
         return super().get_queryset().select_related('home_team', 'away_team')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        status = get_match_status(self.object.date) 
+
+        status = get_match_status(self.object.date)
         context['is_match_live_or_finished'] = status in ['Ongoing', 'Finished']
-        
+
         context['is_update'] = True
-        context['messages_json'] = _get_cleaned_messages(self.request) 
+        context['messages_json'] = _get_cleaned_messages(self.request)
         context['current_page'] = 'matches'
         return context
 
@@ -506,20 +511,20 @@ class MatchUpdateView(AdminRequiredMixin, MatchCreateUpdateMixin, UpdateView):
         self.object = form.save(commit=False)
 
         self.object.save()
-        form.save_m2m() 
+        form.save_m2m()
 
         formset = TicketPriceFormSet(self.request.POST, self.request.FILES, instance=self.object)
 
         if formset.is_valid():
             formset.save()
-            
+
             messages.success(self.request, f'Pertandingan {self.object.home_team.name} vs {self.object.away_team.name} berhasil diperbarui.')
             return redirect(self.get_success_url())
         else:
             messages.error(self.request, "Gagal memperbarui harga tiket.")
-            
+
             context = self.get_context_data(form=form)
-            context['formset'] = formset 
+            context['formset'] = formset
             return self.render_to_response(context)
 
 class MatchDeleteView(AdminRequiredMixin, DeleteView):
