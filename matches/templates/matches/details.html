@@ -4,7 +4,11 @@
 {% if user.is_authenticated %}
   {% include "components/step_wizard.html" with step=1 %}
 {% endif %}
-<div class="bg-white max-w-4xl mx-auto p-8 rounded-xl shadow-lg border border-slate-200">
+<div id="match-details-container"
+     data-match-start-time="{{ match.date.isoformat }}"
+     data-match-status="{{ match.status_key }}"
+     class="bg-white max-w-4xl mx-auto p-8 rounded-xl shadow-lg border border-slate-200">
+
   {% if user.is_authenticated and user.role == 'admin' %}
   <div class="text-right mb-4">
     <a href="{% url 'matches:edit_match' match.id %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors inline-flex items-center space-x-1">
@@ -26,9 +30,7 @@
     </div>
 
     <div class="text-center">
-      {% if match.status_key == 'Ongoing' %}
-      <div id="top-timer" class="text-lg font-semibold text-gray-600 mb-1"><span id="elapsed-time">N/A</span></div>
-      {% endif %}
+      <div id="top-timer" class="text-lg font-semibold text-gray-600 mb-1 {% if match.status_key != 'Ongoing' %}hidden{% endif %}"><span id="elapsed-time">00:00</span></div>
       <p id="score-display" class="text-5xl font-bold text-slate-900">{{ match.home_goals|default:"0" }} - {{ match.away_goals|default:"0" }}</p>
       <div id="status-container" class="mt-2">
         {% if match.status_key == 'Finished' %}
@@ -84,7 +86,7 @@
         {% for i in "12345" %}
           {% if forloop.counter <= avg_rating|floatformat:0 %}⭐{% else %}☆{% endif %}
         {% endfor %}
-        <span class="text-slate-800 ml-2">{{ avg_rating }}/5 dari {{ review_count }} ulasan</span>
+        <span class="text-slate-800 ml-2">{{ avg_rating }}/5 dari {{ reviews.count }} ulasan</span>
       </div>
     </div>
 
@@ -149,7 +151,6 @@
 </div>
 
 
-<!-- === MODAL EDIT / ADD REVIEW === -->
 <div id="review-modal" class="fixed inset-0 bg-black/40 hidden z-50 flex items-center justify-center">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 text-center relative">
     <h3 class="text-xl font-bold text-gray-900 mb-1" id="modal-title">Beri Ulasan Anda</h3>
@@ -177,7 +178,6 @@
   </div>
 </div>
 
-<!-- === MODAL REPLY ADMIN === -->
 <div id="reply-modal" class="fixed inset-0 bg-black/40 hidden z-50 flex items-center justify-center">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
     <h3 class="text-lg font-bold text-gray-900 mb-2">Balas Review</h3>
@@ -192,9 +192,128 @@
   </div>
 </div>
 
+{% endblock %}
+
+
+{% block scripts %}
+{{ block.super }}
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  // === ELEMENTS ===
+    const matchContainer = document.getElementById('match-details-container');
+    const elapsedTimeEl = document.getElementById('elapsed-time');
+    const statusBadgeEl = document.getElementById('status-badge');
+    const timerContainerEl = document.getElementById('top-timer');
+
+    const matchStatus = matchContainer.dataset.matchStatus;
+    const matchStartTimeISO = matchContainer.dataset.matchStartTime;
+
+    let intervalId = null;
+    let matchStartTime = null;
+    let isHalftime = false;
+    let halftimeEndTime = null;
+    const halftimeDurationMinutes = 15;
+    const halftimeStartMinutes = 45;
+    const fullTimeMinutes = 90;
+    const localCheckIntervalMs = 1000;
+
+    function formatTime(minutes) {
+        if (typeof minutes !== 'number' || isNaN(minutes) || minutes < 0) {
+            return '00:00';
+        }
+        const mins = Math.floor(minutes);
+        const secs = Math.floor((minutes * 60) % 60);
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function stopTimer() {
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+            console.log("Local timer stopped.");
+        }
+    }
+
+    function updateMatchState(statusText, badgeClass) {
+        if (statusBadgeEl) {
+            statusBadgeEl.textContent = statusText;
+            statusBadgeEl.className = `text-xs font-bold px-2 py-1 rounded ${badgeClass}`;
+             statusBadgeEl.classList.remove('animate-pulse');
+        }
+        stopTimer();
+        if (timerContainerEl) timerContainerEl.classList.add('hidden');
+    }
+
+    function calculateAndUpdateLocalTime() {
+        if (!matchStartTime) return;
+
+        const now = new Date();
+        const diffMs = now - matchStartTime;
+        let elapsedMinutes = diffMs / (1000 * 60);
+
+        if (isHalftime) {
+            if (halftimeEndTime && now >= halftimeEndTime) {
+                console.log("Halftime finished, resuming timer.");
+                isHalftime = false;
+                const timeAfterHalftimeMs = now - halftimeEndTime;
+                elapsedMinutes = halftimeStartMinutes + (timeAfterHalftimeMs / (1000 * 60));
+            } else {
+                elapsedTimeEl.textContent = 'Half Time';
+                return;
+            }
+        } else if (elapsedMinutes >= halftimeStartMinutes && elapsedMinutes < (halftimeStartMinutes + halftimeDurationMinutes) && !halftimeEndTime) {
+            console.log("Entering halftime locally.");
+            isHalftime = true;
+            halftimeEndTime = new Date(now.getTime() + halftimeDurationMinutes * 60000);
+            elapsedTimeEl.textContent = 'Half Time';
+            return;
+        }
+
+        let actualPlayingMinutes = elapsedMinutes;
+        if (elapsedMinutes > (halftimeStartMinutes + halftimeDurationMinutes)) {
+            actualPlayingMinutes = elapsedMinutes - halftimeDurationMinutes;
+        } else if (isHalftime) {
+             actualPlayingMinutes = halftimeStartMinutes;
+        }
+
+
+        if (actualPlayingMinutes <= fullTimeMinutes) {
+             if (!isHalftime) {
+                elapsedTimeEl.textContent = formatTime(actualPlayingMinutes);
+             }
+        } else {
+             elapsedTimeEl.textContent = `${fullTimeMinutes}:00+`;
+             if (statusBadgeEl && statusBadgeEl.textContent !== 'Finished') {
+                updateMatchState('Finished', 'bg-red-500 text-white');
+             }
+        }
+    }
+
+    if (matchStatus === 'Ongoing') {
+        try {
+            matchStartTime = new Date(matchStartTimeISO);
+            if (isNaN(matchStartTime)) {
+                throw new Error("Invalid match start time format");
+            }
+            console.log("Starting local timer calculation.");
+            intervalId = setInterval(calculateAndUpdateLocalTime, localCheckIntervalMs);
+            calculateAndUpdateLocalTime();
+
+        } catch (e) {
+            console.error("Error initializing local timer:", e);
+            if(elapsedTimeEl) elapsedTimeEl.textContent = "Error";
+            if (timerContainerEl) timerContainerEl.classList.remove('hidden');
+        }
+    } else {
+        console.log("Match is not ongoing, timer not started.");
+        if (timerContainerEl) timerContainerEl.classList.add('hidden');
+    }
+
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
   const modal = document.getElementById("review-modal");
   const textArea = document.getElementById("review-text");
   const stars = document.querySelectorAll("#rating-stars .star");
@@ -204,7 +323,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalSubtitle = document.getElementById("modal-subtitle");
   let selectedRating = 0, isEditing = false;
 
-  // === OPEN MODAL (EDIT) ===
   document.querySelectorAll(".edit-review-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const rating = parseInt(btn.dataset.rating);
@@ -223,7 +341,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // === STAR RATING ===
   stars.forEach(star => {
     star.addEventListener("click", () => {
       selectedRating = parseInt(star.dataset.value);
@@ -235,7 +352,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // === CANCEL ===
   cancelBtn.addEventListener("click", () => {
     modal.classList.add("hidden");
     textArea.value = "";
@@ -243,7 +359,6 @@ document.addEventListener("DOMContentLoaded", () => {
     stars.forEach(s => s.classList.replace("text-yellow-400", "text-gray-300"));
   });
 
-  // === SUBMIT ===
   submitBtn.addEventListener("click", async () => {
     const comment = textArea.value.trim();
     if (!selectedRating || !comment) {
@@ -267,7 +382,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // === REPLY ADMIN ===
   const replyModal = document.getElementById("reply-modal");
   const replyText = document.getElementById("reply-text");
   let selectedReviewId = null;
