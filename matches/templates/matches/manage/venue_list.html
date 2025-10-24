@@ -1,4 +1,5 @@
 {% extends 'matches/manage/admin_manage_base.html' %}
+{% load static %}
 {% block title %}Manajemen Venue{% endblock %}
 
 {% block list_content %}
@@ -22,8 +23,20 @@
         </div>
       </div>
 
-      <div class="w-full h-32 bg-white border border-slate-200 rounded-md flex items-center justify-center text-slate-400 text-xs italic">
-        [Foto Venue Belum Tersedia]
+      <div class="w-full h-32 bg-white border border-slate-200 rounded-md flex items-center justify-center text-slate-400 text-xs italic overflow-hidden">
+        
+        {% with name_and_city=venue.name|add:" "|add:venue.city %}
+        {% with filename=name_and_city|lower|cut:","|cut:"."|slugify|add:".png" %}
+        <img src="{% static 'venues/'|add:filename %}" 
+             alt="Foto Venue {{ venue.name }}"
+             onerror="this.onerror=null;this.src='{% static 'images/thumbnail_placeholder.png' %}';"
+             class="w-full h-full object-cover">
+        {% endwith %}
+        {% endwith %}
+
+        <noscript>
+            [Foto Venue Belum Tersedia]
+        </noscript>
       </div>
     </div>
     {% empty %}
