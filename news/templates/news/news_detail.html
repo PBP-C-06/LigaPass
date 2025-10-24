@@ -1,14 +1,11 @@
 <!-- Extend dari template dasar yang berisi struktur HTML umum (navbar dan footer) -->
 {% extends "base.html" %}
+{% load static %}
 
 <!-- Set judul halaman yang ditampilkan di tab browser -->
 {% block title %}{{ news.title }} - LigaPass{% endblock %}
-<<<<<<< HEAD
 
 <!-- Blok konten utama halaman -->
-=======
-{% load static %}
->>>>>>> 2dbde66e09625f0490ddc275baff4f05b1984896
 {% block content %}
 <a href="{% url 'news:news_list' %}" class="inline-flex items-center text-blue-600 hover:underline mb-4">
   ← Kembali ke Daftar Berita
@@ -117,9 +114,14 @@
     </form>
   </div>
 {% else %}
-  <p class="text-gray-600 mt-8">
-    <a href="{% url 'login' %}" class="text-blue-600 underline">Login</a> untuk berkomentar.
-  </p>
+  <div class="mt-8">
+    <p class="text-gray-600 mb-4">Login terlebih dahulu untuk bisa meninggalkan komentar.</p>
+    <a href="{% url 'authentication:login' %}"
+      class="inline-block px-6 py-3 bg-red-600 text-white font-semibold rounded shadow hover:bg-blue-700 transition duration-300">
+      🔐 Login Sekarang
+    </a>
+  </div>
+
 {% endif %}
 
 <!-- Modal Konfirmasi Hapus Komentar -->
