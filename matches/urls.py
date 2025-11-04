@@ -10,6 +10,8 @@ from .views import (
     match_details_view,
     update_matches_view,
     TeamListView, TeamCreateView, TeamUpdateView, TeamDeleteView,
+    VenueListView, VenueCreateView, VenueUpdateView, VenueDeleteView,
+    ManageBaseView,
 )
 
 app_name = 'matches'
@@ -30,6 +32,9 @@ urlpatterns = [
     path('api/calendar/', api_match_list, name='api_calendar'),
 
     # URL untuk Manajemen Admin (CUD)
+    # Base Management URL
+    path('manage/', ManageBaseView.as_view(), name='manage_base'),
+
     # Teams
     path('manage/teams/', TeamListView.as_view(), name='manage_teams'),
     path('manage/teams/add/', TeamCreateView.as_view(), name='add_team'),
@@ -41,4 +46,10 @@ urlpatterns = [
     path('manage/matches/add/', MatchCreateView.as_view(), name='add_match'),
     path('manage/matches/edit/<uuid:pk>/', MatchUpdateView.as_view(), name='edit_match'), 
     path('manage/matches/delete/<uuid:pk>/', MatchDeleteView.as_view(), name='delete_match'),
+    
+    # Venues
+    path('manage/venues/', VenueListView.as_view(), name='manage_venues'),
+    path('manage/venues/add/', VenueCreateView.as_view(), name='add_venue'),
+    path('manage/venues/edit/<uuid:pk>/', VenueUpdateView.as_view(), name='edit_venue'),
+    path('manage/venues/delete/<uuid:pk>/', VenueDeleteView.as_view(), name='delete_venue'),
 ]

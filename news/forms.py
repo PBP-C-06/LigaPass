@@ -1,5 +1,5 @@
 from django import forms
-from .models import News
+from .models import News, Comment
 from django.forms.widgets import ClearableFileInput
 
 class PlainFileInput(ClearableFileInput):
@@ -14,11 +14,7 @@ class NewsForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition',
                 'placeholder': 'Masukkan judul berita...'
             }),
-            'content': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition',
-                'rows': 6,
-                'placeholder': 'Tulis isi berita...'
-            }),
+            'content': forms.HiddenInput(),
             'category': forms.Select(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition'
             }),
@@ -26,4 +22,19 @@ class NewsForm(forms.ModelForm):
             'is_featured': forms.CheckboxInput(attrs={
                 'class': 'h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
             }),
+        }
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2 border rounded-md',
+                'rows': 3,
+                'placeholder': 'Tulis komentar...'
+            })
+        }
+        labels = {
+            'content': ''
         }

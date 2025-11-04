@@ -43,16 +43,13 @@ class Venue(models.Model):
         return f"{self.name}, {self.city}"
 
 class Match(models.Model):
-    # Sudah menggunakan UUID sejak awal
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     api_id = models.IntegerField(unique=True, null=True, blank=True)
     
-    # ForeignKey ke Team sekarang otomatis menggunakan UUID
     home_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='home_matches')
     away_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='away_matches')
     
-    # ForeignKey ke Venue sekarang otomatis menggunakan UUID
     venue = models.ForeignKey(Venue, on_delete=models.SET_NULL, null=True, blank=True)
     date = models.DateTimeField()
     
@@ -72,7 +69,6 @@ class TicketPrice(models.Model):
         ('REGULAR', 'Regular'),
     ]
 
-    # ForeignKey ke Match menggunakan UUID
     match = models.ForeignKey(Match, on_delete=models.CASCADE, related_name='ticket_prices')
     
     seat_category = models.CharField(max_length=10, choices=SEAT_CATEGORIES)

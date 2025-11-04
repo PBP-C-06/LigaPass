@@ -1,49 +1,85 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Kalender Pertandingan{% endblock %}
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   <h1 class="text-3xl font-bold text-center mb-6 text-slate-800">Kalender Pertandingan</h1>
-  
-  <form id="search-filter-form" method="GET" action="{% url 'matches:calendar' %}" class="mb-8 mt-6 space-y-4">
-    <div class="flex">
-      <input type="text" name="q" id="search-input" placeholder="Cari nama tim..." value="{{ search_query|default:'' }}"
-        class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400">
+
+  <h2 class="text-2xl font-semibold mb-4 text-slate-700">Tim Liga 1</h2>
+  <div class="w-full mb-8 relative group">
+
+    <div id="team-slider-container" class="flex overflow-x-auto space-x-4 pb-4 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+
+      {% for team in teams %}
+      <a href="#"
+         class="team-filter-card flex-shrink-0 w-32 bg-white p-4 rounded-lg border border-slate-200 text-center hover:shadow-lg hover:border-blue-400 transition-all duration-200 cursor-pointer"
+         data-team-name="{{ team.name }}">
+
+        <img src="{{ team.display_logo_url }}" alt="{{ team.name }} logo" class="h-16 w-16 mx-auto mb-2 object-contain pointer-events-none">
+
+        <span class="text-xs font-semibold text-slate-800 pointer-events-none line-clamp-2">{{ team.name }}</span>
+      </a>
+      {% endfor %}
+
     </div>
-    
+
+    <button id="slider-btn-left" class="absolute top-1/2 left-2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-md cursor-pointer hover:bg-white opacity-0 group-hover:opacity-100 transition-all duration-300 hidden">
+      <svg class="w-5 h-5 text-slate-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+      </svg>
+    </button>
+    <button id="slider-btn-right" class="absolute top-1/2 right-2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-md cursor-pointer hover:bg-white opacity-0 group-hover:opacity-100 transition-all duration-300">
+      <svg class="w-5 h-5 text-slate-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+      </svg>
+    </button>
+
+  </div>
+
+  <form id="search-filter-form" class="mb-8 mt-6 space-y-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="text" name="q" id="search-input" placeholder="Cari nama tim..." value="{{ search_query|default:'' }}"
+            class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400">
+        <select name="per_page" id="per-page-select" class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
+            <option value="10" selected>10 entri per halaman</option>
+            <option value="25">25 entri per halaman</option>
+            <option value="50">50 entri per halaman</option>
+        </select>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <select id="date-mode-filter" class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
+      <select id="date-mode-filter" class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
           <option value="single">Tanggal Tertentu</option>
           <option value="range">Rentang Tanggal</option>
       </select>
 
-      <input type="date" name="date_start" id="date-start-filter" 
-        class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400"
-        placeholder="Tanggal Mulai">
-      
-      <input type="date" name="date_end" id="date-end-filter" 
-        class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400 hidden"
+      <input type="date" name="date_start" id="date-start-filter"
+        class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400 md:col-span-2">
+
+      <input type="date" name="date_end" id="date-end-filter"
+        class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none placeholder-slate-400 hidden md:col-span-1"
         placeholder="Tanggal Akhir">
 
-      <div id="status-checkbox-container" class="col-span-1 p-3 bg-white rounded-lg border border-slate-300 space-y-1">
+      <div id="status-checkbox-container" class="md:col-span-1 p-3 bg-white rounded-lg border border-slate-300 space-y-1">
           <p class="text-xs font-semibold text-slate-600 mb-1">Filter Status:</p>
           <div class="flex items-center space-x-2">
-              <input type="checkbox" id="status-upcoming" name="status" value="Upcoming" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <input type="checkbox" id="status-upcoming" name="status" value="Upcoming" class="filter-change form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
               <label for="status-upcoming" class="text-sm text-slate-800">Upcoming</label>
           </div>
           <div class="flex items-center space-x-2">
-              <input type="checkbox" id="status-ongoing" name="status" value="Ongoing" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <input type="checkbox" id="status-ongoing" name="status" value="Ongoing" class="filter-change form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
               <label for="status-ongoing" class="text-sm text-slate-800">Ongoing</label>
           </div>
           <div class="flex items-center space-x-2">
-              <input type="checkbox" id="status-finished" name="status" value="Finished" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <input type="checkbox" id="status-finished" name="status" value="Finished" class="filter-change form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
               <label for="status-finished" class="text-sm text-slate-800">Finished</label>
           </div>
       </div>
-      </div>
+    </div>
 
     <div class="grid grid-cols-1">
         <select name="venue" id="venue-filter"
-          class="w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          class="filter-change w-full p-3 rounded-lg bg-white text-slate-800 border border-slate-300 focus:ring-2 focus:ring-blue-400 focus:outline-none">
           <option value="">Semua Tempat</option>
           {% for venue in venues %}
               <option value="{{ venue.id }}">{{ venue.name }}, {{ venue.city }}</option>
@@ -51,35 +87,38 @@
         </select>
     </div>
 
+     <div class="flex justify-end gap-3">
+        <button type="button" id="reset-filters-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2 rounded-lg font-semibold shadow transition">
+            Reset
+        </button>
+    </div>
+
   </form>
 
   {% if user.is_authenticated and user.role == 'admin' %}
-    <div class="text-center mb-4">
-      <button id="update-api-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition">
-        Update Data dari API
+    <div class="text-center mb-6">
+      <button id="update-api-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition inline-flex items-center space-x-2">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+        <span>Update Data dari API</span>
       </button>
     </div>
   {% endif %}
 
-  <div id="messages-container">
-    {% if messages %}
-      {% for message in messages %}
-        <div class="bg-green-100 border border-green-300 text-green-800 p-3 rounded-lg mb-4 text-center">
-          {{ message }}
-        </div>
-      {% endfor %}
-    {% endif %}
-  </div>
+  <div id="messages-container" class="mb-6"></div>
 
-  <div id="matches-container">
+  <div id="matches-container" class="mb-8">
     <div class="text-center py-8 text-gray-500">Memuat data pertandingan...</div>
   </div>
 
   <div class="bg-slate-50 border border-slate-200 p-6 rounded-lg text-center hidden" id="no-matches-found">
-    <p class="text-slate-600">Tidak ada pertandingan yang ditemukan.</p>
+    <p class="text-slate-600">Tidak ada pertandingan yang ditemukan sesuai filter.</p>
   </div>
 
-  <div id="loading-overlay" class="fixed inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 opacity-0 z-10">
+  <div id="pagination-controls" class="mt-8 flex justify-center items-center space-x-2 hidden"></div>
+
+  <div id="loading-overlay" class="fixed inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 opacity-0 z-50 bg-white/50 backdrop-blur-sm">
     <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
   </div>
 </div>
@@ -88,126 +127,194 @@
 {% block scripts %}
 {{ block.super }}
 <script>
+const USER_IS_ADMIN = {% if user.is_authenticated and user.role == 'admin' %}true{% else %}false{% endif %};
+
 function getCookie(name) {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
   if (parts.length === 2) return parts.pop().split(';').shift();
 }
 const CSRF_TOKEN = getCookie('csrftoken');
-// PERUBAHAN: Mengganti 'Past' menjadi 'Finished'
-const STATUS_ORDER = ['Upcoming', 'Ongoing', 'Finished']; 
+let currentPage = 1;
+let currentPerPage = 10;
+const placeholderImageUrl = '{% static "images/thumbnail_placeholder.png" %}';
 
-function renderMatchCard(match) {
-  // PERUBAHAN: Cek status_key === 'Finished'
+const STATUS_STYLES = {
+    'Upcoming': 'bg-blue-100 text-blue-700',
+    'Ongoing': 'bg-green-100 text-green-700',
+    'Finished': 'bg-red-500 text-white'
+};
+
+function createMatchCard(match) {
   const isFinished = match.status_key === 'Finished';
   const dateParts = match.date.split(' @ ');
   const matchTime = dateParts[1] || '';
   const matchDate = dateParts[0] || '';
 
-  const scoreDisplay = isFinished 
-    ? `${match.home_goals != null ? match.home_goals : '0'} - ${match.away_goals != null ? match.away_goals : '0'}` 
-    : 'VS';
+  const scoreDisplay = isFinished
+    ? `${match.home_goals != null ? match.home_goals : '0'} - ${match.away_goals != null ? match.away_goals : '0'}`
+    : '<span class="text-slate-500">VS</span>';
+
+  const statusStyle = STATUS_STYLES[match.status_key] || 'bg-gray-100 text-gray-700';
+  const statusText = match.status_key || 'N/A';
+
+  let adminButtonsHtml = '';
+  if (USER_IS_ADMIN) {
+    const matchName = `${match.home_team_name} vs ${match.away_team_name}`;
+    adminButtonsHtml = `
+      <div class="pt-4 mt-4 border-t border-slate-100 flex justify-end space-x-2">
+        <a href="${match.edit_url}" class="inline-flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-lg transition-colors text-xs" title="Edit Pertandingan">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-5.646 5.646l-1.55 1.55a4 4 0 00-1.127 2.518V16h2.518a4 4 0 002.517-1.127l1.55-1.55-2.828-2.828z"/></svg>
+          <span>Edit</span>
+        </a>
+        <button type="button" 
+                class="open-delete-modal-btn inline-flex items-center space-x-1 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg transition-colors text-xs" 
+                title="Delete Match"
+                data-match-id="${match.id}"
+                data-match-name="${matchName}"
+                data-delete-url="${match.delete_url}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span>Delete</span>
+        </button>
+      </div>
+      
+      <form id="delete-match-form-${match.id}" method="post" action="${match.delete_url}" class="hidden">
+        <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF_TOKEN}">
+      </form>
+    `;
+  }
 
   return `
-    <a href="${match.details_url}" class="relative block bg-white border border-slate-200 p-4 rounded-lg hover:shadow-md hover:scale-[1.01] transition">
-      <div class="flex items-center justify-center">
-        <div class="flex-1 text-right text-slate-800 font-semibold">${match.home_team_name}</div>
-        <img src="${match.home_logo_url}" alt="${match.home_team_name} logo" class="w-8 h-8 mx-2">
-        <div class="text-xl font-bold text-slate-900">${scoreDisplay}</div>
-        <img src="${match.away_logo_url}" alt="${match.away_team_name} logo" class="w-8 h-8 mx-2">
-        <div class="flex-1 text-left text-slate-800 font-semibold">${match.away_team_name}</div>
-      </div>
-      <div class="absolute top-3 right-4 text-right text-xs text-slate-500">
-        <p>${matchDate}</p>
-        <p>${matchTime}</p>
-      </div>
-    </a>
+    <div class="relative block bg-white border border-slate-200 p-4 rounded-lg hover:shadow-lg transition-all duration-200">
+      <a href="${match.details_url}" class="block">
+        <div class="absolute top-3 left-3">
+          <span class="text-xs font-semibold px-2.5 py-0.5 rounded ${statusStyle}">
+            ${statusText}
+          </span>
+        </div>
+        <div class="absolute top-3 right-3 text-right text-xs text-slate-500">
+          <p>${matchDate}</p>
+          <p>${matchTime}</p>
+        </div>
+        <div class="flex items-center justify-center py-6">
+          <div class="flex-1 text-right">
+              <span class="text-base md:text-lg font-semibold text-slate-800">${match.home_team_name}</span>
+          </div>
+          <img src="${match.home_logo_url || placeholderImageUrl}" alt="${match.home_team_name} logo" class="w-12 h-12 mx-4 object-contain flex-shrink-0">
+          <div class="text-xl md:text-2xl font-bold text-slate-900 px-2">${scoreDisplay}</div>
+          <img src="${match.away_logo_url || placeholderImageUrl}" alt="${match.away_team_name} logo" class="w-12 h-12 mx-4 object-contain flex-shrink-0">
+          <div class="flex-1 text-left">
+               <span class="text-base md:text-lg font-semibold text-slate-800">${match.away_team_name}</span>
+          </div>
+        </div>
+      </a>
+      ${adminButtonsHtml}
+    </div>
   `;
 }
+
+function renderPaginationControls(paginationData, filterParams) {
+    const controlsContainer = document.getElementById('pagination-controls');
+    controlsContainer.innerHTML = '';
+
+    if (!paginationData || paginationData.total_pages <= 1) {
+        controlsContainer.classList.add('hidden');
+        return;
+    }
+
+    controlsContainer.classList.remove('hidden');
+
+    const queryString = filterParams.toString() ? `&${filterParams.toString()}` : '';
+
+    const createButton = (text, pageNum, isDisabled, isCurrent = false) => {
+        const button = document.createElement('button');
+        button.innerHTML = text;
+        button.dataset.page = pageNum;
+        let baseClasses = 'px-3 py-1 rounded border ';
+        if (isCurrent) {
+            baseClasses += 'bg-blue-600 text-white border-blue-600 cursor-default';
+        } else if (isDisabled) {
+            baseClasses += 'border-slate-300 bg-white text-slate-400 cursor-not-allowed';
+        } else {
+            baseClasses += 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50 pagination-link';
+        }
+        button.className = baseClasses;
+        button.disabled = isDisabled || isCurrent;
+        if (!isDisabled && !isCurrent) {
+             button.onclick = () => {
+                currentPage = pageNum;
+                fetchFilteredMatches();
+                window.scrollTo({ top: document.getElementById('search-filter-form').offsetTop - 20, behavior: 'smooth' });
+            };
+        }
+        return button;
+    };
+
+    controlsContainer.appendChild(createButton('&laquo;', 1, !paginationData.has_previous));
+    controlsContainer.appendChild(createButton('Prev', paginationData.current_page - 1, !paginationData.has_previous));
+
+    paginationData.page_range.forEach(pageNum => {
+        if (pageNum === '...') {
+            const ellipsis = document.createElement('span');
+            ellipsis.textContent = '...';
+            ellipsis.className = 'px-3 py-1 text-slate-500';
+            controlsContainer.appendChild(ellipsis);
+        } else {
+            controlsContainer.appendChild(createButton(pageNum, pageNum, false, pageNum === paginationData.current_page));
+        }
+    });
+
+    controlsContainer.appendChild(createButton('Next', paginationData.current_page + 1, !paginationData.has_next));
+    controlsContainer.appendChild(createButton('&raquo;', paginationData.total_pages, !paginationData.has_next));
+}
+
 
 function renderFilteredMatches(data) {
   const container = document.getElementById('matches-container');
   const noMatchesEl = document.getElementById('no-matches-found');
-  
-  container.innerHTML = ''; 
+
+  container.innerHTML = '';
   noMatchesEl.classList.add('hidden');
 
-  const groupedMatches = data.grouped_matches || {}; 
-  let totalMatches = 0;
+  const matches = data.matches || [];
   let listHtml = '';
-  
-  const selectedStatuses = Array.from(document.querySelectorAll('#status-checkbox-container input[name="status"]:checked'))
-                                .map(cb => cb.value);
 
-  const statusesToDisplayHeaders = selectedStatuses.length > 0 ? selectedStatuses : STATUS_ORDER;
-
-
-  statusesToDisplayHeaders.forEach(status => {
-    const matchesToRender = groupedMatches[status] || [];
-    totalMatches += matchesToRender.length;
-    
-    // Tampilkan header jika status dicentang ATAU jika default (semua dicentang)
-    if (selectedStatuses.includes(status) || selectedStatuses.length === 0) {
-      
-        listHtml += `<h2 class="text-2xl font-bold mt-8 mb-4 text-slate-700">${status} Matches</h2>`;
-        
-        if (matchesToRender.length > 0) {
-            listHtml += `<div class="space-y-4 mb-8">`;
-            
-            matchesToRender.forEach(match => {
-                listHtml += renderMatchCard(match);
-            });
-            listHtml += `</div>`;
-        } else {
-            // Tampilkan pesan kosong spesifik di bawah header jika tidak ada match
-            listHtml += `<div class="bg-slate-50 border border-slate-200 p-3 rounded-lg text-center mb-8">
-                <p class="text-slate-600 text-sm">Tidak ada pertandingan ${status.toLowerCase()} yang ditemukan dengan filter ini.</p>
-            </div>`;
-        }
-    }
-  });
-
-  if (totalMatches === 0) {
-    const hasOtherActiveFilter = document.getElementById('search-input').value || 
-                                 document.getElementById('date-start-filter').value || 
-                                 document.getElementById('venue-filter').value;
-    
-    if (hasOtherActiveFilter || selectedStatuses.length === 0) {
-         // Jika filter non-status aktif ATAU semua status dicentang (default load)
-         // tampilkan grouped headers + empty message di bawahnya
-         container.innerHTML = listHtml;
-    } else {
-        // Jika hanya status yang dicentang dan hasilnya 0 (jarang terjadi)
-        container.innerHTML = `<p class='text-center text-red-500 py-8'>Tidak ditemukan pertandingan dengan filter tersebut.</p>`;
-    }
-  } else {
+  if (matches.length > 0) {
+    listHtml += `<div class="space-y-4 mb-8">`;
+    matches.forEach(match => {
+        listHtml += createMatchCard(match);
+    });
+    listHtml += `</div>`;
     container.innerHTML = listHtml;
+  } else {
+    container.innerHTML = '';
+    noMatchesEl.classList.remove('hidden');
   }
+
+  renderPaginationControls(data.pagination, data.filterParams || new URLSearchParams());
 }
+
 
 let debounceTimer;
 let isFetching = false;
 
 function setLoadingState(isLoading) {
-  const matchesContainer = document.getElementById('matches-container');
   const overlay = document.getElementById('loading-overlay');
-
   if (isLoading) {
     isFetching = true;
-    matchesContainer.classList.add('opacity-50', 'pointer-events-none');
-    overlay.classList.remove('opacity-0');
+    overlay.classList.remove('opacity-0', 'pointer-events-none');
     overlay.classList.add('opacity-100');
   } else {
     isFetching = false;
-    matchesContainer.classList.remove('opacity-50', 'pointer-events-none');
-    overlay.classList.add('opacity-0');
+    overlay.classList.add('opacity-0', 'pointer-events-none');
     overlay.classList.remove('opacity-100');
   }
 }
 
 async function fetchFilteredMatches() {
   clearTimeout(debounceTimer);
-  
   if (isFetching) return;
 
   const searchInput = document.getElementById('search-input');
@@ -215,85 +322,94 @@ async function fetchFilteredMatches() {
   const dateStartFilter = document.getElementById('date-start-filter');
   const dateEndFilter = document.getElementById('date-end-filter');
   const venueFilter = document.getElementById('venue-filter');
-  
+  const perPageSelect = document.getElementById('per-page-select');
   const selectedStatuses = Array.from(document.querySelectorAll('#status-checkbox-container input[name="status"]:checked'))
                                 .map(cb => cb.value)
-                                .join(','); 
-  
+                                .join(',');
+
   const query = searchInput.value.trim();
   const dateMode = dateModeFilter.value;
   const dateStart = dateStartFilter.value;
   const dateEnd = dateEndFilter.value;
   const venue = venueFilter.value;
+  currentPerPage = perPageSelect.value;
 
-  if (true) { 
-    
-    debounceTimer = setTimeout(async () => {
-      const url = "{% url 'matches:api_calendar' %}"; 
-      
-      const params = new URLSearchParams();
-      
-      if (query) params.append('q', query);
-      
+  debounceTimer = setTimeout(async () => {
+      const url = "{% url 'matches:api_calendar' %}";
+      const filterParams = new URLSearchParams();
+
+      if (query) filterParams.append('q', query);
       if (dateStart) {
-          params.append('date_start', dateStart);
+          filterParams.append('date_start', dateStart);
           if (dateMode === 'range' && dateEnd) {
-              params.append('date_end', dateEnd);
+              filterParams.append('date_end', dateEnd);
           }
       }
+      if (venue) filterParams.append('venue', venue);
+      if (selectedStatuses) filterParams.append('status', selectedStatuses);
+      filterParams.append('per_page', currentPerPage);
 
-      if (venue) params.append('venue', venue);
-      
-      if (selectedStatuses) params.append('status', selectedStatuses); 
+      const apiParams = new URLSearchParams(filterParams);
+      apiParams.append('page', currentPage);
 
       setLoadingState(true);
-      
+
       try {
-        const response = await fetch(`${url}?${params.toString()}`, {
+        const response = await fetch(`${url}?${apiParams.toString()}`, {
           method: 'GET',
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest' 
-          },
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
         });
 
         const data = await response.json();
-        
+
         if (response.ok) {
+          data.filterParams = filterParams;
           renderFilteredMatches(data);
-          const newQueryString = params.toString() ? `?${params.toString()}` : `{% url 'matches:calendar' %}`;
-          history.replaceState(null, '', newQueryString);
+          const newQueryString = `?${filterParams.toString()}&page=${currentPage}`;
+          history.pushState({ page: currentPage }, '', newQueryString);
         } else {
           document.getElementById('matches-container').innerHTML = `<p class='text-center text-red-500 py-8'>Gagal memuat hasil pencarian.</p>`;
+          renderPaginationControls(null, new URLSearchParams());
         }
-
       } catch (error) {
         console.error("AJAX Search/Filter Error:", error);
         document.getElementById('matches-container').innerHTML = `<p class='text-center text-red-500 py-8'>Error jaringan saat mencari.</p>`;
+        renderPaginationControls(null, new URLSearchParams());
       } finally {
         setLoadingState(false);
       }
     }, 300);
-  }
 }
 
-function toggleDateEndInput() {
+
+function toggleDateEndInput(shouldFetch = true) {
     const dateModeFilter = document.getElementById('date-mode-filter');
     const dateEndFilter = document.getElementById('date-end-filter');
-    const gridContainer = document.querySelector('#search-filter-form > div:nth-child(2)');
-    
-    gridContainer.classList.remove('md:grid-cols-2', 'md:grid-cols-3', 'md:grid-cols-4');
-    
+    const dateStartFilter = document.getElementById('date-start-filter');
+    const statusContainer = document.getElementById('status-checkbox-container');
+
+    dateStartFilter.classList.remove('md:col-span-1', 'md:col-span-2');
+    statusContainer.classList.remove('md:col-span-1', 'md:col-span-2');
+
+
     if (dateModeFilter.value === 'range') {
         dateEndFilter.classList.remove('hidden');
-        gridContainer.classList.add('md:grid-cols-4'); 
+        dateStartFilter.classList.add('md:col-span-1');
+        dateEndFilter.classList.add('md:col-span-1');
+        statusContainer.classList.add('md:col-span-1');
     } else {
         dateEndFilter.classList.add('hidden');
-        dateEndFilter.value = '';
-        gridContainer.classList.add('md:grid-cols-3');
+        if (shouldFetch) dateEndFilter.value = '';
+        dateStartFilter.classList.add('md:col-span-2');
+        statusContainer.classList.add('md:col-span-1');
     }
-    
-    fetchFilteredMatches();
+
+    if (shouldFetch) {
+        currentPage = 1;
+        fetchFilteredMatches();
+    }
 }
+
 
 document.addEventListener('DOMContentLoaded', function() {
   const updateApiBtn = document.getElementById('update-api-btn');
@@ -304,56 +420,57 @@ document.addEventListener('DOMContentLoaded', function() {
   const dateEndFilter = document.getElementById('date-end-filter');
   const venueFilter = document.getElementById('venue-filter');
   const statusCheckboxes = document.querySelectorAll('#status-checkbox-container input[name="status"]');
-  
+  const perPageSelect = document.getElementById('per-page-select');
+  const resetBtn = document.getElementById('reset-filters-btn');
+
   const params = new URLSearchParams(window.location.search);
   const initialQuery = params.get('q') || '';
   const initialDateStart = params.get('date_start') || '';
   const initialDateEnd = params.get('date_end') || '';
   const initialVenue = params.get('venue') || '';
-  const initialStatus = params.get('status') || ''; 
+  const initialStatus = params.get('status') || '';
+  const initialPage = parseInt(params.get('page') || '1');
+  const initialPerPage = params.get('per_page') || '10';
+
+  currentPage = initialPage;
+  perPageSelect.value = initialPerPage;
+  currentPerPage = initialPerPage;
 
   let initialMode = 'single';
   if (initialDateEnd) {
       initialMode = 'range';
   }
-  
+
   searchInput.value = initialQuery;
   dateStartFilter.value = initialDateStart;
   venueFilter.value = initialVenue;
-  
-  if (!initialStatus && initialStatus !== 'none') { 
-      statusCheckboxes.forEach(cb => {
-          cb.checked = true;
-      });
+
+  if (!initialStatus && initialStatus !== 'none' && !params.has('status')) {
+      statusCheckboxes.forEach(cb => cb.checked = true);
   } else {
     const selectedStatuses = initialStatus.split(',');
     statusCheckboxes.forEach(cb => {
-        if (selectedStatuses.includes(cb.value)) {
-            cb.checked = true;
-        } else {
-            cb.checked = false;
-        }
+        cb.checked = selectedStatuses.includes(cb.value);
     });
   }
-  
+
   dateModeFilter.value = initialMode;
   dateEndFilter.value = initialDateEnd;
-  toggleDateEndInput();
-
+  toggleDateEndInput(false);
 
   if (updateApiBtn) {
     updateApiBtn.addEventListener('click', async function() {
       const url = "{% url 'matches:update_from_api' %}";
-      
       updateApiBtn.disabled = true;
-      const originalText = updateApiBtn.textContent;
-      
+      const originalContent = updateApiBtn.innerHTML;
+      updateApiBtn.innerHTML = `
+        <svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        <span>Memproses...</span>`;
+
       messagesContainer.innerHTML = '';
       const statusDiv = document.createElement('div');
-      statusDiv.className = 'bg-yellow-100 border border-yellow-300 text-yellow-800 p-3 rounded-lg mb-4 text-center flex items-center justify-center space-x-2';
-      statusDiv.innerHTML = `
-        <svg class="animate-spin h-5 w-5 text-yellow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-        <span>Sedang menjalankan sinkronisasi data dari API.</span>`;
+      statusDiv.className = 'bg-yellow-100 border border-yellow-300 text-yellow-800 p-3 rounded-lg mb-4 text-center';
+      statusDiv.textContent = 'Sedang menjalankan sinkronisasi data dari API...';
       messagesContainer.appendChild(statusDiv);
 
       try {
@@ -361,50 +478,85 @@ document.addEventListener('DOMContentLoaded', function() {
           method: 'POST',
           headers: {
             'X-CSRFToken': CSRF_TOKEN,
-            'X-Requested-With': 'XMLHttpRequest' 
+            'X-Requested-With': 'XMLHttpRequest'
           },
         });
-
         const data = await response.json();
-        
         if (response.ok && data.status === 'success') {
           statusDiv.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
           statusDiv.classList.add('bg-green-100', 'border-green-300', 'text-green-800');
-          statusDiv.innerHTML = data.message || 'Sinkronisasi berhasil! Memuat ulang halaman...';
-          
-          setTimeout(() => {
-            window.location.reload(); 
-          }, 1500); 
-
+          statusDiv.innerHTML = data.message || 'Sinkronisasi berhasil! Memuat ulang data...';
+          currentPage = 1;
+          fetchFilteredMatches();
         } else {
-          statusDiv.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
-          statusDiv.classList.add('bg-red-100', 'border-red-300', 'text-red-800');
-          statusDiv.innerHTML = data.message || `Error (${response.status}): Sinkronisasi gagal.`;
-          updateApiBtn.disabled = false;
-          updateApiBtn.textContent = originalText;
+          throw new Error(data.message || `Error (${response.status}): Sinkronisasi gagal.`);
         }
-        
       } catch (error) {
         console.error("API Update Error:", error);
         statusDiv.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
         statusDiv.classList.add('bg-red-100', 'border-red-300', 'text-red-800');
-        statusDiv.innerHTML = `Error Jaringan. Coba lagi.`;
-        updateApiBtn.disabled = false;
-        updateApiBtn.textContent = originalText;
+        statusDiv.innerHTML = `Error: ${error.message || 'Gagal menghubungi server.'}`;
+      } finally {
+         updateApiBtn.disabled = false;
+         updateApiBtn.innerHTML = originalContent;
+         setTimeout(() => { if (statusDiv) statusDiv.remove(); }, 5000);
       }
     });
   }
-  
+
   searchInput.addEventListener('input', function() {
+    currentPage = 1;
     fetchFilteredMatches();
   });
-  dateModeFilter.addEventListener('change', toggleDateEndInput);
-  dateStartFilter.addEventListener('change', fetchFilteredMatches);
-  dateEndFilter.addEventListener('change', fetchFilteredMatches);
-  venueFilter.addEventListener('change', fetchFilteredMatches);
-  
+
+  dateModeFilter.addEventListener('change', () => toggleDateEndInput(true));
+
+  dateStartFilter.addEventListener('change', () => {
+    currentPage = 1;
+    fetchFilteredMatches();
+  });
+
+  dateEndFilter.addEventListener('change', () => {
+    currentPage = 1;
+    fetchFilteredMatches();
+  });
+
+  venueFilter.addEventListener('change', () => {
+    currentPage = 1;
+    fetchFilteredMatches();
+  });
+
   statusCheckboxes.forEach(cb => {
-      cb.addEventListener('change', fetchFilteredMatches);
+      cb.addEventListener('change', () => {
+        currentPage = 1;
+        fetchFilteredMatches();
+      });
+  });
+
+  perPageSelect.addEventListener('change', () => {
+    currentPage = 1;
+    fetchFilteredMatches();
+  });
+
+  resetBtn.addEventListener('click', () => {
+      document.getElementById('search-filter-form').reset();
+      perPageSelect.value = '10';
+      statusCheckboxes.forEach(cb => cb.checked = true);
+      dateModeFilter.value = 'single';
+      toggleDateEndInput(false);
+      currentPage = 1;
+      fetchFilteredMatches();
+  });
+
+  document.querySelectorAll('.team-filter-card').forEach(card => {
+      card.addEventListener('click', function(e) {
+          e.preventDefault();
+          const teamName = this.dataset.teamName;
+          searchInput.value = teamName;
+          currentPage = 1;
+          fetchFilteredMatches();
+          searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
   });
 
   window.addEventListener('popstate', function(event) {
@@ -414,30 +566,89 @@ document.addEventListener('DOMContentLoaded', function() {
     const dateEnd = params.get('date_end') || '';
     const venue = params.get('venue') || '';
     const status = params.get('status') || '';
-    
+    const page = parseInt(params.get('page') || '1');
+    const perPage = params.get('per_page') || '10';
+
     let mode = 'single';
     if (dateEnd) mode = 'range';
-    
-    searchInput.value = query; 
+
+    currentPage = page;
+    perPageSelect.value = perPage;
+    currentPerPage = perPage;
+    searchInput.value = query;
     dateStartFilter.value = dateStart;
     dateEndFilter.value = dateEnd;
     venueFilter.value = venue;
     dateModeFilter.value = mode;
-    
-    const selectedStatuses = status.split(',');
-    
-    statusCheckboxes.forEach(cb => {
-        cb.checked = selectedStatuses.includes(cb.value);
-    });
-    if (!status) {
+
+    if (!params.has('status')) {
         statusCheckboxes.forEach(cb => cb.checked = true);
+    } else {
+        const selectedStatuses = status.split(',');
+        statusCheckboxes.forEach(cb => {
+            cb.checked = selectedStatuses.includes(cb.value);
+        });
     }
 
-
+    toggleDateEndInput(false);
     fetchFilteredMatches();
   });
-  
+
   fetchFilteredMatches();
+
+  const sliderContainer = document.getElementById('team-slider-container');
+  const sliderBtnLeft = document.getElementById('slider-btn-left');
+  const sliderBtnRight = document.getElementById('slider-btn-right');
+
+  if (sliderContainer) {
+      const scrollAmount = 300;
+      const checkSliderButtons = () => {
+          if (!sliderContainer) return;
+          const maxScroll = sliderContainer.scrollWidth - sliderContainer.clientWidth;
+          sliderBtnLeft.classList.toggle('hidden', sliderContainer.scrollLeft <= 0);
+          sliderBtnRight.classList.toggle('hidden', sliderContainer.scrollLeft >= maxScroll - 1);
+      };
+      sliderBtnRight.addEventListener('click', () => { sliderContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' }); });
+      sliderBtnLeft.addEventListener('click', () => { sliderContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' }); });
+      sliderContainer.addEventListener('scroll', checkSliderButtons, { passive: true });
+      new ResizeObserver(checkSliderButtons).observe(sliderContainer);
+      checkSliderButtons();
+  }
+
+  const matchesContainer = document.getElementById('matches-container');
+  matchesContainer.addEventListener('click', function(e) {
+      const deleteBtn = e.target.closest('.open-delete-modal-btn');
+      
+      if (deleteBtn) {
+          e.preventDefault(); 
+          e.stopPropagation();
+
+          const matchId = deleteBtn.dataset.matchId;
+          const matchName = deleteBtn.dataset.matchName;
+          
+          if (typeof window.showConfirmationModal === 'function') {
+              const modalTitle = 'Hapus Pertandingan Ini?';
+              const modalText = `Tindakan ini akan menghapus pertandingan <strong>${matchName}</strong> secara permanen. <br><br>Untuk konfirmasi, ketik <strong>CONFIRM</strong> (case-sensitive) di bawah ini.`;
+              
+              const onConfirmCallback = () => {
+                  const deleteForm = document.getElementById(`delete-match-form-${matchId}`);
+                  if (deleteForm) {
+                      showToast('Menghapus pertandingan...', 'info');
+                      deleteForm.submit();
+                  } else {
+                      console.error(`Delete form not found for match ID: ${matchId}`);
+                      showToast('Error: Delete form tidak ditemukan.', 'error');
+                  }
+              };
+
+              window.showConfirmationModal(modalTitle, modalText, onConfirmCallback);
+
+          } else {
+              console.error('Fungsi showConfirmationModal() tidak ditemukan.');
+              alert('Error: Fungsi modal tidak ditemukan.');
+          }
+      }
+  });
 });
 </script>
 {% endblock %}

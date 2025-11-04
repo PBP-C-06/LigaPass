@@ -107,7 +107,6 @@ def show_json_admin(request):
         admin = User.objects.filter(role='admin').first()
         admin_profile = getattr(admin, 'adminjournalistprofile', None)
 
-        # Petakan data 
         data = {
             "username": "admin",
             "profile_picture": admin_profile.profile_picture if admin_profile else None,
@@ -125,7 +124,6 @@ def show_json_journalist(request):
         journalist = User.objects.filter(role='journalist').first()
         journalist_profile = getattr(journalist, 'adminjournalistprofile', None)
 
-        # Petakan data
         data = {
             "username": "journalist",
             "profile_picture": journalist_profile.profile_picture if journalist_profile else None,
@@ -284,7 +282,7 @@ def current_user_json(request):
     login_page = reverse("authentication:login") 
     
     if not user.is_authenticated:
-        # Anonymous user redirect ke login
+        # Anonymous user akan redirect ke login
         return JsonResponse({
             "authenticated": False,
             "username": "Anonymous",
@@ -293,9 +291,9 @@ def current_user_json(request):
             "id": None,
             "profile_picture": static("images/default-profile-picture.png"),
             "menu": [
-                {"name": "Profil", "url": login_page},
-                {"name": "Tiket Saya", "url": login_page},
-                {"name": "Analisis", "url": login_page},
+                {"name": "📷 Profil", "url": login_page},
+                {"name": "🎫 Tiket Saya", "url": login_page},
+                {"name": "📊 Analisis", "url": login_page},
             ]
         })
     
@@ -304,22 +302,22 @@ def current_user_json(request):
         profile_picture_url = static("images/Admin.png")
         my_profile_url = reverse("profiles:admin_view")
         menu = [
-            {"name": "Profil", "url": my_profile_url},
-            {"name": "Analytics", "url": reverse("reviews:admin_analytics_page")},
+            {"name": "📷 Profil", "url": my_profile_url},
+            {"name": "📊 Analisis", "url": reverse("reviews:admin_analytics_page")},
         ]
     elif user.role == "journalist":
         profile_picture_url = static("images/Journalist.png")
         my_profile_url = reverse("profiles:journalist_view")
         menu = [
-            {"name": "Profil", "url": my_profile_url},
+            {"name": "📷 Profil", "url": my_profile_url},
         ]
-    else:  # Regular user
+    else:  
         profile_picture_url = profile.profile_picture.url if profile and profile.profile_picture else static("images/default-profile-picture.png")
         my_profile_url = reverse("profiles:user_view", args=[user.id])
         menu = [
-            {"name": "Profil", "url": my_profile_url},
-            {"name": "My Booking", "url": reverse("profiles:user_tickets_page", args=[user.id])},
-            {"name": "Analytics", "url": reverse("reviews:user_analytics_page")},
+            {"name": "📷 Profil", "url": my_profile_url},
+            {"name": "🎫 Tiket Saya", "url": reverse("profiles:user_tickets_page", args=[user.id])},
+            {"name": "📊 Analisis", "url": reverse("reviews:user_analytics_page")},
         ]
     
     return JsonResponse({
@@ -335,7 +333,6 @@ def current_user_json(request):
 @login_required
 def user_tickets_page(request, id):
     return render(request, "tickets.html", {})
-
 
 @login_required
 def user_tickets_json(request, id):
@@ -374,4 +371,3 @@ def user_tickets_json(request, id):
         })
 
     return JsonResponse({"tickets": results})
-

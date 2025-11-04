@@ -1,0 +1,51 @@
+{% extends 'matches/manage/admin_manage_base.html' %}
+{% block title %}Manajemen Venue - {% if is_update %}Edit{% else %}Tambah{% endif %}{% endblock %}
+
+{% block list_content %}
+<div class="max-w-xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+  <h1 class="text-3xl font-bold mb-6 text-blue-600">
+    {% if is_update %}Edit Venue: {{ form.instance.name }}{% else %}Tambah Venue Baru{% endif %}
+  </h1>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    {% for field in form %}
+    <div class="field-wrapper">
+      <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+        {{ field.label }}
+      </label>
+      {{ field }}
+      {% for error in field.errors %}
+        <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    <style>
+      .field-wrapper input, .field-wrapper textarea, .field-wrapper select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #0f172a;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      .field-wrapper input:focus, .field-wrapper textarea:focus, .field-wrapper select:focus {
+        border-color: #3b82f6;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+      }
+    </style>
+
+    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors mt-6">
+      Simpan
+    </button>
+  </form>
+
+  <div class="mt-4 text-center">
+    <a href="{% url 'matches:manage_venues' %}" class="text-slate-600 hover:text-slate-800 text-sm">Kembali ke Daftar Venue</a>
+  </div>
+</div>
+{% endblock list_content %}

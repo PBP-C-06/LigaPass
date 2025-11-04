@@ -1,24 +1,39 @@
-{% extends 'base.html' %}
-{% block content %}
-<h1 class="text-2xl font-bold">Manajemen Tim</h1>
-<a href="{% url 'matches:add_team' %}" class="bg-green-500 text-white p-2 rounded my-4 inline-block">Tambah Tim Baru</a>
-<table class="w-full text-left">
-    <thead>
-    <tr class="bg-slate-700">
-        <th class="p-2">Nama Tim</th>
-        <th class="p-2">Aksi</th>
-    </tr>
-    </thead>
-    <tbody>
+{% extends 'matches/manage/admin_manage_base.html' %}
+{% load static %}
+{% block title %}Manajemen Tim{% endblock %}
+
+{% block list_content %}
+<div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+  <h1 class="text-2xl font-bold text-blue-600 mb-4">Manajemen Tim</h1>
+  <a href="{% url 'matches:add_team' %}" class="bg-green-500 text-white p-2 rounded my-4 inline-block hover:bg-green-600 transition-colors">
+    + Tambah Tim Baru
+  </a>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
     {% for team in teams %}
-        <tr class="border-b border-slate-600">
-        <td class="p-2">{{ team.name }}</td>
-        <td class="p-2">
-            <a href="{% url 'matches:edit_team' team.pk %}" class="text-yellow-400">Edit</a> |
-            <a href="{% url 'matches:delete_team' team.pk %}" class="text-red-400">Hapus</a>
-        </td>
-        </tr>
+    <div class="bg-slate-50 p-4 rounded-lg shadow-sm flex flex-col justify-between hover:bg-slate-100 transition-colors duration-200 border border-slate-200">
+      <div class="flex items-center space-x-3 mb-4">
+        <img src="{{ team.display_logo_url }}" alt="{{ team.name }} logo" class="w-12 h-12 object-contain bg-white p-1 rounded-full border border-slate-200">
+        <div class="flex flex-col">
+          <p class="font-semibold text-slate-800 text-lg">{{ team.name }}</p>
+          <p class="text-xs text-slate-500 uppercase">{{ team.get_league_display|default:"N/A" }}</p>
+        </div>
+      </div>
+
+      <div class="flex space-x-3 border-t border-slate-200 pt-3 justify-end">
+        <a href="{% url 'matches:edit_team' team.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
+          Edit
+        </a>
+        <a href="{% url 'matches:delete_team' team.pk %}" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
+          Delete
+        </a>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full bg-slate-50 p-6 rounded-lg text-center border border-slate-200">
+      <p class="text-slate-600">Belum ada tim yang terdaftar.</p>
+    </div>
     {% endfor %}
-    </tbody>
-</table>
-{% endblock %}
+  </div>
+</div>
+{% endblock list_content %}

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Admin Management - {{ current_page|title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 p-4">
+
+  <div class="lg:w-1/5 w-full flex-shrink-0 bg-white p-6 rounded-xl shadow-lg border border-slate-200 sticky lg:top-20 self-start">
+    <h2 class="text-xl font-bold text-blue-600 mb-6 border-b border-slate-200 pb-3">Admin CRUD</h2>
+    <nav class="space-y-2">
+      {% with current_page=current_page|default:'matches' %}
+      <a href="{% url 'matches:manage_matches' %}"
+         class="block p-3 rounded-lg font-medium transition-colors
+         {% if current_page == 'matches' %}bg-blue-50 text-blue-600{% else %}text-slate-600 hover:bg-slate-50 hover:text-blue-600{% endif %}">
+        ⚽ Manajemen Pertandingan
+      </a>
+      <a href="{% url 'matches:manage_teams' %}"
+         class="block p-3 rounded-lg font-medium transition-colors
+         {% if current_page == 'teams' %}bg-blue-50 text-blue-600{% else %}text-slate-600 hover:bg-slate-50 hover:text-blue-600{% endif %}">
+        🏆 Manajemen Tim
+      </a>
+      <a href="{% url 'matches:manage_venues' %}"
+         class="block p-3 rounded-lg font-medium transition-colors
+         {% if current_page == 'venues' %}bg-blue-50 text-blue-600{% else %}text-slate-600 hover:bg-slate-50 hover:text-blue-600{% endif %}">
+        🏟️ Manajemen Venue
+      </a>
+      {% endwith %}
+    </nav>
+  </div>
+
+  <div class="lg:w-4/5 w-full">
+    
+    {% block list_content %}
+      <div class="bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+        <h1 class="text-3xl font-bold text-blue-600 mb-4">Admin Management Dashboard</h1>
+        <p class="text-slate-600">Selamat datang di pusat manajemen LigaPass. Silakan pilih kategori dari sidebar untuk memulai.</p>
+      </div>
+    {% endblock list_content %}
+  </div>
+</div>
+{% endblock content %}
+
+
+{% block scripts %}
+{{ block.super }} 
+
+{% if messages %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    
+    if (typeof showToast !== 'function') {
+      console.error('Fungsi showToast() tidak ditemukan. Pastikan toast.js di-load dari base.html');
+      return;
+    }
+
+    {% for message in messages %}
+      {
+        let messageText = "{{ message|escapejs }}";
+        let messageTags = "{{ message.tags }}";
+        let toastType = 'info';
+
+        if (messageTags.includes('success')) {
+          toastType = 'success';
+        } else if (messageTags.includes('error')) {
+          toastType = 'error';
+        } else if (messageTags.includes('warning')) {
+          toastType = 'warning';
+        }
+        
+        showToast(messageText, toastType);
+      }
+    {% endfor %}
+    
+  });
+</script>
+{% endif %}
+{% endblock scripts %}
