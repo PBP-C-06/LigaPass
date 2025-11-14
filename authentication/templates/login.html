@@ -279,12 +279,27 @@
 
       const data = await res.json().catch(() => ({}));
 
-      if (res.ok && data.status === 'success' && data.redirect_url) {
-        showToast('✅ Login berhasil! Mengarahkan...', 'success');
-        setTimeout(() => window.location.href = data.redirect_url, 1000);
-      } else {
-        showToast('❌ ' + (data.message || 'Login gagal. Cek username/password!'), 'error');
+      if (data.status === 'banned') {
+        showToast('🚫 Akun Anda diblokir. Hubungi admin di l1gapass@outlook.com.', 'error');
+        btn.disabled = false;
+        return;
       }
+
+      if (data.status === 'success') {
+        if (data.profile_status === 'suspended') {
+          showSuspendModal();
+          showToast('⚠️ Akun Anda sedang ditangguhkan.', 'warning');
+          setTimeout(() => window.location.href = data.redirect_url, 2500);
+        } else {
+          showToast('✅ Login berhasil! Mengarahkan...', 'success');
+          setTimeout(() => window.location.href = data.redirect_url, 1000);
+        }
+        return;
+      }
+
+      // Error biasa
+      showToast('❌ ' + (data.message || 'Login gagal. Cek username/password!'), 'error');
+
     } catch {
       showToast('⚠️ Terjadi kesalahan koneksi.', 'error');
     } finally {
@@ -337,20 +352,6 @@
     document.getElementById('closeModalBtn').addEventListener('click', () => {
       modal.classList.add('hidden');
     });
-  }
-
-  // ===== Integrasi ke login AJAX =====
-  if (res.ok && data.status === 'success' && data.redirect_url) {
-    if (data.profile_status === 'suspended') {
-      showSuspendModal();
-      showToast('⚠️ Akun Anda sedang ditangguhkan.', 'warning');
-      setTimeout(() => window.location.href = data.redirect_url, 2500);
-    } else {
-      showToast('✅ Login berhasil! Mengarahkan...', 'success');
-      setTimeout(() => window.location.href = data.redirect_url, 1000);
-    }
-  } else if (data.status === 'banned') {
-    showToast('🚫 Akun Anda diblokir. Hubungi admin di l1gapass@outlook.com.', 'error');
   }
 </script>
 {% endblock %}
