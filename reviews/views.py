@@ -19,6 +19,25 @@ def is_admin(user):
 def is_user(user):
     return user.is_authenticated and getattr(user, "role", None) == "user"
 
+def is_active_user(view_func):
+    def wrapper(request, *args, **kwargs):
+       
+        status = request.user.profile.status
+
+        if status != "active":
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "message": f"Akun Anda sedang {status}. Anda tidak dapat memberikan review."
+                },
+                status=403
+            )
+
+        # Jika active → lanjutkan request API
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
 
 @user_passes_test(is_user)
 @login_required
@@ -54,6 +73,7 @@ def user_review_page(request, match_id):
 @csrf_exempt
 @user_passes_test(is_user)
 @login_required
+@is_active_user
 def api_create_review(request, match_id):
     if request.method != "POST":
         return HttpResponseBadRequest("POST only")
@@ -85,6 +105,7 @@ def api_create_review(request, match_id):
 @csrf_exempt
 @user_passes_test(is_user)
 @login_required
+@is_active_user
 def api_update_review(request, match_id):
     if request.method not in ("POST", "PUT", "PATCH"):
         return HttpResponseBadRequest("POST/PUT only")
