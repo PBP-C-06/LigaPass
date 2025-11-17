@@ -109,6 +109,8 @@ def news_detail(request, pk):
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         if not request.user.is_authenticated:
             return JsonResponse({'success': False, 'error': 'Login diperlukan untuk komentar.'}, status=403) # Cek autentikasi user
+        if request.user.profile.status == "suspended":
+            return JsonResponse({'success': False, 'error': 'Anda tidak dapat berkomentar karena akun Anda sedang ditangguhkan'}, status=403)
         comment_form = CommentForm(request.POST)
         if comment_form.is_valid():
             parent_id = request.POST.get("parent_id")
@@ -174,6 +176,9 @@ def like_comment(request, comment_id):
     comment = get_object_or_404(Comment, id=comment_id)
     user = request.user
 
+    if user.profile.status == "suspended":
+        return JsonResponse({'success': False, 'error': 'Anda tidak dapat menyukai komentar karena akun Anda sedang ditangguhkan'}, status=403)
+    
     # Jika sudah dilike, hapus like
     if comment.likes.filter(id=user.id).exists():
         comment.likes.remove(user)
