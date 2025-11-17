@@ -135,6 +135,21 @@ document.getElementById("review-form").addEventListener("submit", async e => {
     body: formData
   });
 
+   if (res.status === 403) {
+    const data = await res.json();
+
+    closeModal(); // Tutup modal review utama
+
+    // Tampilkan modal larangan
+    Swal.fire({
+      icon: "warning",
+      title: "Akses Ditolak",
+      text: data.message || "Akun Anda sedang ditangguhkan. Anda tidak dapat memberi review.",
+    });
+
+    return;
+  }
+
   if (!res.ok) {
     const data = await res.json();
     toastDanger(data.message || "Gagal menyimpan review.");
