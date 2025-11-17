@@ -11,37 +11,11 @@ from reviews.models import Review, ReviewReply
 from bookings.models import Ticket
 import json
 
-
-def is_admin(user):
-    return user.is_authenticated and getattr(user, "role", None) == "admin"
-
-
-def is_user(user):
-    return user.is_authenticated and getattr(user, "role", None) == "user"
-
-def is_active_user(view_func):
-    def wrapper(request, *args, **kwargs):
-       
-        status = request.user.profile.status
-
-        if status != "active":
-            return JsonResponse(
-                {
-                    "ok": False,
-                    "message": f"Akun Anda sedang {status}. Anda tidak dapat memberikan review."
-                },
-                status=403
-            )
-
-        # Jika active → lanjutkan request API
-        return view_func(request, *args, **kwargs)
-
-    return wrapper
-
-
-@user_passes_test(is_user)
+@csrf_exempt
 @login_required
 def user_review_page(request, match_id):
+    if getattr(request.user, "role", None) != "user":
+        return redirect("main:home")
     match = get_object_or_404(
         Match.objects.select_related("home_team", "away_team"),
         id=match_id
@@ -55,10 +29,8 @@ def user_review_page(request, match_id):
     ).exists()
 
     if not has_ticket:
-        return JsonResponse({
-            "ok": False,
-            "message": "Kamu belum membeli tiket untuk pertandingan ini."
-        }, status=403)
+        messages.error(request, "Kamu belum membeli tiket untuk pertandingan ini.")
+        return redirect("main:home")
 
     my_review = Review.objects.filter(user=request.user, match=match).first()
     reviews = Review.objects.filter(match=match).select_related("user").order_by("-created_at")
@@ -71,10 +43,15 @@ def user_review_page(request, match_id):
 
 
 @csrf_exempt
-@user_passes_test(is_user)
 @login_required
-@is_active_user
 def api_create_review(request, match_id):
+
+    if getattr(request.user, "role", None) != "user":
+        return JsonResponse({"ok": False, "message": "Hanya user yang bisa memberi review."}, status=403)
+    
+    status = getattr(request.user.profile, "status", "active")
+    if status != "active":
+        return JsonResponse({"ok": False, "message": f"Akun Anda sedang {status}. Tidak bisa review."}, status=403)
     if request.method != "POST":
         return HttpResponseBadRequest("POST only")
 
@@ -103,10 +80,15 @@ def api_create_review(request, match_id):
 
 
 @csrf_exempt
-@user_passes_test(is_user)
 @login_required
-@is_active_user
 def api_update_review(request, match_id):
+    if getattr(request.user, "role", None) != "user":
+        return JsonResponse({"ok": False, "message": "Hanya user yang bisa memberi review."}, status=403)
+
+    status = getattr(request.user.profile, "status", "active")
+    if status != "active":
+        return JsonResponse({"ok": False, "message": f"Akun Anda sedang {status}. Tidak bisa edit review."}, status=403)
+  
     if request.method not in ("POST", "PUT", "PATCH"):
         return HttpResponseBadRequest("POST/PUT only")
 
@@ -134,18 +116,21 @@ def api_update_review(request, match_id):
     return JsonResponse({"ok": True, "message": "Review berhasil diperbarui", "item_html": html_item, "review_id": str(review.id)})
 
 
-@user_passes_test(is_admin)
+@csrf_exempt
 @login_required
 def admin_review_page(request, match_id):
+    if getattr(request.user, "role", None) != "admin":
+        return redirect("main:home")
     match = get_object_or_404(Match.objects.select_related("home_team", "away_team"), id=match_id)
     reviews = Review.objects.filter(match=match).select_related("user", "reply").order_by("-created_at")
     return render(request, "admin_review_page.html", {"match": match, "reviews": reviews})
 
 
 @csrf_exempt
-@user_passes_test(is_admin)
 @login_required
 def api_add_reply(request, review_id):
+    if getattr(request.user, "role", None) != "admin":
+        return JsonResponse({"ok": False, "message": "Halaman yang anda coba lihat hanya untuk admin"}, status=403)
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Invalid method"}, status=400)
 
