@@ -16,8 +16,6 @@ class Review(models.Model):
     rating = models.PositiveSmallIntegerField()  # 1–5
     comment = models.TextField(blank=True, null=True)
     sentiment = models.CharField(max_length=8, choices=SENTIMENT_CHOICES, blank=True, null=True)
-    status = models.ForeignKey(Profile, on_delete=models.CASCADE, null=True, blank=True, related_name='review_statuses')
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
