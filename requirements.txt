@@ -29,3 +29,4 @@ urllib3==2.5.0
 webencodings==0.5.1
 whitenoise==6.11.0
 coverage
+django-cors-headers
