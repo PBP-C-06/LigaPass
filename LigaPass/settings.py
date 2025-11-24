@@ -35,7 +35,7 @@ RAPID_API_KEY = os.getenv("RAPID_API_KEY")
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1","jaysen-lestari-ligapass.pbp.cs.ui.ac.id", "10.0.2.2"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","jaysen-lestari-ligapass.pbp.cs.ui.ac.id","10.0.2.2"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://accounts.google.com",
@@ -68,10 +68,12 @@ INSTALLED_APPS = [
     'news',
     'reviews',
     'phonenumber_field',
+    'corsheaders',
     ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -179,6 +181,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'authentication.User'
 
 LOGIN_URL = 'authentication:login'
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'None'
 
 # https://docs.djangoproject.com/en/5.2/topics/email/
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
