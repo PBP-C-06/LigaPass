@@ -12,14 +12,14 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
     {% for venue in venues %}
     <div class="bg-slate-50 p-4 rounded-lg shadow-sm flex flex-col hover:bg-slate-100 transition-colors duration-200 border-l-4 border-blue-500 border border-slate-200">
-      <div class="flex items-center justify-between mb-2">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2 text-center sm:text-left">
         <div class="flex flex-col">
-          <p class="font-semibold text-slate-800 text-lg">{{ venue.name }}</p>
+          <p class="font-semibold text-slate-800 text-base sm:text-lg">{{ venue.name }}</p>
           <p class="text-sm text-slate-500">{{ venue.city|default:"N/A" }}</p>
         </div>
-        <div class="flex space-x-2">
-          <a href="{% url 'matches:edit_venue' venue.pk %}" class="text-yellow-600 hover:text-yellow-700 text-sm font-semibold p-1 rounded transition">Edit</a>
-          <a href="{% url 'matches:delete_venue' venue.pk %}" class="text-red-600 hover:text-red-700 text-sm font-semibold p-1 rounded transition">Hapus</a>
+        <div class="flex flex-wrap gap-2 justify-center sm:justify-end">
+          <a href="{% url 'matches:edit_venue' venue.pk %}" class="text-yellow-600 hover:text-yellow-700 text-sm font-semibold px-2 py-1 rounded transition">Edit</a>
+          <a href="{% url 'matches:delete_venue' venue.pk %}" class="text-red-600 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded transition">Hapus</a>
         </div>
       </div>
 
