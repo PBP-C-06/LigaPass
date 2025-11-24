@@ -1,17 +1,37 @@
-<a href="{% url 'matches:details' match.id %}" class="relative block bg-white border border-slate-200 p-4 rounded-lg hover:shadow-md hover:scale-[1.01] transition">
-  <div class="flex items-center justify-center">
-    <div class="flex-1 text-right text-slate-800 font-semibold">{{ match.home_team.name }}</div>
-    <img src="{{ match.home_team.display_logo_url }}" alt="{{ match.home_team.name }} logo" class="w-8 h-8 mx-2">
-    <div class="text-xl font-bold text-slate-900">
-      {% if match.status_key == 'Past' %}
-        {{ match.home_goals|default_if_none:"-" }} - {{ match.away_goals|default_if_none:"-" }}
-      {% else %}VS{% endif %}
-    </div>
-    <img src="{{ match.away_team.display_logo_url }}" alt="{{ match.away_team.name }} logo" class="w-8 h-8 mx-2">
-    <div class="flex-1 text-left text-slate-800 font-semibold">{{ match.away_team.name }}</div>
-  </div>
-  <div class="absolute top-3 right-4 text-right text-xs text-slate-500">
+<a href="{% url 'matches:details' match.id %}" class="relative block bg-white border border-slate-200 p-3 md:p-4 rounded-lg hover:shadow-md hover:scale-[1.01] transition">
+  <div class="absolute top-2 md:top-3 right-2 md:right-4 text-right text-xs text-slate-500 hidden sm:block">
     <p>{{ match.date|date:"d M Y" }}</p>
     <p>{{ match.date|date:"H:i" }} WIB</p>
+  </div>
+
+  <div class="flex flex-col gap-3">
+    <div class="flex items-center justify-between text-xs text-slate-500 sm:hidden">
+      <div>
+        <p>{{ match.date|date:"d M Y" }}</p>
+        <p>{{ match.date|date:"H:i" }} WIB</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-5 py-3 md:py-5">
+      <div class="flex items-center justify-end gap-3 sm:gap-4 min-w-0 text-right">
+        <span class="min-w-0 text-xs sm:text-sm md:text-base font-semibold text-slate-800 line-clamp-2 text-right">{{ match.home_team.name }}</span>
+        <img src="{{ match.home_team.display_logo_url }}" alt="{{ match.home_team.name }} logo" class="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 object-contain flex-shrink-0">
+      </div>
+
+      <div class="flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg font-bold text-slate-900">
+        {% if match.status_key == 'Past' %}
+          <span>{{ match.home_goals|default_if_none:"-" }}</span>
+          <span>-</span>
+          <span>{{ match.away_goals|default_if_none:"-" }}</span>
+        {% else %}
+          <span class="text-slate-500 text-sm md:text-base">VS</span>
+        {% endif %}
+      </div>
+
+      <div class="flex items-center justify-start gap-3 sm:gap-4 min-w-0 text-left">
+        <img src="{{ match.away_team.display_logo_url }}" alt="{{ match.away_team.name }} logo" class="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 object-contain flex-shrink-0">
+        <span class="min-w-0 text-xs sm:text-sm md:text-base font-semibold text-slate-800 line-clamp-2 text-left">{{ match.away_team.name }}</span>
+      </div>
+    </div>
   </div>
 </a>

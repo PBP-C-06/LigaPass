@@ -12,15 +12,15 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
     {% for team in teams %}
     <div class="bg-slate-50 p-4 rounded-lg shadow-sm flex flex-col justify-between hover:bg-slate-100 transition-colors duration-200 border border-slate-200">
-      <div class="flex items-center space-x-3 mb-4">
-        <img src="{{ team.display_logo_url }}" alt="{{ team.name }} logo" class="w-12 h-12 object-contain bg-white p-1 rounded-full border border-slate-200">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 text-center sm:text-left">
+        <img src="{{ team.display_logo_url }}" alt="{{ team.name }} logo" class="w-12 h-12 sm:w-14 sm:h-14 object-contain bg-white p-1 rounded-full border border-slate-200 mx-auto sm:mx-0">
         <div class="flex flex-col">
-          <p class="font-semibold text-slate-800 text-lg">{{ team.name }}</p>
+          <p class="font-semibold text-slate-800 text-base sm:text-lg">{{ team.name }}</p>
           <p class="text-xs text-slate-500 uppercase">{{ team.get_league_display|default:"N/A" }}</p>
         </div>
       </div>
 
-      <div class="flex space-x-3 border-t border-slate-200 pt-3 justify-end">
+      <div class="flex flex-wrap gap-2 border-t border-slate-200 pt-3 justify-center sm:justify-end">
         <a href="{% url 'matches:edit_team' team.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
           Edit
         </a>

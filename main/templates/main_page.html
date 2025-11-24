@@ -7,12 +7,12 @@
     {% for slide in hero_slides %}
       <div class="min-w-full relative">
         <img src="{{ slide.image }}" alt="banner"
-             class="w-full h-[450px] object-cover brightness-75">
-        <div class="absolute inset-0 flex flex-col items-start justify-center px-16 text-white">
-          <h1 class="text-5xl font-extrabold mb-4 drop-shadow-lg">{{ slide.title }}</h1>
-          <p class="text-xl mb-8 max-w-2xl drop-shadow-md">{{ slide.description }}</p>
+             class="w-full h-64 sm:h-[450px] object-cover brightness-75">
+        <div class="absolute inset-0 flex flex-col items-start justify-center px-4 md:px-16 text-white">
+          <h1 class="text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg">{{ slide.title }}</h1>
+          <p class="text-lg md:text-xl mb-8 max-w-2xl drop-shadow-md">{{ slide.description }}</p>
           <a href="{{ slide.cta_link }}"
-             class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-xl font-semibold transition transform hover:scale-105">
+             class="bg-red-600 hover:bg-red-700 text-white px-6 md:px-8 py-3 rounded-xl font-semibold transition transform hover:scale-105">
             {{ slide.cta_text }}
           </a>
         </div>
@@ -61,19 +61,19 @@ dots.forEach((dot, i) => dot.addEventListener("click", () => { showSlide(i); res
 showSlide(0);
 </script>
 
-<section class="py-12 px-10 bg-gray-50">
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-3xl font-bold text-gray-800">Pertandingan Mendatang</h2>
-    <a href="/matches/" class="border border-slate-800 px-4 py-2 rounded-lg hover:bg-slate-800 hover:text-white transition">Lihat Selengkapnya</a>
-  </div>
+<section class="py-12 px-4 md:px-10 bg-gray-50">
+   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+     <h2 class="text-3xl font-bold text-gray-800">Pertandingan Mendatang</h2>
+     <a href="/matches/" class="border border-slate-800 px-4 py-2 rounded-lg hover:bg-slate-800 hover:text-white transition">Lihat Selengkapnya</a>
+   </div>
 
-  <div class="grid gap-4">
-    {% for match in upcoming_matches %}
-      {% include 'matches/match_card.html' with match=match %}
-    {% empty %}
-      <p class="text-gray-500">Tidak ada pertandingan mendatang saat ini.</p>
-    {% endfor %}
-  </div>
+   <div class="grid grid-cols-1 gap-4">
+     {% for match in upcoming_matches %}
+       {% include 'matches/match_card.html' with match=match %}
+     {% empty %}
+       <p class="text-gray-500">Tidak ada pertandingan mendatang saat ini.</p>
+     {% endfor %}
+   </div>
 </section>
 
 <style>
@@ -134,32 +134,32 @@ showSlide(0);
 }
 </style>
 
-<section class="py-10 px-10 bg-gray-50">
-  <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Tim Liga 1</h2>
-  
-  <div class="slider-container w-full overflow-hidden relative py-4">
-    <div class="slider-track">
-      
-      <div class="flex min-w-full justify-between flex-shrink-0">
-        {% for team in teams %}
-          <div class="slider-item">
-            <img src="{{ team.display_logo_url }}" alt="{{ team.name }} Logo">
-          </div>
-        {% empty %}
-          <p class="text-gray-500 p-8">Belum ada tim yang terdaftar.</p>
-        {% endfor %}
-      </div>
+<section class="py-10 px-4 md:px-10 bg-gray-50">
+   <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Tim Liga 1</h2>
 
-      <div class="flex min-w-full justify-between flex-shrink-0">
-        {% for team in teams %}
-          <div class="slider-item">
-            <img src="{{ team.display_logo_url }}" alt="{{ team.name }} Logo">
-          </div>
-        {% endfor %}
-      </div>
+   <div class="slider-container w-full overflow-hidden relative py-4">
+     <div class="slider-track">
 
-    </div>
-  </div>
+       <div class="flex min-w-full justify-between flex-shrink-0">
+         {% for team in teams %}
+           <div class="slider-item">
+             <img src="{{ team.display_logo_url }}" alt="{{ team.name }} Logo">
+           </div>
+         {% empty %}
+           <p class="text-gray-500 p-8">Belum ada tim yang terdaftar.</p>
+         {% endfor %}
+       </div>
+
+       <div class="flex min-w-full justify-between flex-shrink-0">
+         {% for team in teams %}
+           <div class="slider-item">
+             <img src="{{ team.display_logo_url }}" alt="{{ team.name }} Logo">
+           </div>
+         {% endfor %}
+       </div>
+
+     </div>
+   </div>
 </section>
 {% include 'news/latest_news_snippets.html' %}
 {% endblock %}

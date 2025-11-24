@@ -152,8 +152,8 @@ function createMatchCard(match) {
   const matchDate = dateParts[0] || '';
 
   const scoreDisplay = isFinished
-    ? `${match.home_goals != null ? match.home_goals : '0'} - ${match.away_goals != null ? match.away_goals : '0'}`
-    : '<span class="text-slate-500">VS</span>';
+    ? `<span>${match.home_goals != null ? match.home_goals : '0'}</span><span>-</span><span>${match.away_goals != null ? match.away_goals : '0'}</span>`
+    : '<span class="text-slate-500 text-xs sm:text-sm md:text-base">VS</span>';
 
   const statusStyle = STATUS_STYLES[match.status_key] || 'bg-gray-100 text-gray-700';
   const statusText = match.status_key || 'N/A';
@@ -189,24 +189,40 @@ function createMatchCard(match) {
   return `
     <div class="relative block bg-white border border-slate-200 p-4 rounded-lg hover:shadow-lg transition-all duration-200">
       <a href="${match.details_url}" class="block">
-        <div class="absolute top-3 left-3">
+        <div class="absolute top-3 left-3 hidden sm:block">
           <span class="text-xs font-semibold px-2.5 py-0.5 rounded ${statusStyle}">
             ${statusText}
           </span>
         </div>
-        <div class="absolute top-3 right-3 text-right text-xs text-slate-500">
+        <div class="absolute top-3 right-3 text-right text-xs text-slate-500 hidden sm:block">
           <p>${matchDate}</p>
           <p>${matchTime}</p>
         </div>
-        <div class="flex items-center justify-center py-6">
-          <div class="flex-1 text-right">
-              <span class="text-base md:text-lg font-semibold text-slate-800">${match.home_team_name}</span>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between sm:hidden text-xs text-slate-500">
+            <span class="inline-flex items-center font-semibold px-2.5 py-0.5 rounded ${statusStyle}">
+              ${statusText}
+            </span>
+            <div class="text-right">
+              <p>${matchDate}</p>
+              <p>${matchTime}</p>
+            </div>
           </div>
-          <img src="${match.home_logo_url || placeholderImageUrl}" alt="${match.home_team_name} logo" class="w-12 h-12 mx-4 object-contain flex-shrink-0">
-          <div class="text-xl md:text-2xl font-bold text-slate-900 px-2">${scoreDisplay}</div>
-          <img src="${match.away_logo_url || placeholderImageUrl}" alt="${match.away_team_name} logo" class="w-12 h-12 mx-4 object-contain flex-shrink-0">
-          <div class="flex-1 text-left">
-               <span class="text-base md:text-lg font-semibold text-slate-800">${match.away_team_name}</span>
+
+          <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-5 py-4">
+            <div class="flex items-center justify-end gap-3 sm:gap-4 min-w-0 text-right">
+              <span class="min-w-0 text-xs sm:text-sm md:text-base font-semibold text-slate-800 line-clamp-2 text-right">${match.home_team_name}</span>
+              <img src="${match.home_logo_url || placeholderImageUrl}" alt="${match.home_team_name} logo" class="w-10 h-10 sm:w-12 sm:h-12 object-contain flex-shrink-0">
+            </div>
+
+            <div class="flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg md:text-xl font-bold text-slate-900">
+              ${scoreDisplay}
+            </div>
+
+            <div class="flex items-center justify-start gap-3 sm:gap-4 min-w-0 text-left">
+              <img src="${match.away_logo_url || placeholderImageUrl}" alt="${match.away_team_name} logo" class="w-10 h-10 sm:w-12 sm:h-12 object-contain flex-shrink-0">
+              <span class="min-w-0 text-xs sm:text-sm md:text-base font-semibold text-slate-800 line-clamp-2 text-left">${match.away_team_name}</span>
+            </div>
           </div>
         </div>
       </a>
@@ -282,7 +298,7 @@ function renderFilteredMatches(data) {
   let listHtml = '';
 
   if (matches.length > 0) {
-    listHtml += `<div class="space-y-4 mb-8">`;
+    listHtml += `<div class="grid grid-cols-1 gap-4 mb-8">`;
     matches.forEach(match => {
         listHtml += createMatchCard(match);
     });
