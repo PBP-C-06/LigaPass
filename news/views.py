@@ -10,6 +10,10 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 from django.conf import settings
+from django.core.serializers import serialize
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.dateformat import DateFormat
+from django.contrib.sites.shortcuts import get_current_site
 
 # Override tampilan input file menggunakan template kustom
 class PlainFileInput(ClearableFileInput):
@@ -271,3 +275,57 @@ def news_delete(request, pk):
 
     # Jika GET, tampilkan halaman konfirmasi
     return render(request, 'news/news_confirm_delete.html', {'news': news})
+
+def serialize_news(news, request):
+    domain = request.build_absolute_uri('/')[:-1]
+    return {
+        "id": news.id,
+        "title": news.title,
+        "content": news.content,
+        "thumbnail": domain + news.thumbnail.url if news.thumbnail else '',
+        "category": news.category,
+        "is_featured": news.is_featured,
+        "news_views": news.news_views,
+        "created_at": DateFormat(news.created_at).format("Y-m-d H:i"),
+    }
+
+def api_news_list(request):
+    news = News.objects.all()
+
+    query = request.GET.get('search')
+    category = request.GET.get('category')
+    is_featured = request.GET.get('is_featured')
+    sort = request.GET.get('sort', 'created_at')
+
+    if query:
+        news = news.filter(title__icontains=query)
+    if category:
+        news = news.filter(category=category)
+    if is_featured in ['true', 'false']:
+        news = news.filter(is_featured=(is_featured == 'true'))
+    if sort in ['created_at', 'edited_at', 'news_views']:
+        news = news.order_by(f'-{sort}')
+
+    data = [serialize_news(n, request) for n in news]
+
+    return JsonResponse(data, safe=False)
+
+def api_news_detail(request, pk):
+    news = get_object_or_404(News, pk=pk)
+    news.news_views += 1
+    news.save(update_fields=['news_views'])
+
+    data = {
+        "id": news.id,
+        "title": news.title,
+        "content": news.content,
+        "thumbnail": request.build_absolute_uri(news.thumbnail.url) if news.thumbnail else '',
+        "category": news.category,
+        "is_featured": news.is_featured,
+        "news_views": news.news_views,
+        "created_at": DateFormat(news.created_at).format("Y-m-d H:i"),
+    }
+
+    return JsonResponse(data)
+
+
