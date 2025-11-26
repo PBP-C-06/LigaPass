@@ -125,7 +125,7 @@ def login_user(request):
             response.set_cookie('last_login', str(datetime.datetime.now()))
             return response
 
-        return JsonResponse({
+        return JsonResponse({     
             "status": "error",
             "errors": form.errors
         }, status=400)
