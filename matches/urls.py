@@ -6,6 +6,8 @@ from .views import (
     MatchUpdateView,
     api_match_list,
     live_score_api,
+    flutter_team_logos,
+    flutter_venue_images,
     match_calendar_view, 
     match_details_view,
     update_matches_view,
@@ -30,6 +32,8 @@ urlpatterns = [
 
     # Read match list ajax
     path('api/calendar/', api_match_list, name='api_calendar'),
+    path('api/flutter/team-logos/', flutter_team_logos, name='flutter_team_logos'),
+    path('api/flutter/venue-images/', flutter_venue_images, name='flutter_venue_images'),
 
     # URL untuk Manajemen Admin (CUD)
     # Base Management URL

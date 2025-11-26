@@ -6,7 +6,9 @@ certifi==2025.10.5
 channels==4.3.1
 channels_redis==4.3.0
 charset-normalizer==3.4.4
+coverage==7.11.3
 Django==5.2.7
+django-cors-headers==4.9.0
 django-js-asset==3.1.2
 django-phonenumber-field==8.3.0
 google-auth==2.41.1
@@ -28,5 +30,3 @@ tzdata==2025.2
 urllib3==2.5.0
 webencodings==0.5.1
 whitenoise==6.11.0
-coverage
-django-cors-headers

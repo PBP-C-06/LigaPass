@@ -19,6 +19,10 @@ from reviews.models import Review
 from bookings.models import Ticket
 from django.db.models import Avg
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.decorators.http import require_GET
+from django.utils.text import slugify
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.templatetags.static import static
 
 
 from .models import Team, Match, Venue, TicketPrice
@@ -175,6 +179,54 @@ def api_match_list(request):
             'page_range': list(paginator.get_elided_page_range(number=matches_page.number, on_each_side=1, on_ends=1)),
         }
     })
+
+
+def _build_absolute_static_uri(request, path):
+    return request.build_absolute_uri(static(path))
+
+
+def _venue_image_url(request, venue):
+    slug = slugify(f"{venue.name} {venue.city}")
+    filename = f"{slug}.png"
+    path = f"venues/{filename}"
+    if staticfiles_storage.exists(path):
+        return _build_absolute_static_uri(request, path)
+    return _build_absolute_static_uri(request, "images/thumbnail_placeholder.png")
+
+
+@require_GET
+def flutter_team_logos(request):
+    teams = Team.objects.all().order_by('name')
+    data = []
+
+    for team in teams:
+        logo_url = request.build_absolute_uri(team.display_logo_url)
+        data.append({
+            'id': str(team.id),
+            'name': team.name,
+            'league': team.league,
+            'league_label': team.get_league_display(),
+            'logo_url': logo_url,
+        })
+
+    return JsonResponse({'teams': data})
+
+
+@require_GET
+def flutter_venue_images(request):
+    venues = Venue.objects.all().order_by('name')
+    data = []
+
+    for venue in venues:
+        data.append({
+            'id': str(venue.id),
+            'name': venue.name,
+            'city': venue.city,
+            'image_url': _venue_image_url(request, venue),
+        })
+
+    return JsonResponse({'venues': data})
+
 
 def match_details_view(request, match_id):
     match = get_object_or_404(
