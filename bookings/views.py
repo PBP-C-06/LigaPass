@@ -8,7 +8,31 @@ from bookings.models import *
 from matches.models import *
 import requests, json, base64, uuid
 
-
+@login_required
+def flutter_get_ticket_prices(request, match_id):
+    """Get ticket prices for a match - untuk Flutter"""
+    match = get_object_or_404(Match, id=match_id)
+    ticket_prices = TicketPrice.objects.filter(match=match).order_by('price')
+    
+    tickets = []
+    for tp in ticket_prices:
+        tickets.append({
+            'id': tp.id,
+            'match_id': str(tp.match.id),
+            'seat_category': tp.seat_category,
+            'price': float(tp.price),
+            'quantity_available': tp.quantity_available,
+        })
+    
+    return JsonResponse({
+        'status': True,
+        'match': {
+            'id': str(match.id),
+            'title': f"{match.home_team.name} vs {match.away_team.name}",
+        },
+        'tickets': tickets,
+    })
+    
 @login_required
 def create_booking(request, match_id):
     match = get_object_or_404(Match, id=match_id)
@@ -86,7 +110,64 @@ def create_booking(request, match_id):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+@csrf_exempt
+@login_required
+def flutter_create_booking(request, match_id):
+    if request.method != "POST":
+        return JsonResponse({"status": False, "message": "Invalid method"}, status=405)
 
+    body = json.loads(request.body)
+    ticket_types = body.get("ticket_types", {})
+    method = body.get("payment_method")
+
+    if not ticket_types:
+        return JsonResponse({"status": False, "message": "Empty ticket selection"})
+
+    match = get_object_or_404(Match, id=match_id)
+
+    total = 0
+    items = []
+
+    # validate & reserve
+    for seat_cat, qty in ticket_types.items():
+        tp = TicketPrice.objects.filter(match=match, seat_category=seat_cat).first()
+        if not tp:
+            return JsonResponse({"status": False, "message": f"{seat_cat} not found"})
+
+        qty = int(qty)
+        if tp.quantity_available < qty:
+            return JsonResponse({"status": False, "message": f"Insufficient {seat_cat}"})
+
+        # Reserve stock
+        tp.quantity_available -= qty
+        tp.save()
+
+        total += float(tp.price) * qty
+        items.append((tp, qty))
+
+    # create booking
+    booking = Booking.objects.create(
+        user=request.user,
+        total_price=total,
+        status="PENDING",
+    )
+
+    for tp, qty in items:
+        BookingItem.objects.create(
+            booking=booking,
+            ticket_type=tp,
+            quantity=qty,
+        )
+
+    # Return to Flutter
+    return JsonResponse({
+        "status": True,
+        "booking_id": str(booking.booking_id),
+        "total_price": total,
+        "payment_method": method,
+    })
+
+    
 @login_required
 def payment(request, booking_id):
     booking = get_object_or_404(Booking, booking_id=booking_id, user=request.user)
@@ -196,6 +277,96 @@ def payment(request, booking_id):
 
     return JsonResponse({"error": "Invalid method"}, status=405)
 
+@csrf_exempt
+@login_required
+def flutter_payment(request, booking_id):
+    if request.method != "POST":
+        return JsonResponse({"status": False, "message": "Invalid method"}, 405)
+
+    booking = get_object_or_404(Booking, booking_id=booking_id, user=request.user)
+    body = json.loads(request.body)
+    method = body.get("method")
+    token_id = body.get("token_id")
+
+    server_key = settings.MIDTRANS_SERVER_KEY
+    auth = base64.b64encode(f"{server_key}:".encode()).decode()
+    headers = {
+        "Authorization": f"Basic {auth}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    # Prevent duplicate payment
+    if booking.midtrans_order_id:
+        return JsonResponse({"status": False, "message": "Order already processed"})
+
+    order_id = f"mb-{uuid.uuid4().hex[:8]}"
+
+    payload = {
+        "transaction_details": {
+            "order_id": order_id,
+            "gross_amount": int(booking.total_price),
+        },
+        "customer_details": {
+            "first_name": booking.user.username,
+            "email": booking.user.email,
+        },
+        "item_details": [
+            {
+                "id": item.id,
+                "price": float(item.ticket_type.price),
+                "quantity": item.quantity,
+                "name": f"Ticket {item.ticket_type.seat_category}"
+            }
+            for item in booking.items.all()
+        ],
+    }
+
+    # Payment type
+    if method == "gopay":
+        payload["payment_type"] = "qris"
+        payload["qris"] = {"acquirer": "gopay"}
+
+    elif method.startswith("bank_"):
+        bank = method.split("_")[1]
+        payload["payment_type"] = "bank_transfer"
+        payload["bank_transfer"] = {"bank": bank}
+
+    elif method == "credit_card":
+        if not token_id:
+            return JsonResponse({"status": False, "message": "Missing card token"})
+        payload["payment_type"] = "credit_card"
+        payload["credit_card"] = {
+            "token_id": token_id,
+            "authentication": True,
+        }
+
+    else:
+        return JsonResponse({"status": False, "message": "Invalid method"})
+
+    # Midtrans call
+    try:
+        res = requests.post(
+            "https://api.sandbox.midtrans.com/v2/charge",
+            headers=headers,
+            json=payload,
+        )
+        mid_data = res.json()
+    except:
+        return JsonResponse({"status": False, "message": "Midtrans request failed"})
+
+    # Save booking
+    booking.midtrans_order_id = order_id
+    booking.midtrans_actions = mid_data.get("actions", [])
+    booking.status = mid_data.get("transaction_status", "PENDING").upper()
+    booking.save()
+
+    return JsonResponse({
+        "status": True,
+        "payment_data": mid_data,
+    })
+
+    
 def cancel_booking(request, booking_id):
     # Pastikan booking milik user dan masih pending
     booking = get_object_or_404(Booking, booking_id=booking_id, user=request.user)
@@ -231,6 +402,27 @@ def cancel_booking(request, booking_id):
 
     return JsonResponse({"message": f"Booking cannot be cancelled (Status: {booking.status})"}, status=400)
 
+@csrf_exempt
+@login_required
+def flutter_cancel_booking(request, booking_id):
+    booking = Booking.objects.filter(booking_id=booking_id, user=request.user).first()
+
+    if not booking:
+        return JsonResponse({"status": False, "message": "Not found"})
+
+    if booking.status != "PENDING":
+        return JsonResponse({"status": False, "message": "Cannot cancel"})
+
+    # restore stock
+    for item in booking.items.all():
+        item.ticket_type.quantity_available += item.quantity
+        item.ticket_type.save()
+
+    booking.status = "CANCELLED"
+    booking.save()
+
+    return JsonResponse({"status": True, "message": "Booking cancelled"})
+
 @login_required
 def check_booking_status(request, booking_id):
     try:
@@ -238,6 +430,17 @@ def check_booking_status(request, booking_id):
         return JsonResponse({"status": booking.status})
     except Booking.DoesNotExist:
         return JsonResponse({"error": "Booking not found"}, status=404)
+
+@login_required
+def flutter_check_status(request, booking_id):
+    booking = Booking.objects.filter(booking_id=booking_id, user=request.user).first()
+    if not booking:
+        return JsonResponse({"status": False, "message": "Not found"})
+
+    return JsonResponse({
+        "status": True,
+        "payment_status": booking.status,
+    })
 
 
 @csrf_exempt
