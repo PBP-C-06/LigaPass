@@ -8,6 +8,8 @@ from .views import (
     live_score_api,
     flutter_team_logos,
     flutter_venue_images,
+    flutter_team_logo_proxy,
+    flutter_venue_image_proxy,
     match_calendar_view, 
     match_details_view,
     update_matches_view,
@@ -34,6 +36,8 @@ urlpatterns = [
     path('api/calendar/', api_match_list, name='api_calendar'),
     path('api/flutter/team-logos/', flutter_team_logos, name='flutter_team_logos'),
     path('api/flutter/venue-images/', flutter_venue_images, name='flutter_venue_images'),
+    path('api/flutter/team-logos/<uuid:team_id>/image/', flutter_team_logo_proxy, name='flutter_team_logo_proxy'),
+    path('api/flutter/venue-images/<uuid:venue_id>/image/', flutter_venue_image_proxy, name='flutter_venue_image_proxy'),
 
     # URL untuk Manajemen Admin (CUD)
     # Base Management URL
