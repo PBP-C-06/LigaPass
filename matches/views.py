@@ -3,7 +3,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q, Min
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, HttpResponse
 from django.core.cache import cache
 import requests
 from django.conf import settings
@@ -21,8 +21,9 @@ from django.db.models import Avg
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_GET
 from django.utils.text import slugify
-from django.contrib.staticfiles.storage import staticfiles_storage
 from django.templatetags.static import static
+from django.contrib.staticfiles import finders
+import mimetypes
 
 
 from .models import Team, Match, Venue, TicketPrice
@@ -189,9 +190,31 @@ def _venue_image_url(request, venue):
     slug = slugify(f"{venue.name} {venue.city}")
     filename = f"{slug}.png"
     path = f"venues/{filename}"
-    if staticfiles_storage.exists(path):
+    if finders.find(path):
         return _build_absolute_static_uri(request, path)
     return _build_absolute_static_uri(request, "images/thumbnail_placeholder.png")
+
+
+def _serve_static_file(path, fallback_path="images/thumbnail_placeholder.png"):
+    candidate = finders.find(path) or finders.find(fallback_path) or finders.find("images/thumbnail_placeholder.png")
+    if not candidate:
+        return HttpResponse(status=404)
+
+    content_type, _ = mimetypes.guess_type(candidate)
+    file = open(candidate, "rb")
+    return FileResponse(file, content_type=content_type or "application/octet-stream")
+
+
+def _proxy_external_image(url):
+    if not url or not url.startswith(("http://", "https://")):
+        return None
+    try:
+        resp = requests.get(url, timeout=8)
+        resp.raise_for_status()
+        content_type = resp.headers.get("Content-Type", "application/octet-stream")
+        return HttpResponse(resp.content, content_type=content_type)
+    except Exception:
+        return None
 
 
 @require_GET
@@ -200,7 +223,7 @@ def flutter_team_logos(request):
     data = []
 
     for team in teams:
-        logo_url = request.build_absolute_uri(team.display_logo_url)
+        logo_url = request.build_absolute_uri(reverse('matches:flutter_team_logo_proxy', args=[team.id]))
         data.append({
             'id': str(team.id),
             'name': team.name,
@@ -222,10 +245,33 @@ def flutter_venue_images(request):
             'id': str(venue.id),
             'name': venue.name,
             'city': venue.city,
-            'image_url': _venue_image_url(request, venue),
+            'image_url': request.build_absolute_uri(reverse('matches:flutter_venue_image_proxy', args=[venue.id])),
         })
 
     return JsonResponse({'venues': data})
+
+
+@require_GET
+def flutter_team_logo_proxy(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+
+    if team.logo_url:
+        proxied = _proxy_external_image(team.logo_url)
+        if proxied:
+            return proxied
+
+    filename = team.static_logo_filename
+    path = f"matches/images/team_logos/{team.league}/{filename}"
+    return _serve_static_file(path)
+
+
+@require_GET
+def flutter_venue_image_proxy(request, venue_id):
+    venue = get_object_or_404(Venue, id=venue_id)
+    slug = slugify(f"{venue.name} {venue.city}")
+    filename = f"{slug}.png"
+    path = f"venues/{filename}"
+    return _serve_static_file(path)
 
 
 def match_details_view(request, match_id):
