@@ -57,13 +57,27 @@ def get_match_status(match_time):
     else:
         return 'Finished'
 
-def _serialize_match(match):
+def _serialize_match(match, request=None):
+    proxy_home_logo = None
+    proxy_away_logo = None
+    if request:
+        proxy_home_logo = request.build_absolute_uri(
+            reverse('matches:flutter_team_logo_proxy', args=[match.home_team.id])
+        )
+        proxy_away_logo = request.build_absolute_uri(
+            reverse('matches:flutter_team_logo_proxy', args=[match.away_team.id])
+        )
+
     return {
         'id': str(match.id),
         'home_team_name': match.home_team.name,
         'home_logo_url': match.home_team.display_logo_url,
+        'home_logo_proxy_url': proxy_home_logo,
+        'home_team_id': str(match.home_team.id),
         'away_team_name': match.away_team.name,
         'away_logo_url': match.away_team.display_logo_url,
+        'away_logo_proxy_url': proxy_away_logo,
+        'away_team_id': str(match.away_team.id),
         'date': match.date.strftime('%d %b %Y @ %H:%M WIB'),
         'status_key': get_match_status(match.date),
         'home_goals': match.home_goals if match.home_goals is not None else 0,
@@ -165,7 +179,7 @@ def api_match_list(request):
     matches_list = []
 
     for match in matches_page.object_list:
-        matches_list.append(_serialize_match(match))
+        matches_list.append(_serialize_match(match, request))
 
     return JsonResponse({
         'matches': matches_list,
