@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from bookings.models import *
 from matches.models import *
 import requests, json, base64, uuid
+from django.conf import settings
 
 @login_required
 def flutter_get_ticket_prices(request, match_id):
@@ -483,3 +484,215 @@ def midtrans_notification(request):
         return JsonResponse({'message': f'Processed {order_id} with {booking.status}'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@login_required
+def flutter_get_user_tickets(request):
+    """Get all tickets for current user with proper status"""
+    if request.method == 'GET':
+        tickets = Ticket.objects.filter(
+            booking__user=request.user,
+            booking__status='CONFIRMED'
+        ).select_related(
+            'booking', 'ticket_type', 
+            'ticket_type__match', 
+            'ticket_type__match__home_team',
+            'ticket_type__match__away_team',
+            'ticket_type__match__venue'
+        ).order_by('-generated_at')
+        
+        tickets_data = []
+        for ticket in tickets:
+            match = ticket.ticket_type.match
+            
+            # Determine effective status
+            is_match_finished = match.date < timezone.now()
+            effective_used = ticket.is_used or is_match_finished
+            
+            tickets_data.append({
+                'id': str(ticket.ticket_id),
+                'booking_id': str(ticket.booking.booking_id),
+                'seat_category': ticket.ticket_type.seat_category,
+                'match_title': f"{match.home_team.name} vs {match.away_team.name}",
+                'home_team': match.home_team.name,
+                'away_team': match.away_team.name,
+                'home_team_logo': match.home_team.display_logo_url if hasattr(match.home_team, 'display_logo_url') else None,
+                'away_team_logo': match.away_team.display_logo_url if hasattr(match.away_team, 'display_logo_url') else None,
+                'match_date': match.date.isoformat() if match.date else None,
+                'venue': match.venue.name if match.venue else None,
+                'city': match.venue.city if match.venue else None,
+                'is_used': effective_used,  # TRUE if used OR match finished
+                'is_match_finished': is_match_finished,
+                'generated_at': ticket.generated_at.isoformat(),
+                'qr_code': '',  # We use ticket_id as barcode data in Flutter
+            })
+        
+        return JsonResponse({
+            'status': True,
+            'tickets': tickets_data
+        })
+    
+    return JsonResponse({'status': False, 'message': 'Method not allowed'}, status=405)
+
+
+@csrf_exempt
+@login_required
+def flutter_get_booking_tickets(request, booking_id):
+    if request.method == 'GET':
+        try:
+            booking = Booking.objects.get(booking_id=booking_id, user=request.user)
+            tickets = booking.tickets.select_related(
+                'ticket_type',
+                'ticket_type__match',
+                'ticket_type__match__home_team',
+                'ticket_type__match__away_team',
+            ).all()
+            
+            tickets_data = []
+            for ticket in tickets:
+                match = ticket.ticket_type.match
+                tickets_data.append({
+                    'id': str(ticket.ticket_id),
+                    'booking_id': str(booking.booking_id),
+                    'seat_category': ticket.ticket_type.seat_category,
+                    'match_title': f"{match.home_team.name} vs {match.away_team.name}",
+                    'home_team': match.home_team.name,
+                    'away_team': match.away_team.name,
+                    'home_team_logo': match.home_team.display_logo_url if hasattr(match.home_team, 'display_logo_url') else None,
+                    'away_team_logo': match.away_team.display_logo_url if hasattr(match.away_team, 'display_logo_url') else None,
+                    'match_date': match.date.isoformat() if match.date else None,
+                    'venue': match.venue.name if match.venue else None,
+                    'city': match.venue.city if match.venue else None,
+                    'is_used': ticket.is_used,
+                    'generated_at': ticket.generated_at.isoformat(),
+                    'qr_code': ticket.qr_code_url if hasattr(ticket, 'qr_code_url') else '',
+                })
+            
+            return JsonResponse({
+                'status': True,
+                'booking_id': str(booking.booking_id),
+                'tickets': tickets_data
+            })
+        except Booking.DoesNotExist:
+            return JsonResponse({'status': False, 'message': 'Booking not found'}, status=404)
+    
+    return JsonResponse({'status': False, 'message': 'Method not allowed'}, status=405)
+
+
+@csrf_exempt
+@login_required
+def flutter_sync_status(request, booking_id):
+    """
+    Sync payment status from Midtrans API and update Django database.
+    Uses direct HTTP request instead of midtransclient.
+    """
+    if request.method == 'POST':
+        try:
+            booking = Booking.objects.get(booking_id=booking_id, user=request.user)
+            
+            # If already confirmed, return immediately
+            if booking.status == 'CONFIRMED':
+                return JsonResponse({
+                    'status': True,
+                    'payment_status': 'CONFIRMED',
+                    'message': 'Payment already confirmed'
+                })
+            
+            # Check if we have midtrans_order_id
+            if not booking.midtrans_order_id:
+                return JsonResponse({
+                    'status': False,
+                    'payment_status': booking.status,
+                    'message': 'No Midtrans order ID found for this booking'
+                })
+            
+            # Use the actual order_id stored in booking
+            order_id = booking.midtrans_order_id
+            
+            # Midtrans API endpoint for checking transaction status
+            midtrans_url = f"https://api.sandbox.midtrans.com/v2/{order_id}/status"
+            
+            # Create authorization header
+            server_key = settings.MIDTRANS_SERVER_KEY
+            auth_string = base64.b64encode(f"{server_key}:".encode()).decode()
+            
+            headers = {
+                'Authorization': f'Basic {auth_string}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+            
+            # Query Midtrans API
+            response = requests.get(midtrans_url, headers=headers)
+            
+            print(f"Midtrans status check for {order_id}: {response.status_code}")
+            print(f"Response: {response.text}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                transaction_status = data.get('transaction_status', '')
+                fraud_status = data.get('fraud_status', 'accept')
+                
+                # Map Midtrans status to booking status
+                if transaction_status == 'capture':
+                    if fraud_status == 'accept':
+                        if booking.status != 'CONFIRMED':
+                            booking.status = 'CONFIRMED'
+                            booking.save()
+                            # Generate tickets
+                            for item in booking.items.all():
+                                for _ in range(item.quantity):
+                                    Ticket.objects.create(booking=booking, ticket_type=item.ticket_type)
+                                    
+                elif transaction_status == 'settlement':
+                    if booking.status != 'CONFIRMED':
+                        booking.status = 'CONFIRMED'
+                        booking.save()
+                        # Generate tickets
+                        for item in booking.items.all():
+                            for _ in range(item.quantity):
+                                Ticket.objects.create(booking=booking, ticket_type=item.ticket_type)
+                                
+                elif transaction_status in ['cancel', 'deny', 'expire']:
+                    if booking.status not in ['CANCELLED', 'EXPIRED']:
+                        booking.status = 'CANCELLED' if transaction_status != 'expire' else 'EXPIRED'
+                        booking.save()
+                        # Restore stock
+                        for item in booking.items.all():
+                            item.ticket_type.quantity_available += item.quantity
+                            item.ticket_type.save()
+                
+                return JsonResponse({
+                    'status': True,
+                    'payment_status': booking.status,
+                    'midtrans_status': transaction_status,
+                    'message': f'Status synced: {transaction_status}'
+                })
+            
+            elif response.status_code == 404:
+                return JsonResponse({
+                    'status': False,
+                    'payment_status': booking.status,
+                    'message': f'Transaction {order_id} not found in Midtrans'
+                })
+            else:
+                return JsonResponse({
+                    'status': False,
+                    'payment_status': booking.status,
+                    'message': f'Midtrans API error: {response.status_code} - {response.text}'
+                })
+                
+        except Booking.DoesNotExist:
+            return JsonResponse({
+                'status': False,
+                'message': 'Booking not found'
+            }, status=404)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'status': False,
+                'message': f'Error: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({'status': False, 'message': 'Method not allowed'}, status=405)
