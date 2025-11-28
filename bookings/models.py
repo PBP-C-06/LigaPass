@@ -1,3 +1,4 @@
+import datetime
 import uuid
 from django.db import models
 from django.conf import settings
@@ -44,3 +45,21 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"Ticket {self.ticket_id} ({self.ticket_type.seat_category} for match {self.ticket_type.match.id}) for Booking {self.booking.booking_id}"
+    
+    @property
+    def match(self):
+        return self.ticket_type.match
+
+    @property
+    def is_match_finished(self):
+        return self.ticket_type.match.date < datetime.datetime.now()
+
+    @property
+    def effective_status(self):
+
+        if self.is_used:
+            return 'used'
+        elif self.is_match_finished:
+            return 'expired'
+        else:
+            return 'active'

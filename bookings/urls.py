@@ -14,4 +14,7 @@ urlpatterns = [
     path("flutter-cancel/<uuid:booking_id>/", flutter_cancel_booking, name="flutter_cancel_booking"),
     path("flutter-check-status/<uuid:booking_id>/", flutter_check_status, name="flutter_check_status"),
     path("flutter-ticket-prices/<uuid:match_id>/", flutter_get_ticket_prices, name="flutter_ticket_prices"),
+    path('flutter-user-tickets/', flutter_get_user_tickets, name='flutter_user_tickets'),
+    path('flutter-get-tickets/<uuid:booking_id>/', flutter_get_booking_tickets, name='flutter_get_booking_tickets'),
+    path('flutter-sync-status/<uuid:booking_id>/', flutter_sync_status, name='flutter_sync_status'),
 ]
