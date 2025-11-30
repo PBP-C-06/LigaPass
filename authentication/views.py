@@ -179,6 +179,7 @@ def flutter_login(request):
         redirect_url = reverse("news:news_list")
 
     return JsonResponse({
+        "id": user.id,
         "role": user.role,
         "status": "success",
         "message": "Login successful",
@@ -352,6 +353,7 @@ def flutter_google_login(request):
             redirect_url = reverse("main:home")
 
         return JsonResponse({
+            "id": user.id,
             "role": user.role,
             "status": "success",
             "message": "Google login successful",

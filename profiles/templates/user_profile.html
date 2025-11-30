@@ -45,28 +45,59 @@
 
         {% if user.is_authenticated %}
         <!-- Untuk edit profile -->
-            <div id="edit-profile-container" class="mt-10 border-t pt-6">
-                <a href="{% url 'profiles:edit_profile_for_user' user.id %}"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition">
-                    Ubah Profil
-                </a>
-            </div>
+        <div id="edit-profile-container" class="mt-10 border-t pt-6 flex items-center space-x-4">
+            <a
+                href="{% url 'profiles:edit_profile_for_user' user.id %}"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold
+                    py-2 px-4 rounded-lg shadow-md transition"
+            >
+                Ubah Profil
+            </a>
+        
+            <button
+                id="delete-profile-btn"
+                class="bg-red-600 hover:bg-red-700 text-white font-semibold
+                    py-2 px-4 rounded-lg shadow-md transition"
+            >
+                Hapus Profil
+            </button>
+        </div>
         {% endif %}
     </div>
 
     <!-- Untuk admin action (mengubah status) -->
     <div id="admin-actions" class="mt-10 border-t pt-6 hidden">
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">Ubah Status User</h3>
-        <div class="flex space-x-4 items-center">
-            <select id="status-select"
-                    class="w-64 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style="text-align-last: center;">
-            </select>
-            <button id="change-status-btn"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+            Ubah Status User
+        </h3>
+    
+        <!-- Status Selector -->
+        <div class="flex items-center space-x-4 mb-6">
+            <select
+                id="status-select"
+                class="w-64 border border-gray-300 rounded-lg px-3 py-2
+                    focus:outline-none focus:ring-2 focus:ring-blue-500
+                    text-center"
+                style="text-align-last: center;"
+            ></select>
+    
+            <button
+                id="change-status-btn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold
+                    py-2 px-4 rounded-lg shadow-md transition"
+            >
                 Konfirmasi
             </button>
         </div>
+    
+        <!-- Delete Button -->
+        <button
+            id="delete-profile-btn-admin"
+            class="bg-red-600 hover:bg-red-700 text-white font-semibold
+                py-2 px-4 rounded-lg shadow-md transition"
+        >
+            Hapus Profil
+        </button>
     </div>
 </div>
 
@@ -140,38 +171,69 @@
                 });
     
                 const btn = document.getElementById("change-status-btn");
-btn.addEventListener("click", async () => {
-    if (!confirm(`Ubah status pengguna menjadi "${select.value}"?`)) return;
+                btn.addEventListener("click", async () => {
+                    if (!confirm(`Ubah status pengguna menjadi "${select.value}"?`)) return;
 
-    try {
-        const res = await fetch(`/profiles/admin/edit/${profileId}/`, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": "{{ csrf_token }}",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ status: select.value })
-        });
+                    try {
+                        const res = await fetch(`/profiles/admin/edit/${profileId}/`, {
+                            method: "POST",
+                            headers: {
+                                "X-CSRFToken": "{{ csrf_token }}",
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ status: select.value })
+                        });
 
-        const resData = await res.json();
+                        const resData = await res.json();
 
-        if (res.ok && resData.ok) {
-            // Jika berhasil 
-            showToast(resData.message, "success");
-        } else {
-            // Jika gagal
-            showToast(resData.message || "Terjadi kesalahan saat memperbarui status.", "error");
+                        if (res.ok && resData.ok) {
+                            showToast(resData.message, "success");
+                        } else {
+                            showToast(resData.message || "Terjadi kesalahan saat memperbarui status.", "error");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showToast("Terjadi kesalahan saat memperbarui status pengguna.", "error");
+                    }
+                });
+            }
+
+            function attachDeleteHandler(btnId) {
+                const btn = document.getElementById(btnId);
+                if (!btn) return;
+
+                btn.addEventListener("click", async () => {
+                    if (!confirm("Yakin ingin menghapus profil ini?\nAksi ini tidak dapat dibatalkan.")) return;
+
+                    try {
+                        const res = await fetch(`/profiles/delete/${profileId}/`, {
+                            method: "POST",
+                            headers: { "X-CSRFToken": "{{ csrf_token }}" }
+                        });
+
+                        const dataDel = await res.json();
+
+                        if (res.ok && dataDel.ok) {
+                            showToast(dataDel.message, "success");
+                            setTimeout(() => window.location.href = "/", 1200);
+                        } else {
+                            showToast(dataDel.message || "Gagal menghapus profil.", "error");
+                        }
+
+                    } catch (err) {
+                        console.error(err);
+                        showToast("Terjadi kesalahan saat menghapus profil.", "error");
+                    }
+                });
+            }
+
+            attachDeleteHandler("delete-profile-btn");
+            attachDeleteHandler("delete-profile-btn-admin");
+
+        } catch (error) {
+            console.error(error);
+            showToast("Terjadi kesalahan: " + error.message, "error");
         }
-        } catch (err) {
-            console.error(err);
-            showToast("Terjadi kesalahan saat memperbarui status pengguna.", "error");
-        }
-    });
-    }
-    } catch (error) {
-        console.error(error);
-        showToast("Terjadi kesalahan: " + error.message, "error");
-    }
     });    
 </script>
 {% endblock profile_content %}

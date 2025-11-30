@@ -67,6 +67,55 @@ class ProfileViewsTest(TestCase):
         response = self.client.post(reverse("profiles:create_profile"), {})
         self.assertEqual(response.status_code, 400)
 
+    # User menghapus profil dirinya sendiri 
+    def test_delete_profile_self(self):
+        self.client.login(username="user1", password="password")
+        
+        response = self.client.post(
+            reverse("profiles:delete_profile", args=[self.user.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertIn("berhasil dihapus", response.json()["message"])
+
+    # User lain mencoba menghapus profil user lain 
+    def test_delete_profile_other_user_forbidden(self):
+        # Login use journalist dan coba hapus user1
+        self.client.login(username="journalist1", password="password")
+        
+        response = self.client.post(
+            reverse("profiles:delete_profile", args=[self.user.id])
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(response.json()["ok"])
+        self.assertIn("tidak memiliki izin", response.json()["message"])
+
+    # Journalist mencoba menghapus profil 
+    def test_delete_profile_journalist_forbidden(self):
+        # journalist mencoba untuk hapus profile user1
+        self.client.login(username="journalist1", password="password")
+        
+        response = self.client.post(
+            reverse("profiles:delete_profile", args=[self.user.id])
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(response.json()["ok"])
+
+    # Admin menghapus profil siapa pun 
+    def test_delete_profile_admin(self):
+        self.client.login(username="admin1", password="password")
+        
+        response = self.client.post(
+            reverse("profiles:delete_profile", args=[self.user.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertIn("berhasil dihapus", response.json()["message"])
+
     # Test show JSON 
     def test_show_json_returns_profiles(self):
         response = self.client.get(reverse("profiles:show_json"))
