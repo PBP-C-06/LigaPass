@@ -1,14 +1,20 @@
 import hashlib
+import json
 from django.urls import reverse
 from django.middleware.csrf import get_token
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 from dotenv import get_key
 from django.templatetags.static import static
 from authentication.models import User
+from authentication.views import flutter_logout, logout_user
 from profiles.models import AdminJournalistProfile, Profile
 from bookings.models import Booking, Ticket
+import base64
+import imghdr
+from django.core.files.base import ContentFile
 
 # Create profile untuk user yang baru registrasi
 @login_required
@@ -88,6 +94,7 @@ def show_json_by_id(request, id):
         else: # Jika role bukan user / journalist (user) maka tampilkan data sebagai berikut
             profile = getattr(user, 'profile', None)
             data.update({
+                "id": user.id,
                 "full_name": profile.full_name,
                 "username": user.username,
                 "email": user.email,
@@ -275,6 +282,40 @@ def admin_change_status(request, id):
         return JsonResponse({"ok": True, "message": f"Status berhasil diubah menjadi {new_status}"})
     except User.DoesNotExist: # Jika user tidak ditemukan 
         return JsonResponse({"ok": False, "message": "User not found"}, status=404)
+    
+@login_required
+def delete_profile(request, id):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "Method not allowed"}, status=405)
+
+    # Ambil user berdasarkan UUID
+    user = get_object_or_404(User, id=id)
+
+    # Ambil profile user tsb
+    profile = getattr(user, "profile", None)
+
+    # Hanya pemilik sendiri atau admin
+    if request.user != user and request.user.role != "admin":
+        return JsonResponse({
+            "ok": False,
+            "message": "Anda tidak memiliki izin untuk menghapus profil ini."
+        }, status=403)
+
+    try:
+        user.delete()
+
+        if request.user == user:
+            logout_user(request)
+
+        return JsonResponse({
+            "ok": True,
+            "message": "Profil dan akun pengguna berhasil dihapus."
+        })
+    except Exception:
+        return JsonResponse({
+            "ok": False,
+            "message": "Terjadi kesalahan saat menghapus profil."
+        }, status=500)
 
 def current_user_json(request):
     user = request.user
@@ -371,3 +412,128 @@ def user_tickets_json(request, id):
         })
 
     return JsonResponse({"tickets": results})
+
+# ======================================== Flutter
+@csrf_exempt
+@login_required
+def create_profile_flutter(request):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "Method not allowed"}, status=405)
+    
+    user = request.user
+
+    # Validasi supaya admin dan journalist tidak dapat membuat profile
+    if user.role in ["admin", "journalist"]:
+        return JsonResponse({
+            "ok": False,
+            "message": "Profil sudah terdaftar sebelumnya."
+        }, status=400)
+
+    # Validasi supaya profile tidak lebih dari satu
+    if hasattr(user, 'profile'):
+        return JsonResponse({
+            "ok": False,
+            "message": "Profil sudah terdaftar sebelumnya."
+        }, status=400)
+
+    try:
+        # Ambil data dari body request (JSON)
+        if request.content_type == "application/json":
+            data = json.loads(request.body)
+            date_of_birth = data.get("date_of_birth")
+            phone_number = data.get("phone")
+            profile_picture = None  # Flutter bisa kirim file via multipart, kalau pakai JSON skip dulu
+        else:
+            # Kalau multipart/form-data (misal ada file upload)
+            date_of_birth = request.POST.get("date_of_birth")
+            phone_number = request.POST.get("phone")
+            profile_picture = request.FILES.get("profile_picture")
+
+        # Buat profile baru
+        Profile.objects.create(
+            user=user,
+            profile_picture=profile_picture,
+            date_of_birth=date_of_birth,
+            status="active"
+        )
+
+        # Update phone dan profile_completed
+        user.phone = phone_number
+        user.profile_completed = True
+        user.save()
+
+        return JsonResponse({"ok": True, "message": "Profil berhasil didaftarkan."}, status=201)
+
+    except Exception as e:
+        return JsonResponse({"ok": False, "message": f"Terjadi kesalahan: {str(e)}"}, status=500)
+
+
+@csrf_exempt
+def admin_change_status_flutter(request, id):
+    import json
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "Method not allowed"}, status=405)
+    
+    # Hanya admin yang boleh mengubah status sisanya permission denied
+    if request.user.role != "admin":
+        return JsonResponse({"ok": False, "message": "Permission denied"}, status=403)
+    
+    # Ambil data JSON dari request body
+    data = json.loads(request.body)
+    new_status = data.get("status") # Ambil status baru 
+    
+    STATUS_CHOICES = ['active', 'suspended', 'banned'] # Adalah daftar status yang valid
+
+    # Jika status invalid maka error
+    if new_status not in STATUS_CHOICES:
+        return JsonResponse({"ok": False, "message": "Invalid status"}, status=400)
+    # Jika valid maka
+    try:
+        # Ambil user berdasarkan id
+        user = User.objects.get(pk=id)
+
+        # Ambil profile user jika ada
+        profile = getattr(user, 'profile', None)
+        if not profile:
+            return JsonResponse({"ok": False, "message": "Profile not found"}, status=404)
+        
+        # Ubah dan save perubahan status
+        profile.status = new_status
+        profile.save()
+        return JsonResponse({"ok": True, "message": f"Status berhasil diubah menjadi {new_status}"})
+    except User.DoesNotExist: # Jika user tidak ditemukan 
+        return JsonResponse({"ok": False, "message": "User not found"}, status=404)
+
+@csrf_exempt
+def delete_profile_flutter(request, id):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "Method not allowed"}, status=405)
+
+    # Ambil user berdasarkan UUID
+    user = get_object_or_404(User, id=id)
+
+    # Ambil profile user tsb
+    profile = getattr(user, "profile", None)
+
+    # Hanya pemilik sendiri atau admin
+    if request.user != user and request.user.role != "admin":
+        return JsonResponse({
+            "ok": False,
+            "message": "Anda tidak memiliki izin untuk menghapus profil ini."
+        }, status=403)
+
+    try:
+        user.delete()
+
+        if request.user == user:
+            flutter_logout(request)
+
+        return JsonResponse({
+            "ok": True,
+            "message": "Profil dan akun pengguna berhasil dihapus."
+        })
+    except Exception:
+        return JsonResponse({
+            "ok": False,
+            "message": "Terjadi kesalahan saat menghapus profil."
+        }, status=500)
