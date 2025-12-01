@@ -14,7 +14,7 @@ urlpatterns = [
     path("admin/<uuid:match_id>/", views.admin_review_page, name="admin_review_page"),
     path("api/reply/<int:review_id>/", views.api_add_reply, name="api_add_reply"),
     # === ADMIN REVIEW JSON API ===
-    path("api/<uuid:match_id>/list/", views.api_list_reviews_admin, name="api_list_reviews_admin"),
+    path("api/<uuid:match_id>/admin_list/", views.api_list_reviews_admin, name="api_list_reviews_admin"),
     path("api/reply/<int:reply_id>/edit/", views.api_edit_reply, name="api_edit_reply"),
     path("api/reply/<int:reply_id>/delete/", views.api_delete_reply, name="api_delete_reply"),
 
