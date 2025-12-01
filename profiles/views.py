@@ -415,58 +415,39 @@ def user_tickets_json(request, id):
 
 # ======================================== Flutter
 @csrf_exempt
-@login_required
 def create_profile_flutter(request):
     if request.method != "POST":
-        return JsonResponse({"ok": False, "message": "Method not allowed"}, status=405)
-    
+        return JsonResponse({"ok": False, "message": "Invalid request method"}, status=405)
+
     user = request.user
 
-    # Validasi supaya admin dan journalist tidak dapat membuat profile
+    # Validasi supaya admin dan journalist tidak dapat membuat profile lagi 
     if user.role in ["admin", "journalist"]:
-        return JsonResponse({
-            "ok": False,
-            "message": "Profil sudah terdaftar sebelumnya."
-        }, status=400)
+        return JsonResponse({"ok": False, "message": "Profil sudah terdaftar sebelumnya."}, status=400)
 
     # Validasi supaya profile tidak lebih dari satu
     if hasattr(user, 'profile'):
-        return JsonResponse({
-            "ok": False,
-            "message": "Profil sudah terdaftar sebelumnya."
-        }, status=400)
+        return JsonResponse({"ok": False, "message": "Profil sudah terdaftar sebelumnya."}, status=400)
 
-    try:
-        # Ambil data dari body request (JSON)
-        if request.content_type == "application/json":
-            data = json.loads(request.body)
-            date_of_birth = data.get("date_of_birth")
-            phone_number = data.get("phone")
-            profile_picture = None  # Flutter bisa kirim file via multipart, kalau pakai JSON skip dulu
-        else:
-            # Kalau multipart/form-data (misal ada file upload)
-            date_of_birth = request.POST.get("date_of_birth")
-            phone_number = request.POST.get("phone")
-            profile_picture = request.FILES.get("profile_picture")
+    # Ambil data form-data 
+    profile_picture = request.FILES.get("profile_picture")
+    date_of_birth = request.POST.get("date_of_birth")
+    phone_number  = request.POST.get("phone")
 
-        # Buat profile baru
-        Profile.objects.create(
-            user=user,
-            profile_picture=profile_picture,
-            date_of_birth=date_of_birth,
-            status="active"
-        )
+    # Buat sesuai dengan input dari form user
+    Profile.objects.create(
+        user=user,
+        date_of_birth=date_of_birth,
+        profile_picture=profile_picture,
+        status="active",
+    )
 
-        # Update phone dan profile_completed
-        user.phone = phone_number
-        user.profile_completed = True
-        user.save()
+    # Simpan phone number dan status complete profile
+    user.phone = phone_number
+    user.profile_completed = True
+    user.save()
 
-        return JsonResponse({"ok": True, "message": "Profil berhasil didaftarkan."}, status=201)
-
-    except Exception as e:
-        return JsonResponse({"ok": False, "message": f"Terjadi kesalahan: {str(e)}"}, status=500)
-
+    return JsonResponse({"ok": True, "message": "Profil berhasil didaftarkan."}, status=201)
 
 @csrf_exempt
 def admin_change_status_flutter(request, id):
