@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.template.loader import render_to_string
-
+from django.db.models import Avg
 from matches.models import Match
 from reviews.models import Review, ReviewReply
 from bookings.models import Ticket
@@ -147,3 +147,176 @@ def api_add_reply(request, review_id):
     html_item = render_to_string("_review_item.html", {"review": review}, request=request)
 
     return JsonResponse({"status": "success", "message": "Balasan berhasil disimpan.", "reply_text": reply.reply_text, "review_id": str(review.id), "updated_html": html_item})
+
+@csrf_exempt
+@login_required
+def api_list_reviews(request, match_id):
+    # Hanya role user yang boleh akses
+    if getattr(request.user, "role", None) != "user":
+        return JsonResponse({"ok": False, "message": "Hanya user yang bisa mengakses."}, status=403)
+
+    match = get_object_or_404(Match, id=match_id)
+
+    # Cek apakah user memiliki tiket valid
+    from bookings.models import Ticket
+    has_ticket = Ticket.objects.filter(
+        ticket_type__match=match,
+        booking__user=request.user,
+        booking__status="CONFIRMED"
+    ).exists()
+
+    # Ambil review user (jika ada)
+    my_review = Review.objects.filter(
+        user=request.user,
+        match=match
+    ).first()
+
+    my_review_json = None
+    if my_review:
+        my_review_json = {
+            "id": my_review.id,
+            "rating": my_review.rating,
+            "comment": my_review.comment,
+            "sentiment": my_review.sentiment,
+            "created_at": my_review.created_at.isoformat(),
+            "updated_at": my_review.updated_at.isoformat(),
+            "reply": (
+                {
+                    "admin": my_review.reply.admin.username if my_review.reply.admin else None,
+                    "reply_text": my_review.reply.reply_text,
+                    "created_at": my_review.reply.created_at.isoformat(),
+                }
+                if hasattr(my_review, "reply")
+                else None
+            )
+        }
+
+    # Ambil review orang lain
+    other_reviews = (
+        Review.objects.filter(match=match)
+        .exclude(user=request.user)
+        .select_related("user", "reply")
+        .order_by("-created_at")
+    )
+
+    reviews_json = []
+    for r in other_reviews:
+        reviews_json.append({
+            "id": r.id,
+            "user": r.user.username,
+            "rating": r.rating,
+            "comment": r.comment,
+            "sentiment": r.sentiment,
+            "created_at": r.created_at.isoformat(),
+            "updated_at": r.updated_at.isoformat(),
+            "reply": (
+                {
+                    "admin": r.reply.admin.username if r.reply.admin else None,
+                    "reply_text": r.reply.reply_text,
+                    "created_at": r.reply.created_at.isoformat(),
+                }
+                if hasattr(r, "reply")
+                else None
+            )
+        })
+
+    # Hitung rata-rata rating
+    avg_rating = Review.objects.filter(match=match).aggregate(avg=Avg("rating"))["avg"]
+
+    return JsonResponse({
+        "ok": True,
+        "my_review": my_review_json,
+        "reviews": reviews_json,
+        "average_rating": avg_rating,
+        "has_ticket": has_ticket,
+        "can_review": has_ticket and (my_review is None),
+    })
+
+@csrf_exempt
+@login_required
+def api_list_reviews_admin(request, match_id):
+    if getattr(request.user, "role", None) != "admin":
+        return JsonResponse({"ok": False, "message": "Admin only"}, status=403)
+
+    match = get_object_or_404(Match, id=match_id)
+
+    reviews_qs = Review.objects.filter(match=match).select_related("user", "reply")
+
+    # Hitung rata-rata rating
+    average_rating = reviews_qs.aggregate(avg=Avg("rating"))["avg"] or 0
+    total_reviews = reviews_qs.count()
+
+    reviews_json = []
+    for r in reviews_qs.order_by("-created_at"):
+        reviews_json.append({
+            "id": r.id,
+            "user": r.user.username,
+            "rating": r.rating,
+            "comment": r.comment,
+            "created_at": r.created_at.isoformat(),
+            "reply": (
+                {
+                    "id": r.reply.id,
+                    "reply_text": r.reply.reply_text,
+                    "admin": r.reply.admin.username if r.reply.admin else None,
+                    "created_at": r.reply.created_at.isoformat(),
+                }
+                if hasattr(r, "reply")
+                else None
+            )
+        })
+
+    return JsonResponse({
+        "ok": True,
+        "average_rating": round(float(average_rating), 2),
+        "total_reviews": total_reviews,
+        "reviews": reviews_json,
+    })
+
+
+@csrf_exempt
+@login_required
+def api_edit_reply(request, reply_id):
+    if getattr(request.user, "role", None) != "admin":
+        return JsonResponse({"ok": False, "message": "Admin only"}, status=403)
+
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "POST required"}, status=400)
+
+    reply = get_object_or_404(ReviewReply, id=reply_id)
+
+    new_text = (request.POST.get("reply_text") or "").strip()
+    if not new_text:
+        return JsonResponse({"ok": False, "message": "Reply cannot be empty"}, status=400)
+
+    reply.reply_text = new_text
+    reply.save(update_fields=["reply_text"])
+
+    return JsonResponse({
+        "ok": True,
+        "message": "Reply updated",
+        "reply": {
+            "id": reply.id,
+            "reply_text": reply.reply_text,
+            "admin": reply.admin.username if reply.admin else None,
+            "created_at": reply.created_at.isoformat(),
+        }
+    })
+
+@csrf_exempt
+@login_required
+def api_delete_reply(request, reply_id):
+    if getattr(request.user, "role", None) != "admin":
+        return JsonResponse({"ok": False, "message": "Admin only"}, status=403)
+
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "POST required"}, status=400)
+
+    reply = get_object_or_404(ReviewReply, id=reply_id)
+
+    reply.delete()
+
+    return JsonResponse({
+        "ok": True,
+        "message": "Reply deleted"
+    })

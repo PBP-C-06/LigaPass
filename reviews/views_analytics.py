@@ -207,7 +207,8 @@ def api_user_analytics_data(request):
 
     # === Kehadiran ===
     total_matches = Match.objects.filter(
-        ticket_prices__ticket__booking__user=request.user
+        ticket_prices__ticket__booking__user=request.user,
+        ticket_prices__ticket__booking__status="CONFIRMED"
     ).distinct().count()
 
     reviewed_matches = Review.objects.filter(user=request.user).count()
