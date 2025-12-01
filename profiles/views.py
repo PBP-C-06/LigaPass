@@ -12,8 +12,8 @@ from authentication.models import User
 from authentication.views import flutter_logout, logout_user
 from profiles.models import AdminJournalistProfile, Profile
 from bookings.models import Booking, Ticket
-import base64
-import imghdr
+# import base64
+# import imghdr
 from django.core.files.base import ContentFile
 
 # Create profile untuk user yang baru registrasi
