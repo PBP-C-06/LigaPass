@@ -489,28 +489,43 @@ def midtrans_notification(request):
 @csrf_exempt
 @login_required
 def flutter_get_user_tickets(request):
-    if request.method == 'GET':
+    """Get all tickets for the logged-in user (Flutter)"""
+    if request.method != 'GET':
+        return JsonResponse({'status': False, 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        from reviews.models import Review
+        
+        # Get all tickets for confirmed bookings of this user
         tickets = Ticket.objects.filter(
             booking__user=request.user,
             booking__status='CONFIRMED'
         ).select_related(
-            'booking', 'ticket_type', 
-            'ticket_type__match', 
+            'booking',
+            'ticket_type',
+            'ticket_type__match',
             'ticket_type__match__home_team',
             'ticket_type__match__away_team',
             'ticket_type__match__venue'
         ).order_by('-generated_at')
         
         tickets_data = []
+        
+        # Cache for has_reviewed per match to avoid duplicate queries
+        reviewed_matches = set(
+            Review.objects.filter(user=request.user).values_list('match_id', flat=True)
+        )
+        
         for ticket in tickets:
-            match = ticket.ticket_type.match
-            
+            ticket_type = ticket.ticket_type
+            match = ticket_type.match
             is_match_finished = match.date < timezone.now()
-            effective_used = ticket.is_used or is_match_finished
+            has_reviewed = match.id in reviewed_matches
             
-            # Use same method as matches app - build absolute URI with reverse
+            # Build logo URLs using proxy
             home_logo_url = None
             away_logo_url = None
+            
             if match.home_team:
                 home_logo_url = request.build_absolute_uri(
                     reverse('matches:flutter_team_logo_proxy', args=[match.home_team.id])
@@ -523,18 +538,20 @@ def flutter_get_user_tickets(request):
             tickets_data.append({
                 'id': str(ticket.ticket_id),
                 'booking_id': str(ticket.booking.booking_id),
-                'seat_category': ticket.ticket_type.seat_category,
-                'match_title': f"{match.home_team.name} vs {match.away_team.name}",
-                'home_team': match.home_team.name,
-                'away_team': match.away_team.name,
+                'match_id': str(match.id),
+                'seat_category': ticket_type.seat_category,
+                'match_title': f"{match.home_team.name if match.home_team else 'TBD'} vs {match.away_team.name if match.away_team else 'TBD'}",
+                'home_team': match.home_team.name if match.home_team else 'TBD',
+                'away_team': match.away_team.name if match.away_team else 'TBD',
                 'home_team_logo': home_logo_url,
                 'away_team_logo': away_logo_url,
-                'match_date': match.date.isoformat() if match.date else None,
+                'match_date': match.date.isoformat(),
                 'venue': match.venue.name if match.venue else None,
                 'city': match.venue.city if match.venue else None,
-                'is_used': effective_used,
+                'is_used': ticket.is_used,
                 'is_match_finished': is_match_finished,
-                'generated_at': ticket.generated_at.isoformat(),
+                'has_reviewed': has_reviewed,
+                'generated_at': ticket.generated_at.isoformat() if ticket.generated_at else None,
                 'qr_code': '',
             })
         
@@ -542,9 +559,12 @@ def flutter_get_user_tickets(request):
             'status': True,
             'tickets': tickets_data
         })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': False, 'message': str(e)}, status=500)
     
-    return JsonResponse({'status': False, 'message': 'Method not allowed'}, status=405)
-
 @csrf_exempt
 @login_required
 def flutter_get_booking_tickets(request, booking_id):
