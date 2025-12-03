@@ -1,6 +1,5 @@
 from django.urls import path
-from profiles.views import admin_change_status, admin_change_status_flutter, admin_search_filter, admin_view, create_profile, create_profile_flutter, delete_profile, delete_profile_flutter, edit_profile_for_user, journalist_view, show_json_admin, show_json_by_id, show_json_journalist, user_view, show_json, current_user_json, user_tickets_page, user_tickets_json
-
+from profiles.views import *
 app_name = 'profiles'
 
 urlpatterns = [
@@ -37,4 +36,5 @@ urlpatterns = [
     path('flutter-create-profile/', create_profile_flutter, name='create_profile_flutter'),
     path("admin/flutter-edit/<uuid:id>/", admin_change_status_flutter, name="admin_change_status_flutter"),
     path("flutter-delete/<uuid:id>/", delete_profile_flutter, name="delete_profile_flutter"),
+    # path("flutter-edit/<uuid:id>/", edit_profile_flutter, name="edit_profile_flutter"),
 ]
