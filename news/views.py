@@ -426,3 +426,57 @@ def api_news_comments(request, pk):
 def api_news_recommendations(request, pk):
     recommended = News.objects.exclude(pk=pk).order_by('-created_at')[:3]
     return JsonResponse([serialize_news(n, request) for n in recommended], safe=False)
+
+@csrf_exempt
+@login_required
+def api_like_comment(request, comment_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
+
+    comment = get_object_or_404(Comment, id=comment_id)
+    user = request.user
+
+    if user.profile.status == "suspended":
+        return JsonResponse({
+            'success': False,
+            'error': 'Akun Anda ditangguhkan'
+        }, status=403)
+
+    # Toggle like
+    if comment.likes.filter(id=user.id).exists():
+        comment.likes.remove(user)
+        liked = False
+    else:
+        comment.likes.add(user)
+        liked = True
+
+    return JsonResponse({
+        'success': True,
+        'liked': liked,
+        'like_count': comment.likes.count(),
+    })
+
+@csrf_exempt
+@login_required
+def api_delete_comment(request, comment_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
+
+    comment = Comment.objects.filter(id=comment_id, user=request.user).first()
+
+    if not comment:
+        return JsonResponse({
+            "success": False,
+            "error": "Komentar tidak ditemukan atau bukan milik Anda"
+        }, status=404)
+
+    news = comment.news
+    comment.delete()
+
+    total_comments = Comment.objects.filter(news=news).count()
+
+    return JsonResponse({
+        "success": True,
+        "message": "Komentar berhasil dihapus",
+        "total_comments": total_comments
+    })
