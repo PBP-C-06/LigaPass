@@ -15,4 +15,6 @@ urlpatterns = [
     path('api/news/', views.api_news_list, name='api_news_list'),
     path('api/news/<int:pk>/', views.api_news_detail, name='api_news_detail'),
     path('api/news/create/', views.api_news_create, name='api_news_create'),
+    path('api/news/<int:pk>/comments/', views.api_news_comments, name='api_news_comments'),
+    path("api/news/<int:pk>/recommendations/", views.api_news_recommendations, name="api_news_recommendations"),
 ]

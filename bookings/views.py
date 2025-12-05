@@ -8,10 +8,11 @@ from bookings.models import *
 from matches.models import *
 import requests, json, base64, uuid
 from django.conf import settings
+from django.utils import timezone
+from django.urls import reverse
 
 @login_required
 def flutter_get_ticket_prices(request, match_id):
-    """Get ticket prices for a match - untuk Flutter"""
     match = get_object_or_404(Match, id=match_id)
     ticket_prices = TicketPrice.objects.filter(match=match).order_by('price')
     
@@ -488,53 +489,82 @@ def midtrans_notification(request):
 @csrf_exempt
 @login_required
 def flutter_get_user_tickets(request):
-    """Get all tickets for current user with proper status"""
-    if request.method == 'GET':
+    """Get all tickets for the logged-in user (Flutter)"""
+    if request.method != 'GET':
+        return JsonResponse({'status': False, 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        from reviews.models import Review
+        
+        # Get all tickets for confirmed bookings of this user
         tickets = Ticket.objects.filter(
             booking__user=request.user,
             booking__status='CONFIRMED'
         ).select_related(
-            'booking', 'ticket_type', 
-            'ticket_type__match', 
+            'booking',
+            'ticket_type',
+            'ticket_type__match',
             'ticket_type__match__home_team',
             'ticket_type__match__away_team',
             'ticket_type__match__venue'
         ).order_by('-generated_at')
         
         tickets_data = []
+        
+        # Cache for has_reviewed per match to avoid duplicate queries
+        reviewed_matches = set(
+            Review.objects.filter(user=request.user).values_list('match_id', flat=True)
+        )
+        
         for ticket in tickets:
-            match = ticket.ticket_type.match
-            
-            # Determine effective status
+            ticket_type = ticket.ticket_type
+            match = ticket_type.match
             is_match_finished = match.date < timezone.now()
-            effective_used = ticket.is_used or is_match_finished
+            has_reviewed = match.id in reviewed_matches
+            
+            # Build logo URLs using proxy
+            home_logo_url = None
+            away_logo_url = None
+            
+            if match.home_team:
+                home_logo_url = request.build_absolute_uri(
+                    reverse('matches:flutter_team_logo_proxy', args=[match.home_team.id])
+                )
+            if match.away_team:
+                away_logo_url = request.build_absolute_uri(
+                    reverse('matches:flutter_team_logo_proxy', args=[match.away_team.id])
+                )
             
             tickets_data.append({
                 'id': str(ticket.ticket_id),
                 'booking_id': str(ticket.booking.booking_id),
-                'seat_category': ticket.ticket_type.seat_category,
-                'match_title': f"{match.home_team.name} vs {match.away_team.name}",
-                'home_team': match.home_team.name,
-                'away_team': match.away_team.name,
-                'home_team_logo': match.home_team.display_logo_url if hasattr(match.home_team, 'display_logo_url') else None,
-                'away_team_logo': match.away_team.display_logo_url if hasattr(match.away_team, 'display_logo_url') else None,
-                'match_date': match.date.isoformat() if match.date else None,
+                'match_id': str(match.id),
+                'seat_category': ticket_type.seat_category,
+                'match_title': f"{match.home_team.name if match.home_team else 'TBD'} vs {match.away_team.name if match.away_team else 'TBD'}",
+                'home_team': match.home_team.name if match.home_team else 'TBD',
+                'away_team': match.away_team.name if match.away_team else 'TBD',
+                'home_team_logo': home_logo_url,
+                'away_team_logo': away_logo_url,
+                'match_date': match.date.isoformat(),
                 'venue': match.venue.name if match.venue else None,
                 'city': match.venue.city if match.venue else None,
-                'is_used': effective_used,  # TRUE if used OR match finished
+                'is_used': ticket.is_used,
                 'is_match_finished': is_match_finished,
-                'generated_at': ticket.generated_at.isoformat(),
-                'qr_code': '',  # We use ticket_id as barcode data in Flutter
+                'has_reviewed': has_reviewed,
+                'generated_at': ticket.generated_at.isoformat() if ticket.generated_at else None,
+                'qr_code': '',
             })
         
         return JsonResponse({
             'status': True,
             'tickets': tickets_data
         })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': False, 'message': str(e)}, status=500)
     
-    return JsonResponse({'status': False, 'message': 'Method not allowed'}, status=405)
-
-
 @csrf_exempt
 @login_required
 def flutter_get_booking_tickets(request, booking_id):
@@ -546,11 +576,25 @@ def flutter_get_booking_tickets(request, booking_id):
                 'ticket_type__match',
                 'ticket_type__match__home_team',
                 'ticket_type__match__away_team',
+                'ticket_type__match__venue',
             ).all()
             
             tickets_data = []
             for ticket in tickets:
                 match = ticket.ticket_type.match
+                
+                # Use same method as matches app
+                home_logo_url = None
+                away_logo_url = None
+                if match.home_team:
+                    home_logo_url = request.build_absolute_uri(
+                        reverse('matches:flutter_team_logo_proxy', args=[match.home_team.id])
+                    )
+                if match.away_team:
+                    away_logo_url = request.build_absolute_uri(
+                        reverse('matches:flutter_team_logo_proxy', args=[match.away_team.id])
+                    )
+                
                 tickets_data.append({
                     'id': str(ticket.ticket_id),
                     'booking_id': str(booking.booking_id),
@@ -558,14 +602,14 @@ def flutter_get_booking_tickets(request, booking_id):
                     'match_title': f"{match.home_team.name} vs {match.away_team.name}",
                     'home_team': match.home_team.name,
                     'away_team': match.away_team.name,
-                    'home_team_logo': match.home_team.display_logo_url if hasattr(match.home_team, 'display_logo_url') else None,
-                    'away_team_logo': match.away_team.display_logo_url if hasattr(match.away_team, 'display_logo_url') else None,
+                    'home_team_logo': home_logo_url,
+                    'away_team_logo': away_logo_url,
                     'match_date': match.date.isoformat() if match.date else None,
                     'venue': match.venue.name if match.venue else None,
                     'city': match.venue.city if match.venue else None,
                     'is_used': ticket.is_used,
                     'generated_at': ticket.generated_at.isoformat(),
-                    'qr_code': ticket.qr_code_url if hasattr(ticket, 'qr_code_url') else '',
+                    'qr_code': '',
                 })
             
             return JsonResponse({
@@ -577,7 +621,6 @@ def flutter_get_booking_tickets(request, booking_id):
             return JsonResponse({'status': False, 'message': 'Booking not found'}, status=404)
     
     return JsonResponse({'status': False, 'message': 'Method not allowed'}, status=405)
-
 
 @csrf_exempt
 @login_required

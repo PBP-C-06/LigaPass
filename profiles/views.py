@@ -12,8 +12,8 @@ from authentication.models import User
 from authentication.views import flutter_logout, logout_user
 from profiles.models import AdminJournalistProfile, Profile
 from bookings.models import Booking, Ticket
-import base64
-import imghdr
+# import base64
+# import imghdr
 from django.core.files.base import ContentFile
 
 # Create profile untuk user yang baru registrasi
@@ -415,58 +415,62 @@ def user_tickets_json(request, id):
 
 # ======================================== Flutter
 @csrf_exempt
-@login_required
 def create_profile_flutter(request):
-    if request.method != "POST":
-        return JsonResponse({"ok": False, "message": "Method not allowed"}, status=405)
-    
-    user = request.user
-
-    # Validasi supaya admin dan journalist tidak dapat membuat profile
-    if user.role in ["admin", "journalist"]:
-        return JsonResponse({
-            "ok": False,
-            "message": "Profil sudah terdaftar sebelumnya."
-        }, status=400)
+    if request.method == "POST":
+        # Try to get user from session first, fallback to username parameter
+        user = None
+        
+        if request.user.is_authenticated:
+            user = request.user
+        else:
+            # Fallback: get user by username from POST data (for web where cookies don't work)
+            username = request.POST.get('username')
+            if username:
+                try:
+                    from authentication.models import User
+                    user = User.objects.get(username=username)
+                except User.DoesNotExist:
+                    return JsonResponse({
+                        "success": False,
+                        "message": "User tidak ditemukan"
+                    }, status=404)
+        
+        if user is None:
+            return JsonResponse({
+                "success": False,
+                "message": "User tidak terautentikasi. Silakan login terlebih dahulu."
+            }, status=401)
+        
+        # Sekarang aman check role
+        if user.role in ["admin", "journalist"]:
+            return JsonResponse({
+                "success": False,
+                "message": "Admin/Journalist tidak perlu membuat profil pengguna."
+            }, status=403)
 
     # Validasi supaya profile tidak lebih dari satu
     if hasattr(user, 'profile'):
-        return JsonResponse({
-            "ok": False,
-            "message": "Profil sudah terdaftar sebelumnya."
-        }, status=400)
+        return JsonResponse({"ok": False, "message": "Profil sudah terdaftar sebelumnya."}, status=400)
 
-    try:
-        # Ambil data dari body request (JSON)
-        if request.content_type == "application/json":
-            data = json.loads(request.body)
-            date_of_birth = data.get("date_of_birth")
-            phone_number = data.get("phone")
-            profile_picture = None  # Flutter bisa kirim file via multipart, kalau pakai JSON skip dulu
-        else:
-            # Kalau multipart/form-data (misal ada file upload)
-            date_of_birth = request.POST.get("date_of_birth")
-            phone_number = request.POST.get("phone")
-            profile_picture = request.FILES.get("profile_picture")
+    # Ambil data form-data 
+    profile_picture = request.FILES.get("profile_picture")
+    date_of_birth = request.POST.get("date_of_birth")
+    phone_number  = request.POST.get("phone")
 
-        # Buat profile baru
-        Profile.objects.create(
-            user=user,
-            profile_picture=profile_picture,
-            date_of_birth=date_of_birth,
-            status="active"
-        )
+    # Buat sesuai dengan input dari form user
+    Profile.objects.create(
+        user=user,
+        date_of_birth=date_of_birth,
+        profile_picture=profile_picture,
+        status="active",
+    )
 
-        # Update phone dan profile_completed
-        user.phone = phone_number
-        user.profile_completed = True
-        user.save()
+    # Simpan phone number dan status complete profile
+    user.phone = phone_number
+    user.profile_completed = True
+    user.save()
 
-        return JsonResponse({"ok": True, "message": "Profil berhasil didaftarkan."}, status=201)
-
-    except Exception as e:
-        return JsonResponse({"ok": False, "message": f"Terjadi kesalahan: {str(e)}"}, status=500)
-
+    return JsonResponse({"ok": True, "message": "Profil berhasil didaftarkan."}, status=201)
 
 @csrf_exempt
 def admin_change_status_flutter(request, id):
@@ -537,3 +541,66 @@ def delete_profile_flutter(request, id):
             "ok": False,
             "message": "Terjadi kesalahan saat menghapus profil."
         }, status=500)
+
+@csrf_exempt
+def create_profile_flutter(request):
+    if request.method == "POST":
+        # Try to get user from session first, fallback to username parameter
+        user = None
+        
+        if request.user.is_authenticated:
+            user = request.user
+        else:
+            # Fallback: get user by username from POST data (for web where cookies don't work)
+            username = request.POST.get('username')
+            print(f"DEBUG: username from POST = {username}")  # tambah debug
+            if username:
+                try:
+                    user = User.objects.get(username=username)
+                    print(f"DEBUG: Found user = {user}")  # tambah debug
+                except User.DoesNotExist:
+                    return JsonResponse({
+                        "success": False,
+                        "message": "User tidak ditemukan"
+                    }, status=404)
+        
+        if user is None:
+            return JsonResponse({
+                "success": False,
+                "message": "User tidak terautentikasi. Silakan login terlebih dahulu."
+            }, status=401)
+        
+        # Sekarang aman check role
+        if user.role in ["admin", "journalist"]:
+            return JsonResponse({
+                "success": False,
+                "message": "Admin/Journalist tidak perlu membuat profil pengguna."
+            }, status=403)
+
+        # ✅ PINDAHKAN KE DALAM if request.method == "POST" (indent 2 level)
+        # Validasi supaya profile tidak lebih dari satu
+        if hasattr(user, 'profile'):
+            return JsonResponse({"ok": False, "message": "Profil sudah terdaftar sebelumnya."}, status=400)
+
+        # Ambil data form-data 
+        profile_picture = request.FILES.get("profile_picture")
+        date_of_birth = request.POST.get("date_of_birth")
+        phone_number  = request.POST.get("phone")
+
+        # Buat sesuai dengan input dari form user
+        Profile.objects.create(
+            user=user,
+            date_of_birth=date_of_birth,
+            profile_picture=profile_picture,
+            status="active",
+        )
+
+        # Simpan phone number dan status complete profile
+        user.phone = phone_number
+        user.profile_completed = True
+        user.save()
+
+        return JsonResponse({"ok": True, "message": "Profil berhasil didaftarkan."}, status=201)
+    
+    # Handle non-POST methods
+    return JsonResponse({"ok": False, "message": "Method not allowed"}, status=405)
