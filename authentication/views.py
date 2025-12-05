@@ -59,6 +59,8 @@ def flutter_register(request):
             "status": "success",
             "message": "Registration successful",
             "redirect_url": reverse("profiles:create_profile"),
+            "id": str(user.id),
+            "role": user.role,
             "hasProfile": user.profile_completed,
         })
 
@@ -180,6 +182,7 @@ def flutter_login(request):
 
     return JsonResponse({
         "id": user.id,
+        "username": user.username,
         "role": user.role,
         "status": "success",
         "message": "Login successful",
@@ -354,6 +357,7 @@ def flutter_google_login(request):
 
         return JsonResponse({
             "id": user.id,
+            "username": user.username,
             "role": user.role,
             "status": "success",
             "message": "Google login successful",
