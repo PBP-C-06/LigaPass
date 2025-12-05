@@ -17,4 +17,6 @@ urlpatterns = [
     path('api/news/create/', views.api_news_create, name='api_news_create'),
     path('api/news/<int:pk>/comments/', views.api_news_comments, name='api_news_comments'),
     path("api/news/<int:pk>/recommendations/", views.api_news_recommendations, name="api_news_recommendations"),
+    path("api/comment/<int:comment_id>/like/", views.api_like_comment, name="api_like_comment"),
+    path('api/comment/<int:comment_id>/delete/', views.api_delete_comment, name='api_delete_comment'),
 ]
