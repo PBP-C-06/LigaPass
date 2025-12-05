@@ -425,7 +425,6 @@ def create_profile_flutter(request):
     # Fallback ke username dari POST
     if user is None:
         username = request.POST.get("username")
-        print(f"DEBUG: username from POST = {username}")
         if username:
             try:
                 user = User.objects.get(username=username)
@@ -543,3 +542,64 @@ def delete_profile_flutter(request, id):
             "ok": False,
             "message": "Terjadi kesalahan saat menghapus profil."
         }, status=500)
+
+@csrf_exempt
+def edit_profile_flutter(request, id):
+    user = get_object_or_404(User, pk=id)
+    
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "message": "Invalid method"}, status=400)
+
+    # Ambil field dari multipart
+    username = request.POST.get("username")
+    email = request.POST.get("email")
+    first_name = request.POST.get("first_name")
+    last_name = request.POST.get("last_name")
+    phone = request.POST.get("phone")
+    dob = request.POST.get("date_of_birth")
+    profile_picture = request.FILES.get("profile_picture")
+
+    # UPDATE USER
+    if username:
+        user.username = username.strip()
+
+    if email:
+        user.email = email.strip()
+
+    if first_name:
+        user.first_name = first_name.strip()
+
+    if last_name:
+        user.last_name = last_name.strip()
+
+    if phone:
+        user.phone = phone.strip()
+
+    user.save()
+
+    # UPDATE PROFILE
+    profile = getattr(user, "profile", None)
+    if not profile:
+        profile = Profile.objects.create(user=user)
+
+    if dob:
+        profile.date_of_birth = dob
+
+    if profile_picture:
+        profile.profile_picture = profile_picture
+
+    profile.save()
+
+    return JsonResponse({
+        "ok": True,
+        "message": "Profil berhasil diperbarui",
+        "updated": {
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone": str(user.phone) if user.phone else None,
+            "date_of_birth": str(profile.date_of_birth),
+            "profile_picture": profile.profile_picture.url if profile.profile_picture else None
+        }
+    }, status=200)
