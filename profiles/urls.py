@@ -36,5 +36,5 @@ urlpatterns = [
     path('flutter-create-profile/', create_profile_flutter, name='create_profile_flutter'),
     path("admin/flutter-edit/<uuid:id>/", admin_change_status_flutter, name="admin_change_status_flutter"),
     path("flutter-delete/<uuid:id>/", delete_profile_flutter, name="delete_profile_flutter"),
-    # path("flutter-edit/<uuid:id>/", edit_profile_flutter, name="edit_profile_flutter"),
+    path("flutter-edit/<uuid:id>/", edit_profile_flutter, name="edit_profile_flutter"),
 ]
