@@ -59,6 +59,8 @@ def flutter_register(request):
             "status": "success",
             "message": "Registration successful",
             "redirect_url": reverse("profiles:create_profile"),
+            "id": str(user.id),
+            "role": user.role,
             "hasProfile": user.profile_completed,
         })
 
