@@ -180,6 +180,7 @@ def flutter_login(request):
 
     return JsonResponse({
         "id": user.id,
+        "username": user.username,
         "role": user.role,
         "status": "success",
         "message": "Login successful",
@@ -354,6 +355,7 @@ def flutter_google_login(request):
 
         return JsonResponse({
             "id": user.id,
+            "username": user.username,
             "role": user.role,
             "status": "success",
             "message": "Google login successful",
