@@ -328,4 +328,16 @@ def api_news_detail(request, pk):
 
     return JsonResponse(data)
 
-
+@csrf_exempt
+@login_required
+@user_passes_test(is_journalist)
+def api_news_create(request):
+    if request.method == "POST":
+        form = NewsForm(request.POST, request.FILES)
+        if form.is_valid():
+            news = form.save(commit=False)
+            news.author = request.user
+            news.save()
+            return JsonResponse({"id": news.id}, status=201)
+        return JsonResponse({"error": "Form tidak valid", "details": form.errors}, status=400)
+    return JsonResponse({"error": "Invalid method"}, status=405)
