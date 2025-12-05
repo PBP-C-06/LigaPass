@@ -8,7 +8,7 @@ from datetime import datetime
 from django.forms.widgets import ClearableFileInput
 from django.http import JsonResponse, HttpResponseForbidden
 from django.template.loader import render_to_string
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
 from django.core.serializers import serialize
 from django.views.decorators.csrf import csrf_exempt
@@ -328,4 +328,101 @@ def api_news_detail(request, pk):
 
     return JsonResponse(data)
 
+@csrf_exempt
+@login_required
+@user_passes_test(is_journalist)
+def api_news_create(request):
+    if request.method == "POST":
+        form = NewsForm(request.POST, request.FILES)
+        if form.is_valid():
+            news = form.save(commit=False)
+            news.author = request.user
+            news.save()
+            return JsonResponse({"id": news.id}, status=201)
+        return JsonResponse({"error": "Form tidak valid", "details": form.errors}, status=400)
+    return JsonResponse({"error": "Invalid method"}, status=405)
 
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Count
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_news_comments(request, pk):
+    news = get_object_or_404(News, pk=pk)
+
+    if request.method == "POST":
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'error': 'Login diperlukan'}, status=403)
+
+        content = request.POST.get("content", "").strip()
+        parent_id = request.POST.get("parent_id")
+
+        if not content:
+            return JsonResponse({'success': False, 'error': 'Komentar kosong'}, status=400)
+
+        parent = Comment.objects.filter(id=parent_id).first() if parent_id else None
+
+        comment = Comment.objects.create(
+            news=news,
+            user=request.user,
+            content=content,
+            parent=parent
+        )
+
+        # Mengirim komentar yang baru dibuat ke Flutter
+        return JsonResponse({
+            "success": True,
+            "comment": {
+                "id": comment.id,
+                "user": comment.user.username,
+                "content": comment.content,
+                "created_at": comment.created_at.strftime('%Y-%m-%d %H:%M'),
+                "like_count": 0,
+                "user_has_liked": False,
+                "replies": [],
+                "is_owner": True,
+            }
+        })
+
+    sort = request.GET.get("sort", "latest")
+
+    comments = Comment.objects.filter(news=news).prefetch_related(
+        'likes', 'replies', 'replies__likes', 'replies__replies'
+    )
+
+    # Root comments saja
+    if sort == "popular":
+        comments = comments.filter(parent=None).annotate(
+            total_likes=Count("likes")
+        ).order_by("-total_likes", "-created_at")
+    else:
+        comments = comments.filter(parent=None).order_by("-created_at")
+
+    # Fungsi serialize
+    def serialize_comment(comment):
+        return {
+            "id": comment.id,
+            "user": comment.user.username,
+            "content": comment.content,
+            "created_at": comment.created_at.strftime('%Y-%m-%d %H:%M'),
+            "like_count": comment.likes.count(),
+            "user_has_liked": comment.is_liked_by(request.user)
+                if request.user.is_authenticated else False,
+            "is_owner": request.user == comment.user
+                if request.user.is_authenticated else False,
+            "replies": [
+                serialize_comment(reply)
+                for reply in comment.replies.all().order_by("-created_at")
+            ]
+        }
+
+    return JsonResponse(
+        [serialize_comment(c) for c in comments],
+        safe=False
+    )
+
+@require_GET
+def api_news_recommendations(request, pk):
+    recommended = News.objects.exclude(pk=pk).order_by('-created_at')[:3]
+    return JsonResponse([serialize_news(n, request) for n in recommended], safe=False)
