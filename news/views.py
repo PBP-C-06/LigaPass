@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import News, CATEGORY_CHOICES, Comment
 from .forms import NewsForm, CommentForm
+from profiles.utils import get_user_status
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Count
@@ -113,8 +114,11 @@ def news_detail(request, pk):
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         if not request.user.is_authenticated:
             return JsonResponse({'success': False, 'error': 'Login diperlukan untuk komentar.'}, status=403) # Cek autentikasi user
-        if request.user.profile.status == "suspended":
-            return JsonResponse({'success': False, 'error': 'Anda tidak dapat berkomentar karena akun Anda sedang ditangguhkan'}, status=403)
+        if get_user_status(request.user) == "suspended":
+            return JsonResponse({
+                'success': False,
+                'error': 'Anda tidak dapat memposting komentar karena akun Anda ditangguhkan'
+            }, status=403)
         comment_form = CommentForm(request.POST)
         if comment_form.is_valid():
             parent_id = request.POST.get("parent_id")
@@ -180,8 +184,11 @@ def like_comment(request, comment_id):
     comment = get_object_or_404(Comment, id=comment_id)
     user = request.user
 
-    if user.profile.status == "suspended":
-        return JsonResponse({'success': False, 'error': 'Anda tidak dapat menyukai komentar karena akun Anda sedang ditangguhkan'}, status=403)
+    if get_user_status(request.user) == "suspended":
+            return JsonResponse({
+                'success': False,
+                'error': 'Anda tidak dapat memposting komentar karena akun Anda ditangguhkan'
+            }, status=403)
     
     # Jika sudah dilike, hapus like
     if comment.likes.filter(id=user.id).exists():
@@ -354,6 +361,12 @@ def api_news_comments(request, pk):
     if request.method == "POST":
         if not request.user.is_authenticated:
             return JsonResponse({'success': False, 'error': 'Login diperlukan'}, status=403)
+        
+        if get_user_status(request.user) == "suspended":
+            return JsonResponse({
+                'success': False,
+                'error': 'Akun Anda ditangguhkan. Tidak dapat berkomentar.'
+            }, status=403)
 
         content = request.POST.get("content", "").strip()
         parent_id = request.POST.get("parent_id")
@@ -436,11 +449,11 @@ def api_like_comment(request, comment_id):
     comment = get_object_or_404(Comment, id=comment_id)
     user = request.user
 
-    if user.profile.status == "suspended":
-        return JsonResponse({
-            'success': False,
-            'error': 'Akun Anda ditangguhkan'
-        }, status=403)
+    if get_user_status(request.user) == "suspended":
+            return JsonResponse({
+                'success': False,
+                'error': 'Anda tidak dapat memposting komentar karena akun Anda ditangguhkan'
+            }, status=403)
 
     # Toggle like
     if comment.likes.filter(id=user.id).exists():
@@ -479,4 +492,20 @@ def api_delete_comment(request, comment_id):
         "success": True,
         "message": "Komentar berhasil dihapus",
         "total_comments": total_comments
+    })
+
+@csrf_exempt
+def api_current_user(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            "authenticated": False,
+            "role": "anonymous",
+            "status": "anonymous",
+        })
+
+    return JsonResponse({
+        "authenticated": True,
+        "username": request.user.username,
+        "role": request.user.role,
+        "status": get_user_status(request.user),
     })
