@@ -428,7 +428,6 @@ def create_profile_flutter(request):
         if username:
             try:
                 user = User.objects.get(username=username)
-                print(f"DEBUG: Fallback found user = {user}")
             except User.DoesNotExist:
                 return JsonResponse({
                     "success": False,
@@ -559,7 +558,7 @@ def edit_profile_flutter(request, id):
     dob = request.POST.get("date_of_birth")
     profile_picture = request.FILES.get("profile_picture")
 
-    # UPDATE USER
+    # update user
     if username:
         user.username = username.strip()
 
@@ -577,7 +576,7 @@ def edit_profile_flutter(request, id):
 
     user.save()
 
-    # UPDATE PROFILE
+    # update profile
     profile = getattr(user, "profile", None)
     if not profile:
         profile = Profile.objects.create(user=user)
