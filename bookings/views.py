@@ -451,8 +451,6 @@ def midtrans_notification(request):
         return JsonResponse({'error': 'Invalid method'}, status=405)
 
     try:
-        print("Raw body bytes:", request.body)
-        print("Decoded body:", request.body.decode('utf-8', errors='ignore'))
         payload = json.loads(request.body)
         order_id = payload.get("order_id")
         if not order_id:
@@ -667,9 +665,6 @@ def flutter_sync_status(request, booking_id):
             
             # Query Midtrans API
             response = requests.get(midtrans_url, headers=headers)
-            
-            print(f"Midtrans status check for {order_id}: {response.status_code}")
-            print(f"Response: {response.text}")
             
             if response.status_code == 200:
                 data = response.json()
