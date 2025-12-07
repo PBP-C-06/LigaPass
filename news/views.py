@@ -1,4 +1,8 @@
-from django.views.decorators.http import require_http_methods
+import base64
+import json
+import uuid
+from datetime import datetime
+
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import News, CATEGORY_CHOICES, Comment
 from .forms import NewsForm, CommentForm
@@ -6,15 +10,16 @@ from profiles.utils import get_user_status
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Count
-from datetime import datetime
 from django.forms.widgets import ClearableFileInput
 from django.http import JsonResponse, HttpResponseForbidden
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
 from django.core.serializers import serialize
+from django.core.files.base import ContentFile
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateformat import DateFormat
+from django.utils import timezone
 from django.contrib.sites.shortcuts import get_current_site
 import json
 import base64
@@ -31,6 +36,10 @@ class PlainFileInput(ClearableFileInput):
 # Cek apakah user memiliki role 'journalist'
 def is_journalist(user):
     return getattr(user, "is_authenticated", False) and getattr(user, "role", None) == "journalist"
+
+def is_editor(user):
+    role = getattr(user, "role", None)
+    return getattr(user, "is_authenticated", False) and role in ["journalist", "admin"]
 
 # Snippet berita terbaru untuk menampilkan 3 berita terbaru di sidebar atau widget lain
 def latest_news_snippet(request):
@@ -295,6 +304,7 @@ def news_delete(request, pk):
 
 def serialize_news(news, request):
     domain = request.build_absolute_uri('/')[:-1]
+    is_owner = request.user.is_authenticated and news.author_id == request.user.id
     return {
         "id": news.id,
         "title": news.title,
@@ -304,6 +314,7 @@ def serialize_news(news, request):
         "is_featured": news.is_featured,
         "news_views": news.news_views,
         "created_at": DateFormat(news.created_at).format("Y-m-d H:i"),
+        "is_owner": is_owner,
     }
 
 def api_news_list(request):
@@ -336,6 +347,7 @@ def api_news_detail(request, pk):
     news.news_views += 1
     news.save(update_fields=['news_views'])
 
+    is_owner = request.user.is_authenticated and news.author_id == request.user.id
     data = {
         "id": news.id,
         "title": news.title,
@@ -345,10 +357,142 @@ def api_news_detail(request, pk):
         "is_featured": news.is_featured,
         "news_views": news.news_views,
         "created_at": DateFormat(news.created_at).format("Y-m-d H:i"),
-        "is_owner": news.author == request.user,
+        "is_owner": is_owner,
     }
 
     return JsonResponse(data)
+
+@csrf_exempt
+@login_required
+@user_passes_test(is_journalist)
+def api_news_create(request):
+    if request.method == "POST":
+        form = NewsForm(request.POST, request.FILES)
+        if form.is_valid():
+            news = form.save(commit=False)
+            news.author = request.user
+            news.save()
+            return JsonResponse({"id": news.id}, status=201)
+        return JsonResponse({"error": "Form tidak valid", "details": form.errors}, status=400)
+    return JsonResponse({"error": "Invalid method"}, status=405)
+
+
+def _decode_base64_image(data):
+    if not data:
+        return None
+    try:
+        if "base64," in data:
+            data = data.split("base64,", 1)[1]
+        return ContentFile(base64.b64decode(data), name=f"news_{uuid.uuid4().hex}.png")
+    except Exception:
+        return None
+
+def _validate_category(value):
+    valid = [c[0] for c in CATEGORY_CHOICES]
+    return value if value in valid else "update"
+
+@csrf_exempt
+@login_required
+@user_passes_test(is_editor)
+def api_news_create_json(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid method"}, status=405)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    title = (payload.get("title") or "").strip()
+    content = (payload.get("content") or "").strip()
+    category = _validate_category(payload.get("category") or "update")
+    is_featured = bool(payload.get("is_featured"))
+    thumb_b64 = payload.get("thumbnail_base64")
+
+    if not title or not content:
+        return JsonResponse({"status": "error", "message": "Title and content are required."}, status=400)
+
+    news = News(
+        title=title,
+        content=content,
+        category=category,
+        is_featured=is_featured,
+        author=request.user,
+    )
+
+    image_file = _decode_base64_image(thumb_b64)
+    if image_file:
+        news.thumbnail = image_file
+
+    news.save()
+
+    return JsonResponse({"status": "success", "id": news.id}, status=201)
+
+
+@csrf_exempt
+@login_required
+def api_news_edit_json(request, pk):
+    news = get_object_or_404(News, pk=pk)
+    if not (request.user == news.author or getattr(request.user, "role", None) == "admin"):
+        return JsonResponse({"status": "error", "message": "Forbidden"}, status=403)
+
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid method"}, status=405)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    title = payload.get("title")
+    content = payload.get("content")
+    category = payload.get("category")
+    is_featured = payload.get("is_featured")
+    delete_thumbnail = payload.get("delete_thumbnail", False)
+    thumb_b64 = payload.get("thumbnail_base64")
+
+    if title is not None:
+        news.title = title.strip()
+    if content is not None:
+        news.content = content.strip()
+    if category is not None:
+        news.category = _validate_category(category)
+    if is_featured is not None:
+        news.is_featured = bool(is_featured)
+
+    if delete_thumbnail and news.thumbnail:
+        news.thumbnail.delete(save=False)
+
+    new_image = _decode_base64_image(thumb_b64)
+    if new_image:
+        if news.thumbnail:
+            news.thumbnail.delete(save=False)
+        news.thumbnail = new_image
+
+    news.edited_at = timezone.now()
+    news.save()
+
+    return JsonResponse({"status": "success", "message": "News updated"})
+
+
+@csrf_exempt
+@login_required
+def api_news_delete(request, pk):
+    news = get_object_or_404(News, pk=pk)
+    if not (request.user == news.author or getattr(request.user, "role", None) == "admin"):
+        return JsonResponse({"status": "error", "message": "Forbidden"}, status=403)
+
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid method"}, status=405)
+
+    if news.thumbnail:
+        news.thumbnail.delete(save=False)
+    news.delete()
+    return JsonResponse({"status": "success", "message": "News deleted"})
+
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Count
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
