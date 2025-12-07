@@ -35,20 +35,16 @@ RAPID_API_KEY = os.getenv("RAPID_API_KEY")
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1","jaysen-lestari-ligapass.pbp.cs.ui.ac.id"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","jaysen-lestari-ligapass.pbp.cs.ui.ac.id","10.0.2.2"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://accounts.google.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "https://jaysen-lestari-ligapass.pbp.cs.ui.ac.id",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
-
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_SAMESITE = "Lax"
-
 
 # Application definition
 INSTALLED_APPS = [
@@ -67,9 +63,12 @@ INSTALLED_APPS = [
     'news',
     'reviews',
     'phonenumber_field',
+    'corsheaders',
+    'rest_framework',
     ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -178,6 +177,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'authentication.User'
 
 LOGIN_URL = 'authentication:login'
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # https://docs.djangoproject.com/en/5.2/topics/email/
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

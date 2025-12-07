@@ -258,4 +258,3 @@ class NewsViewsTests(TestCase):
         response = self.client.post(url, {"content": "Komentar user login"}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Komentar user login")
-        

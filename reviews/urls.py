@@ -8,13 +8,16 @@ urlpatterns = [
     path("user/<uuid:match_id>/", views.user_review_page, name="user_review_page"),
     path("api/<uuid:match_id>/create/", views.api_create_review, name="api_create_review"),
     path("api/<uuid:match_id>/update/", views.api_update_review, name="api_update_review"),
+    path("api/<uuid:match_id>/delete/", views.api_delete_review, name="api_delete_review"),
+    path("api/<uuid:match_id>/list/", views.api_list_reviews, name="api_list_reviews"),
 
     # === ADMIN REVIEWS ===
-    # Halaman detail review untuk 1 pertandingan (include di detail tiket admin)
     path("admin/<uuid:match_id>/", views.admin_review_page, name="admin_review_page"),
-
-    # API untuk membalas review user
     path("api/reply/<int:review_id>/", views.api_add_reply, name="api_add_reply"),
+    path("api/<uuid:match_id>/admin_list/", views.api_list_reviews_admin, name="api_list_reviews_admin"),
+    path("api/reply/<int:reply_id>/edit/", views.api_edit_reply, name="api_edit_reply"),
+    path("api/reply/<int:reply_id>/delete/", views.api_delete_reply, name="api_delete_reply"),
+
 
     # === ANALYTICS ===
     path("analytics/admin/", views_analytics.admin_analytics_page, name="admin_analytics_page"),

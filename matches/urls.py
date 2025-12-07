@@ -6,6 +6,16 @@ from .views import (
     MatchUpdateView,
     api_match_list,
     live_score_api,
+    flutter_team_logos,
+    flutter_venue_images,
+    flutter_team_logo_proxy,
+    flutter_venue_image_proxy,
+    admin_team_list_api,
+    admin_team_detail_api,
+    admin_venue_list_api,
+    admin_venue_detail_api,
+    admin_match_list_api,
+    admin_match_detail_api,
     match_calendar_view, 
     match_details_view,
     update_matches_view,
@@ -30,6 +40,18 @@ urlpatterns = [
 
     # Read match list ajax
     path('api/calendar/', api_match_list, name='api_calendar'),
+    path('api/flutter/team-logos/', flutter_team_logos, name='flutter_team_logos'),
+    path('api/flutter/venue-images/', flutter_venue_images, name='flutter_venue_images'),
+    path('api/flutter/team-logos/<uuid:team_id>/image/', flutter_team_logo_proxy, name='flutter_team_logo_proxy'),
+    path('api/flutter/venue-images/<uuid:venue_id>/image/', flutter_venue_image_proxy, name='flutter_venue_image_proxy'),
+
+    # Admin API for Flutter app
+    path('api/admin/teams/', admin_team_list_api, name='admin_team_list_api'),
+    path('api/admin/teams/<uuid:team_id>/', admin_team_detail_api, name='admin_team_detail_api'),
+    path('api/admin/venues/', admin_venue_list_api, name='admin_venue_list_api'),
+    path('api/admin/venues/<uuid:venue_id>/', admin_venue_detail_api, name='admin_venue_detail_api'),
+    path('api/admin/matches/', admin_match_list_api, name='admin_match_list_api'),
+    path('api/admin/matches/<uuid:match_id>/', admin_match_detail_api, name='admin_match_detail_api'),
 
     # URL untuk Manajemen Admin (CUD)
     # Base Management URL
