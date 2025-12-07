@@ -1,3 +1,4 @@
+from django.views.decorators.http import require_http_methods
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import News, CATEGORY_CHOICES, Comment
 from .forms import NewsForm, CommentForm
@@ -15,6 +16,13 @@ from django.core.serializers import serialize
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateformat import DateFormat
 from django.contrib.sites.shortcuts import get_current_site
+import json
+import base64
+from django.core.files.base import ContentFile
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 
 # Override tampilan input file menggunakan template kustom
 class PlainFileInput(ClearableFileInput):
@@ -237,7 +245,8 @@ def news_create(request):
 @login_required
 @user_passes_test(is_journalist)
 def news_edit(request, pk):
-    news = get_object_or_404(News, pk=pk, author=request.user)
+    news = get_object_or_404(News, pk=pk)
+    is_owner = news.author == request.user
 
     if request.method == 'POST':
         form = NewsForm(request.POST, request.FILES, instance=news)
@@ -267,7 +276,8 @@ def news_edit(request, pk):
 @login_required
 @user_passes_test(is_journalist)
 def news_delete(request, pk):
-    news = get_object_or_404(News, pk=pk, author=request.user)
+    news = get_object_or_404(News, pk=pk)
+    is_owner = news.author == request.user
 
     if request.method == 'POST':
         news.delete()
@@ -318,7 +328,11 @@ def api_news_list(request):
     return JsonResponse(data, safe=False)
 
 def api_news_detail(request, pk):
-    news = get_object_or_404(News, pk=pk)
+    try:
+        news = News.objects.get(pk=pk)
+    except News.DoesNotExist:
+        return JsonResponse({"error": "Berita tidak ditemukan"}, status=404)
+
     news.news_views += 1
     news.save(update_fields=['news_views'])
 
@@ -331,27 +345,10 @@ def api_news_detail(request, pk):
         "is_featured": news.is_featured,
         "news_views": news.news_views,
         "created_at": DateFormat(news.created_at).format("Y-m-d H:i"),
+        "is_owner": news.author == request.user,
     }
 
     return JsonResponse(data)
-
-@csrf_exempt
-@login_required
-@user_passes_test(is_journalist)
-def api_news_create(request):
-    if request.method == "POST":
-        form = NewsForm(request.POST, request.FILES)
-        if form.is_valid():
-            news = form.save(commit=False)
-            news.author = request.user
-            news.save()
-            return JsonResponse({"id": news.id}, status=201)
-        return JsonResponse({"error": "Form tidak valid", "details": form.errors}, status=400)
-    return JsonResponse({"error": "Invalid method"}, status=405)
-
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Count
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
@@ -508,4 +505,88 @@ def api_current_user(request):
         "username": request.user.username,
         "role": request.user.role,
         "status": get_user_status(request.user),
+    })
+
+@csrf_exempt
+def api_news_create_json(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+
+        title = data.get("title")
+        content = data.get("content")
+        category = data.get("category")
+        is_featured = data.get("is_featured", False)
+        thumb_base64 = data.get("thumbnail_base64")
+
+        news = News(
+            title=title,
+            content=content,
+            category=category,
+            is_featured=is_featured,
+            author=request.user
+        )
+
+        # Handle base64 image
+        if thumb_base64:
+            img_data = base64.b64decode(thumb_base64)
+            news.thumbnail = ContentFile(img_data, "thumb.jpg")
+
+        news.save()
+        return JsonResponse({"status": "success", "id": news.id}, status=201)
+
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+    
+@csrf_exempt
+def api_news_edit_json(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+    news = get_object_or_404(News, pk=pk)
+    is_owner = news.author == request.user
+
+    try:
+        data = json.loads(request.body)
+
+        news.title = data.get("title", news.title)
+        news.content = data.get("content", news.content)
+        news.category = data.get("category", news.category)
+        news.is_featured = data.get("is_featured", False)
+        news.edited_at = datetime.now()
+
+        # Handle penghapusan thumbnail
+        if data.get("delete_thumbnail") is True:
+            if news.thumbnail:
+                news.thumbnail.delete(save=False)
+                news.thumbnail = None
+
+        # Handle penggantian thumbnail
+        thumb_base64 = data.get("thumbnail_base64")
+        if thumb_base64:
+            img_data = base64.b64decode(thumb_base64)
+            news.thumbnail = ContentFile(img_data, "thumb.jpg")
+
+        news.save()
+
+        return JsonResponse({"status": "success", "id": news.id})
+
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+
+@csrf_exempt
+def api_news_delete(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Invalid method"}, status=405)
+
+    news = get_object_or_404(News, pk=pk)
+    is_owner = news.author == request.user
+    if not is_owner:
+        return JsonResponse({"status": "error", "message": "Unauthorized"}, status=403)
+    news.delete()
+    return JsonResponse({
+        "status": "success",
+        "message": "Berita berhasil dihapus"
     })
