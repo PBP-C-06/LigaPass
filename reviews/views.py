@@ -115,6 +115,37 @@ def api_update_review(request, match_id):
     html_item = render_to_string("_review_item.html", {"review": review}, request=request)
     return JsonResponse({"ok": True, "message": "Review berhasil diperbarui", "item_html": html_item, "review_id": str(review.id)})
 
+@csrf_exempt
+@login_required
+def api_delete_review(request, match_id):
+    if getattr(request.user, "role", None) != "user":
+        return JsonResponse(
+            {"ok": False, "message": "Hanya user yang bisa menghapus review."},
+            status=403
+        )
+
+    status = getattr(request.user.profile, "status", "active")
+    if status != "active":
+        return JsonResponse(
+            {"ok": False, "message": f"Akun Anda sedang {status}. Tidak bisa hapus review."},
+            status=403
+        )
+
+    if request.method not in ("DELETE", "POST"):
+        return HttpResponseBadRequest("DELETE or POST only")
+
+    match = get_object_or_404(Match, id=match_id)
+    review = get_object_or_404(Review, match=match, user=request.user)
+
+    review_id = str(review.id)
+    review.delete()
+
+    return JsonResponse({
+        "ok": True,
+        "message": "Review berhasil dihapus",
+        "review_id": review_id,
+    })
+
 
 @csrf_exempt
 @login_required
