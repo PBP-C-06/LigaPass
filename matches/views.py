@@ -24,11 +24,14 @@ from django.utils.text import slugify
 from django.templatetags.static import static
 from django.contrib.staticfiles import finders
 import mimetypes
+import json
 
 
 from .models import Team, Match, Venue, TicketPrice
 from .forms import TeamForm, MatchForm, TicketPriceFormSet
 from .services import sync_database_with_apis
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 
 
 def is_admin(user):
@@ -47,6 +50,36 @@ def _get_cleaned_messages(request):
             'tags': message.tags
         })
     return message_list
+
+
+def _serialize_team(team, request=None):
+    proxy_logo = None
+    if request:
+        proxy_logo = request.build_absolute_uri(
+            reverse('matches:flutter_team_logo_proxy', args=[team.id])
+        )
+    return {
+        'id': str(team.id),
+        'name': team.name,
+        'league': team.league,
+        'league_label': team.get_league_display(),
+        'logo_url': team.logo_url or '',
+        'logo_proxy_url': proxy_logo,
+    }
+
+
+def _serialize_venue(venue, request=None):
+    image_url = None
+    if request:
+        image_url = request.build_absolute_uri(
+            reverse('matches:flutter_venue_image_proxy', args=[venue.id])
+        )
+    return {
+        'id': str(venue.id),
+        'name': venue.name,
+        'city': venue.city,
+        'image_url': image_url,
+    }
 
 def get_match_status(match_time):
     now = timezone.now()
@@ -79,12 +112,16 @@ def _serialize_match(match, request=None):
         'away_logo_proxy_url': proxy_away_logo,
         'away_team_id': str(match.away_team.id),
         'date': match.date.strftime('%d %b %Y @ %H:%M WIB'),
+        'date_iso': match.date.isoformat(),
         'status_key': get_match_status(match.date),
+        'status_short': match.status_short,
+        'status_long': match.status_long,
         'home_goals': match.home_goals if match.home_goals is not None else 0,
         'away_goals': match.away_goals if match.away_goals is not None else 0,
         'details_url': reverse('matches:details', args=[match.id]),
         'venue_name': match.venue.name if match.venue else 'N/A',
         'venue_city': match.venue.city if match.venue else 'N/A',
+        'venue_id': str(match.venue.id) if match.venue else None,
         'edit_url': reverse('matches:edit_match', args=[match.id]),
         'delete_url': reverse('matches:delete_match', args=[match.id])
     }
@@ -286,6 +323,171 @@ def flutter_venue_image_proxy(request, venue_id):
     filename = f"{slug}.png"
     path = f"venues/{filename}"
     return _serve_static_file(path)
+
+
+def _require_admin(request):
+    if not is_admin(request.user):
+        return JsonResponse({'detail': 'Unauthorized'}, status=403)
+    return None
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def admin_team_list_api(request):
+    if (resp := _require_admin(request)) is not None:
+        return resp
+
+    if request.method == "GET":
+        teams = Team.objects.all().order_by('name')
+        data = [_serialize_team(t, request) for t in teams]
+        return JsonResponse({'teams': data})
+
+    payload = json.loads(request.body.decode() or '{}')
+    name = payload.get('name', '')
+    league = payload.get('league', 'n/a')
+    logo_url = payload.get('logo_url') or ''
+    team = Team.objects.create(name=name, league=league, logo_url=logo_url)
+    return JsonResponse({'team': _serialize_team(team, request)})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def admin_team_detail_api(request, team_id):
+    if (resp := _require_admin(request)) is not None:
+        return resp
+    payload = json.loads(request.body.decode() or '{}')
+    action = payload.get('action')
+    team = get_object_or_404(Team, id=team_id)
+
+    if action == 'delete':
+        team.delete()
+        return JsonResponse({'success': True})
+
+    team.name = payload.get('name', team.name)
+    team.league = payload.get('league', team.league)
+    team.logo_url = payload.get('logo_url', team.logo_url)
+    team.save()
+    return JsonResponse({'team': _serialize_team(team, request)})
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def admin_venue_list_api(request):
+    if (resp := _require_admin(request)) is not None:
+        return resp
+
+    if request.method == "GET":
+        venues = Venue.objects.all().order_by('name')
+        data = [_serialize_venue(v, request) for v in venues]
+        return JsonResponse({'venues': data})
+
+    payload = json.loads(request.body.decode() or '{}')
+    venue = Venue.objects.create(
+        name=payload.get('name', ''),
+        city=payload.get('city'),
+    )
+    return JsonResponse({'venue': _serialize_venue(venue, request)})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def admin_venue_detail_api(request, venue_id):
+    if (resp := _require_admin(request)) is not None:
+        return resp
+
+    payload = json.loads(request.body.decode() or '{}')
+    action = payload.get('action')
+    venue = get_object_or_404(Venue, id=venue_id)
+
+    if action == 'delete':
+        venue.delete()
+        return JsonResponse({'success': True})
+
+    venue.name = payload.get('name', venue.name)
+    venue.city = payload.get('city', venue.city)
+    venue.save()
+    return JsonResponse({'venue': _serialize_venue(venue, request)})
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def admin_match_list_api(request):
+    if (resp := _require_admin(request)) is not None:
+        return resp
+
+    if request.method == "GET":
+        matches = Match.objects.select_related('home_team', 'away_team', 'venue').order_by('date')
+        data = [_serialize_match(m, request) for m in matches]
+        return JsonResponse({'matches': data})
+
+    payload = json.loads(request.body.decode() or '{}')
+    try:
+        home_team = Team.objects.get(id=payload.get('home_team'))
+        away_team = Team.objects.get(id=payload.get('away_team'))
+    except Team.DoesNotExist:
+        return JsonResponse({'errors': 'Tim tidak ditemukan'}, status=400)
+
+    venue = None
+    venue_id = payload.get('venue')
+    if venue_id:
+        venue = Venue.objects.filter(id=venue_id).first()
+
+    date_str = payload.get('date')
+    try:
+        date = datetime.fromisoformat(date_str)
+    except Exception:
+        return JsonResponse({'errors': 'Format tanggal tidak valid'}, status=400)
+
+    match = Match.objects.create(
+        home_team=home_team,
+        away_team=away_team,
+        venue=venue,
+        date=date,
+        home_goals=payload.get('home_goals'),
+        away_goals=payload.get('away_goals'),
+        status_short=payload.get('status_short', 'NS') or 'NS',
+        status_long=payload.get('status_long', 'Not Started') or 'Not Started',
+    )
+    return JsonResponse({'match': _serialize_match(match, request)})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def admin_match_detail_api(request, match_id):
+    if (resp := _require_admin(request)) is not None:
+        return resp
+
+    payload = json.loads(request.body.decode() or '{}')
+    action = payload.get('action')
+    match = get_object_or_404(Match, id=match_id)
+
+    if action == 'delete':
+        match.delete()
+        return JsonResponse({'success': True})
+
+    if 'home_team' in payload:
+        match.home_team = get_object_or_404(Team, id=payload['home_team'])
+    if 'away_team' in payload:
+        match.away_team = get_object_or_404(Team, id=payload['away_team'])
+    if 'venue' in payload:
+        venue_id = payload.get('venue')
+        match.venue = Venue.objects.filter(id=venue_id).first() if venue_id else None
+    if 'date' in payload:
+        try:
+            match.date = datetime.fromisoformat(payload['date'])
+        except Exception:
+            return JsonResponse({'errors': 'Format tanggal tidak valid'}, status=400)
+    if 'home_goals' in payload:
+        match.home_goals = payload.get('home_goals')
+    if 'away_goals' in payload:
+        match.away_goals = payload.get('away_goals')
+    if 'status_short' in payload:
+        match.status_short = payload.get('status_short') or match.status_short
+    if 'status_long' in payload:
+        match.status_long = payload.get('status_long') or match.status_long
+
+    match.save()
+    return JsonResponse({'match': _serialize_match(match, request)})
 
 
 def match_details_view(request, match_id):
