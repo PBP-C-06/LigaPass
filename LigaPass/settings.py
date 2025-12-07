@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'reviews',
     'phonenumber_field',
     'corsheaders',
+    'rest_framework',
     ]
 
 MIDDLEWARE = [
