@@ -187,7 +187,7 @@ def news_detail(request, pk):
     })
 
 # View untuk like / unlike komentar
-@login_required
+@login_required # Hanya user login yang boleh like/unlike
 def like_comment(request, comment_id):
     comment = get_object_or_404(Comment, id=comment_id)
     user = request.user
@@ -217,7 +217,7 @@ def like_comment(request, comment_id):
     return redirect('news:news_detail', pk=comment.news.pk)
 
 # View untuk menghapus komentar milik user sendiri
-@login_required
+@login_required # Hanya user login yang boleh like/unlike
 def delete_comment(request, comment_id):
     comment = get_object_or_404(Comment, id=comment_id, user=request.user)
     comment.delete()
@@ -226,7 +226,7 @@ def delete_comment(request, comment_id):
     return JsonResponse({'success': True, 'total_comments': total_comments})
 
 # View untuk membuat berita baru (hanya jurnalis)
-@login_required
+@login_required # Hanya user login yang boleh like/unlike
 @user_passes_test(is_journalist)
 def news_create(request):
     if request.method == 'POST':
@@ -242,15 +242,19 @@ def news_create(request):
     return render(request, 'news/news_form.html', {'form': form, 'is_create': True})
 
 # View untuk mengedit berita (hanya jurnalis)
-@login_required
+@login_required # Hanya user login yang boleh like/unlike
 @user_passes_test(is_journalist)
 def news_edit(request, pk):
+    # Ambil objek News berdasarkan pk, atau 404 jika tidak ada
     news = get_object_or_404(News, pk=pk)
+    # Cek apakah user yang login adalah pemilik (author) berita
     is_owner = news.author == request.user
 
+    # Method POST, user mengirim perubahan form
     if request.method == 'POST':
         form = NewsForm(request.POST, request.FILES, instance=news)
 
+        # Jika form valid
         if form.is_valid():
             # Handle delete thumbnail via custom JS
             if request.POST.get("delete_thumbnail") == "true":
@@ -264,6 +268,7 @@ def news_edit(request, pk):
             messages.success(request, "Berita berhasil diedit!")
             return redirect('news:news_detail', pk=pk)
     else:
+        # Jika method GET, kita isi form dengan data existing (instance=news)
         form = NewsForm(instance=news)
 
     return render(request, 'news/news_form.html', {
@@ -273,12 +278,13 @@ def news_edit(request, pk):
     })
 
 # View untuk menghapus berita (hanya pemilik)
-@login_required
+@login_required # Hanya user login yang boleh like/unlike
 @user_passes_test(is_journalist)
 def news_delete(request, pk):
     news = get_object_or_404(News, pk=pk)
     is_owner = news.author == request.user
 
+    # Method POST konfirmasi penghapusan sudah dilakukan
     if request.method == 'POST':
         news.delete()
 
@@ -293,10 +299,11 @@ def news_delete(request, pk):
     # Jika GET, tampilkan halaman konfirmasi
     return render(request, 'news/news_confirm_delete.html', {'news': news})
 
-# Fungsi utilitas untuk mengubah objek News menjadi dict siap di-JSON-kan
+ # Fungsi utilitas untuk mengubah objek News menjadi dict siap di-JSON-kan
 def serialize_news(news, request):
-    # Build domain penuh
+    # Build domain penuh dari request
     domain = request.build_absolute_uri('/')[:-1]
+    # Mengembalikan dictionary berisi field yang ingin diekspos ke API
     return {
         "id": news.id,
         "title": news.title,
@@ -308,7 +315,7 @@ def serialize_news(news, request):
         "created_at": DateFormat(news.created_at).format("Y-m-d H:i"),
     }
 
-# Endpoint API (berbasis JSON) untuk daftar berita
+# Endpoint API (berbasis JSON) untuk daftar berita (mirip news_list tapi tanpa HTML)
 def api_news_list(request):
     # Ambil semua News terlebih dahulu
     news = News.objects.all()
@@ -319,23 +326,18 @@ def api_news_list(request):
     is_featured = request.GET.get('is_featured')
     sort = request.GET.get('sort', 'created_at')
 
-    # Filter berdasarkan judul jika ada query
+    # Filter
     if query:
         news = news.filter(title__icontains=query)
-    # Filter berdasarkan kategori jika ada
     if category:
         news = news.filter(category=category)
-    # Filter is_featured jika nilainya 'true' atau 'false'
     if is_featured in ['true', 'false']:
         news = news.filter(is_featured=(is_featured == 'true'))
-    # Sorting berdasarkan field yang diperbolehkan
     if sort in ['created_at', 'edited_at', 'news_views']:
         news = news.order_by(f'-{sort}')
 
-    # Serialisasikan setiap objek News menggunakan fungsi serialize_news
     data = [serialize_news(n, request) for n in news]
 
-    # Return JsonResponse dengan data list
     return JsonResponse(data, safe=False)
 
 # Endpoint API untuk detail satu berita
@@ -343,11 +345,10 @@ def api_news_detail(request, pk):
     # Coba ambil berita berdasarkan pk
     try:
         news = News.objects.get(pk=pk)
-    # Jika tidak ada, balas JSON error dengan status 404
     except News.DoesNotExist:
         return JsonResponse({"error": "Berita tidak ditemukan"}, status=404)
 
-    # Tambah jumlah view setiap kali endpoint ini dipanggil
+    # Tingkatkan jumlah view setiap kali endpoint ini dipanggil
     news.news_views += 1
     # Simpan ke database, hanya field news_views yang diupdate
     news.save(update_fields=['news_views'])
@@ -365,17 +366,16 @@ def api_news_detail(request, pk):
         "is_owner": news.author == request.user,
     }
 
-    # Return JsonResponse dengan data
     return JsonResponse(data)
 
-@csrf_exempt # Nonaktifkan CSRF
-@require_http_methods(["GET", "POST"]) # Hanya mengizinkan method GET dan POST
+@csrf_exempt  # Menonaktifkan CSRF
+@require_http_methods(["GET", "POST"])
 # Endpoint API untuk mengambil dan membuat komentar berita
 def api_news_comments(request, pk):
     # Ambil objek News, 404 jika tidak ada
     news = get_object_or_404(News, pk=pk)
 
-    # Jika method POST, berarti client ingin menambahkan komentar baru
+    # Method POST untuk menambahkan komentar baru
     if request.method == "POST":
         # Pastikan user sudah login
         if not request.user.is_authenticated:
@@ -388,9 +388,9 @@ def api_news_comments(request, pk):
                 'error': 'Akun Anda ditangguhkan. Tidak dapat berkomentar.'
             }, status=403)
 
-        # Ambil isi komentar dari POST, strip untuk menghapus spasi berlebih di awal/akhir
+        # Ambil isi komentar dari POST, strip untuk menghapus spasi berlebih di awal/akhir.
         content = request.POST.get("content", "").strip()
-        # Ambil parent_id kalau ini balasan
+        # Ambil parent_id kalau ini balasan.
         parent_id = request.POST.get("parent_id")
 
         # Jika konten kosong, return error 400
@@ -409,7 +409,6 @@ def api_news_comments(request, pk):
         )
 
         # Mengirim komentar yang baru dibuat ke Flutter
-        # Balas JSON dengan struktur komentar yang sesuai kebutuhan aplikasi Flutter
         return JsonResponse({
             "success": True,
             "comment": {
@@ -440,7 +439,7 @@ def api_news_comments(request, pk):
     else:
         comments = comments.filter(parent=None).order_by("-created_at")
 
-    # Fungsi serialize rekursif untuk komentar dan seluruh reply-nya
+    # Fungsi serialize
     def serialize_comment(comment):
         return {
             "id": comment.id,
@@ -448,34 +447,30 @@ def api_news_comments(request, pk):
             "content": comment.content,
             "created_at": comment.created_at.strftime('%Y-%m-%d %H:%M'),
             "like_count": comment.likes.count(),
-            # True jika user saat ini sudah like komentar ini; jika tidak login, False
             "user_has_liked": comment.is_liked_by(request.user)
                 if request.user.is_authenticated else False,
-            # True jika komentar ini milik user yang saat ini login
             "is_owner": request.user == comment.user
                 if request.user.is_authenticated else False,
-            # Serialize balasan komentar ini, diurutkan terbaru dulu
             "replies": [
                 serialize_comment(reply)
                 for reply in comment.replies.all().order_by("-created_at")
             ]
         }
 
-    # Menghasilkan list komentar ter-serialize, lalu return sebagai JsonResponse
+    # Menghasilkan list komentar ter-serialize, lalu kembalikan sebagai JsonResponse
     return JsonResponse(
         [serialize_comment(c) for c in comments],
         safe=False
     )
 
-# Decorator: hanya mengizinkan method GET
-@require_GET
+@require_GET # Decorator: hanya mengizinkan method GET
+# Endpoint API untuk rekomendasi berita
 def api_news_recommendations(request, pk):
     # Ambil berita selain berita dengan pk ini, dan urutkan berdasarkan created_at terbaru, ambil 3
     recommended = News.objects.exclude(pk=pk).order_by('-created_at')[:3]
-    # Serialisasikan setiap news menjadi dict, lalu return sebagai JSON (list)
     return JsonResponse([serialize_news(n, request) for n in recommended], safe=False)
 
-@csrf_exempt # Nonaktifkan CSRF
+@csrf_exempt  # Menonaktifkan CSRF
 @login_required # Hanya user login yang boleh like/unlike
 # Endpoint API untuk toggle like komentar
 def api_like_comment(request, comment_id):
@@ -505,25 +500,24 @@ def api_like_comment(request, comment_id):
         comment.likes.add(user)
         liked = True
 
-    # Return JSON dengan status sukses, liked, dan jumlah like terbaru
+    # Kembalikan JSON dengan status sukses
     return JsonResponse({
         'success': True,
         'liked': liked,
         'like_count': comment.likes.count(),
     })
 
-@csrf_exempt # Nonaktifkan CSRF
-@login_required # User harus login untuk menghapus komentar lewat API
+@csrf_exempt  # Menonaktifkan CSRF
+@login_required # Hanya user login yang boleh like/unlike
 # Endpoint API untuk hapus komentar
 def api_delete_comment(request, comment_id):
-    # Hanya izinkan method POST
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
 
     # Cari komentar dengan id tertentu yang dimiliki user saat ini
     comment = Comment.objects.filter(id=comment_id, user=request.user).first()
 
-    # Jika tidak ditemukan (mungkin sudah dihapus atau bukan milik user)
+    # Jika tidak ditemukan
     if not comment:
         return JsonResponse({
             "success": False,
@@ -538,14 +532,13 @@ def api_delete_comment(request, comment_id):
     # Hitung total komentar tersisa pada berita tersebut
     total_comments = Comment.objects.filter(news=news).count()
 
-    # Return JSON sukses dengan pesan dan total_comments terbaru
     return JsonResponse({
         "success": True,
         "message": "Komentar berhasil dihapus",
         "total_comments": total_comments
     })
 
-@csrf_exempt # Nonaktifkan CSRF
+@csrf_exempt  # Menonaktifkan CSRF
 # Endpoint API untuk mengembalikan data singkat user saat ini
 def api_current_user(request):
     # Jika user belum login, kembalikan info bahwa user tidak terautentikasi
@@ -564,25 +557,21 @@ def api_current_user(request):
         "status": get_user_status(request.user),
     })
 
-@csrf_exempt # Nonaktifkan CSRF
-# Endpoint API untuk membuat berita baru dengan payload JSON (bukan form)
+@csrf_exempt  # Menonaktifkan CSRF
+# Endpoint API untuk membuat berita baru dengan payload JSON 
 def api_news_create_json(request):
-    # Hanya izinkan method POST, method lain dianggap tidak diperbolehkan
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
     try:
-        # Parse body request (bytes) menjadi dict Python menggunakan json.loads()
         data = json.loads(request.body)
 
-        # Ambil field-field dari JSON (title, content, category, is_featured, thumbnail_base64)
         title = data.get("title")
         content = data.get("content")
         category = data.get("category")
         is_featured = data.get("is_featured", False)
         thumb_base64 = data.get("thumbnail_base64")
 
-        # Buat instance News tetapi belum disimpan
         news = News(
             title=title,
             content=content,
@@ -596,19 +585,16 @@ def api_news_create_json(request):
             img_data = base64.b64decode(thumb_base64)
             news.thumbnail = ContentFile(img_data, "thumb.jpg")
 
-        # Simpan objek News ke database
         news.save()
         # Kembalikan JSON dengan status success dan id berita yang baru dibuat
         return JsonResponse({"status": "success", "id": news.id}, status=201)
 
-    # Jika ada error, catch exception dan kembalikan status error
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=400)
     
-@csrf_exempt # Nonaktifkan CSRF
+@csrf_exempt  # Menonaktifkan CSRF
 # Endpoint API untuk mengedit berita via JSON payload
 def api_news_edit_json(request, pk):
-    # Hanya izinkan POST (bisa dianggap sebagai "update" di sini)
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
@@ -626,7 +612,6 @@ def api_news_edit_json(request, pk):
         news.content = data.get("content", news.content)
         news.category = data.get("category", news.category)
         news.is_featured = data.get("is_featured", False)
-        # Update waktu edited_at ke datetime sekarang
         news.edited_at = datetime.now()
 
         # Handle penghapusan thumbnail
@@ -644,13 +629,14 @@ def api_news_edit_json(request, pk):
         # Simpan perubahan ke database
         news.save()
 
-        # Return JSON sukses
+        # Kembalikan JSON sukses
         return JsonResponse({"status": "success", "id": news.id})
 
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=400)
 
-@csrf_exempt # Nonaktifkan CSRF
+@csrf_exempt  # Menonaktifkan CSRF
+# Endpoint API untuk menghapus berita via JSON/HTTP sederhana
 def api_news_delete(request, pk):
     # Hanya izinkan method POST untuk delete di endpoint ini
     if request.method != "POST":
@@ -660,8 +646,8 @@ def api_news_delete(request, pk):
     news = get_object_or_404(News, pk=pk)
     # Cek apakah user saat ini adalah author berita
     is_owner = news.author == request.user
-    # Jika bukan pemilik, balas status 403 Unauthorized
     if not is_owner:
+        # Jika bukan pemilik, balas status 403 Unauthorized
         return JsonResponse({"status": "error", "message": "Unauthorized"}, status=403)
     # Jika pemilik, hapus berita
     news.delete()
