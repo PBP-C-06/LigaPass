@@ -1,5 +1,5 @@
 {% url 'matches:details' match.id as fallback_details_url %}
-{% with (match.details_url|default:fallback_details_url) as details_url %}
+{% with match.details_url|default:fallback_details_url as details_url %}
 <a href="{{ details_url }}" class="relative block bg-white border border-slate-200 p-3 md:p-4 rounded-lg hover:shadow-md hover:scale-[1.01] transition">
   <div class="absolute top-2 md:top-3 right-2 md:right-4 text-right text-xs text-slate-500 hidden sm:block">
     <p>{{ match.date|date:"d M Y" }}</p>
