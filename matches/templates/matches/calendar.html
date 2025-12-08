@@ -88,6 +88,9 @@
     </div>
 
      <div class="flex justify-end gap-3">
+        <button type="button" id="apply-filters-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow transition">
+            Terapkan
+        </button>
         <button type="button" id="reset-filters-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2 rounded-lg font-semibold shadow transition">
             Reset
         </button>
@@ -438,6 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const statusCheckboxes = document.querySelectorAll('#status-checkbox-container input[name="status"]');
   const perPageSelect = document.getElementById('per-page-select');
   const resetBtn = document.getElementById('reset-filters-btn');
+  const applyBtn = document.getElementById('apply-filters-btn');
 
   const params = new URLSearchParams(window.location.search);
   const initialQuery = params.get('q') || '';
@@ -553,6 +557,13 @@ document.addEventListener('DOMContentLoaded', function() {
     currentPage = 1;
     fetchFilteredMatches();
   });
+
+  if (applyBtn) {
+    applyBtn.addEventListener('click', () => {
+      currentPage = 1;
+      fetchFilteredMatches();
+    });
+  }
 
   resetBtn.addEventListener('click', () => {
       document.getElementById('search-filter-form').reset();

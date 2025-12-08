@@ -1,20 +1,26 @@
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
 from django.templatetags.static import static
 from matches.models import Match, Team
 from news.models import News
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
+from matches.views import get_match_status
 
 def home(request):
     now = timezone.now()
 
     # === Ambil 5 pertandingan mendatang ===
-    upcoming_matches = (
+    upcoming_matches = list(
         Match.objects.select_related("home_team", "away_team", "venue")
         .filter(date__gt=now)
         .order_by("date")[:5]
     )
+
+    for m in upcoming_matches:
+        m.status_key = get_match_status(m.date)
+        m.details_url = reverse('matches:details', args=[m.id])
 
     # === Ambil 6 berita terbaru (prioritaskan featured) ===
     featured = list(News.objects.filter(is_featured=True).order_by("-created_at")[:3])

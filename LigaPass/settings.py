@@ -184,6 +184,8 @@ CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
+# Session berlaku 1 hari (detik)
+SESSION_COOKIE_AGE = 60 * 60 * 24
 
 # https://docs.djangoproject.com/en/5.2/topics/email/
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

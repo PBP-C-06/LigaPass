@@ -67,6 +67,9 @@
     </div>
 
     <div class="flex justify-end gap-3">
+        <button type="button" id="apply-filters" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold shadow transition">
+            Terapkan
+        </button>
         <button type="button" id="reset-filters" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2 rounded-lg font-semibold shadow transition">
             Reset
         </button>
@@ -164,6 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const perPageSelect = document.getElementById('per-page-select');
     const otherFilters = document.querySelectorAll('.filter-change');
     const resetBtn = document.getElementById('reset-filters');
+    const applyBtn = document.getElementById('apply-filters');
 
     const matchListContainer = document.getElementById('match-list-container');
     const paginationContainer = document.getElementById('pagination-container');
@@ -388,6 +392,12 @@ document.addEventListener('DOMContentLoaded', function() {
     perPageSelect.addEventListener('change', () => {
         fetchMatches(1);
     });
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+            fetchMatches(1);
+        });
+    }
 
     paginationContainer.addEventListener('click', function(e) {
         if (e.target.tagName === 'A' && e.target.classList.contains('pagination-link')) {
