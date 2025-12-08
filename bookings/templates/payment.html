@@ -563,7 +563,7 @@
     <p>Tiket Anda sudah diterbitkan dan dapat dilihat di halaman profil.</p>
     <div class="modal-buttons">
       <a href="{% url 'profiles:user_tickets_page' user.id %}" class="btn-secondary">Lihat Tiket</a>
-      <a href="{% url 'main:home' %}" class="btn-primary">Kembali ke Home</a>
+      <a href="{% url 'main:home' %}" id="success-home-btn" class="btn-primary">Kembali ke Home</a>
     </div>
   </div>
 </div>
@@ -591,6 +591,7 @@
   const selectedMethod = "{{ selected_method|default:'' }}";
   const csrftoken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
   const resultBox = document.getElementById("result-box");
+  const homeUrl = "{% url 'main:home' %}";
 
   let paymentInProgress = true;
 
@@ -654,22 +655,22 @@
         throw new Error(errData.error || `HTTP error! status: ${res.status}`);
       }
       
-      const data = await res.json();
-      
-      if (data.status === "CONFIRMED") {
-        paymentInProgress = false;
-        showSuccessModal();
+          const data = await res.json();
+          
+          if (data.status === "CONFIRMED") {
+            paymentInProgress = false;
+            showSuccessModal();
       
       } else if (data.status === "EXPIRED" || data.status === "CANCELLED" || data.status === "DENY") {
         paymentInProgress = false;
         resultBox.innerHTML = `
-          <div class="va-card" style="border-color: #fecaca; background: #fef2f2;">
-            <h3 style="color: #dc2626;">Pembayaran Gagal / Dibatalkan</h3>
-            <p class="note">Status booking ini adalah: <strong>${data.status}</strong></p>
-            <p class="note" style="margin-top: 10px;">Anda bisa mencoba membuat booking baru jika diinginkan.</p>
-            <a href="/" class="btn-primary" style="margin-top: 20px; width: auto; padding: 10px 20px;">Kembali ke Home</a>
-          </div>
-        `;
+              <div class="va-card" style="border-color: #fecaca; background: #fef2f2;">
+                <h3 style="color: #dc2626;">Pembayaran Gagal / Dibatalkan</h3>
+                <p class="note">Status booking ini adalah: <strong>${data.status}</strong></p>
+                <p class="note" style="margin-top: 10px;">Anda bisa mencoba membuat booking baru jika diinginkan.</p>
+                <a href="${homeUrl}" class="btn-primary" style="margin-top: 20px; width: auto; padding: 10px 20px;">Kembali ke Home</a>
+              </div>
+            `;
       
       } else {
         // Masih PENDING
@@ -765,13 +766,13 @@
       showToast("❌ Pembayaran gagal atau dibatalkan.", "error");
       paymentInProgress = false;
       resultBox.innerHTML = `
-        <div class="va-card" style="border-color: #fecaca; background: #fef2f2;">
-          <h3 style="color: #dc2626;">Pembayaran Gagal / Dibatalkan</h3>
-          <p class="note">Status transaksi ini adalah: <strong>${currentStatus.toUpperCase()}</strong></p>
-          <a href="/" class="btn-primary" style="margin-top: 20px; width: auto; padding: 10px 20px;">Kembali ke Home</a>
-        </div>
-      `;
-      return;
+          <div class="va-card" style="border-color: #fecaca; background: #fef2f2;">
+            <h3 style="color: #dc2626;">Pembayaran Gagal / Dibatalkan</h3>
+            <p class="note">Status transaksi ini adalah: <strong>${currentStatus.toUpperCase()}</strong></p>
+            <a href="${homeUrl}" class="btn-primary" style="margin-top: 20px; width: auto; padding: 10px 20px;">Kembali ke Home</a>
+          </div>
+        `;
+        return;
     }
 
     paymentInProgress = true; 
@@ -928,10 +929,19 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    if (!selectedMethod) {
-        resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Metode pembayaran tidak ditemukan.</p><p>Silakan kembali dan pilih metode pembayaran.</p>`;
-        paymentInProgress = false;
+    document.addEventListener("DOMContentLoaded", () => {
+      const successHomeBtn = document.getElementById("success-home-btn");
+      if (successHomeBtn) {
+        successHomeBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          paymentInProgress = false;
+          window.location.href = homeUrl;
+        });
+      }
+
+      if (!selectedMethod) {
+          resultBox.innerHTML = `<p class="error" style="font-weight: bold;">Metode pembayaran tidak ditemukan.</p><p>Silakan kembali dan pilih metode pembayaran.</p>`;
+          paymentInProgress = false;
         return;
     }
 
