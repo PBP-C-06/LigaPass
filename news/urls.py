@@ -14,7 +14,6 @@ urlpatterns = [
     
     path('api/news/', views.api_news_list, name='api_news_list'),
     path('api/news/<int:pk>/', views.api_news_detail, name='api_news_detail'),
-    path('api/news/create/', views.api_news_create, name='api_news_create'),
     path('api/news/create-json/', views.api_news_create_json, name='api_news_create_json'),
     path('api/news/<int:pk>/edit-json/', views.api_news_edit_json, name='api_news_edit_json'),
     path('api/news/<int:pk>/delete/', views.api_news_delete, name='api_news_delete'),

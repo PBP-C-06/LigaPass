@@ -58,6 +58,6 @@ Registrasi, login, logout, dan manage cookie untuk mendapatkan role yang sesuai.
 ## 🔗 URL
 **Deployment** : https://jaysen-lestari-ligapass.pbp.cs.ui.ac.id/   
 **Figma** : https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/TK-UTS?page-id=0%3A1&node-id=1-1935&p=f&viewport=-1269%2C-173%2C0.41&t=KgYTQaoFAjTJ0iZZ-1&scaling=min-zoom&content-scaling=fixed
-**User flow** : User flow: https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/LigaPass?node-id=0-1&p=f&viewport=-567%2C78%2C0.21&t=18d5UYBpfanXeuIm-0&scaling=contain&content-scaling=fixed&starting-point-node-id=1%3A1935
+**User flow** : https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/LigaPass?node-id=0-1&p=f&viewport=-567%2C78%2C0.21&t=18d5UYBpfanXeuIm-0&scaling=contain&content-scaling=fixed&starting-point-node-id=1%3A1935
 **Admin flow**: https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/LigaPass?node-id=12-131&p=f&viewport=321%2C241%2C0.09&t=18d5UYBpfanXeuIm-0&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=353%3A1124
 **Journalist flow**: https://www.figma.com/proto/czV0IIjdOHyPQ4iIKozhPX/LigaPass?node-id=182-2062&p=f&viewport=243%2C401%2C0.08&t=18d5UYBpfanXeuIm-0&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=353%3A1373
