@@ -439,6 +439,8 @@ def admin_match_list_api(request):
     date_str = payload.get('date')
     try:
         date = datetime.fromisoformat(date_str)
+        if timezone.is_naive(date):
+            date = timezone.make_aware(date, timezone.get_default_timezone())
     except Exception:
         return JsonResponse({'errors': 'Format tanggal tidak valid'}, status=400)
 
@@ -480,7 +482,10 @@ def admin_match_detail_api(request, match_id):
         match.venue = Venue.objects.filter(id=venue_id).first() if venue_id else None
     if 'date' in payload:
         try:
-            match.date = datetime.fromisoformat(payload['date'])
+            parsed_date = datetime.fromisoformat(payload['date'])
+            if timezone.is_naive(parsed_date):
+                parsed_date = timezone.make_aware(parsed_date, timezone.get_default_timezone())
+            match.date = parsed_date
         except Exception:
             return JsonResponse({'errors': 'Format tanggal tidak valid'}, status=400)
     if 'home_goals' in payload:
