@@ -178,9 +178,9 @@ def payment(request, booking_id):
         selected_method = request.session.get("selected_method")
         return render(request, "payment.html", {
             "booking": booking,
+            "booking_id": booking_id,  # Pass booking_id untuk redirect
             "MIDTRANS_CLIENT_KEY": settings.MIDTRANS_CLIENT_KEY,
-            "selected_method": selected_method,
-            "debug": settings.DEBUG  # Pass DEBUG flag for manual confirm button
+            "selected_method": selected_method
         })
 
     elif request.method == "POST":
@@ -477,33 +477,6 @@ def flutter_check_status(request, booking_id):
         "payment_status": booking.status,
     })
 
-
-@login_required
-def manual_confirm_booking(request, booking_id):
-    """Manual confirm booking untuk testing di localhost (development only)"""
-    if not settings.DEBUG:
-        return JsonResponse({"error": "Only available in DEBUG mode"}, status=403)
-    
-    booking = get_object_or_404(Booking, booking_id=booking_id, user=request.user)
-    
-    if booking.status == "CONFIRMED":
-        return JsonResponse({"message": "Booking sudah confirmed sebelumnya", "status": booking.status})
-    
-    # Update status ke CONFIRMED
-    booking.status = "CONFIRMED"
-    booking.updated_at = timezone.now()
-    booking.save()
-    
-    # Generate tickets
-    for item in booking.items.all():
-        for _ in range(item.quantity):
-            Ticket.objects.create(booking=booking, ticket_type=item.ticket_type)
-    
-    return JsonResponse({
-        "message": "Booking berhasil di-confirm secara manual",
-        "status": booking.status,
-        "redirect": f"/bookings/payment/success/{booking_id}/"
-    })
 
 @csrf_exempt
 def midtrans_notification(request):

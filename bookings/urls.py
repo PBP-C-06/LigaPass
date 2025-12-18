@@ -10,7 +10,6 @@ urlpatterns = [
     path("cancel/<uuid:booking_id>/", cancel_booking, name="cancel_booking"),
     path('notification/', midtrans_notification, name='midtrans_notification'),
     path("check_status/<uuid:booking_id>/", check_booking_status, name="check_booking_status"),
-    path("manual-confirm/<uuid:booking_id>/", manual_confirm_booking, name="manual_confirm_booking"),
     path("flutter-create-booking/<uuid:match_id>/", flutter_create_booking, name="flutter_create_booking"),
     path("flutter-payment/<uuid:booking_id>/", flutter_payment, name="flutter_payment"),
     path("flutter-cancel/<uuid:booking_id>/", flutter_cancel_booking, name="flutter_cancel_booking"),

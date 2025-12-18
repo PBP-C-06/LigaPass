@@ -523,15 +523,6 @@
       Jangan tutup atau refresh halaman ini selama proses pembayaran berlangsung.
     </div>
 
-    {% if debug %}
-    <div style="background: #fef3c7; border: 2px dashed #f59e0b; border-radius: 8px; padding: 12px; margin: 16px 0;">
-      <p style="margin: 0; font-weight: 600; color: #92400e;">🛠️ Development Mode - Testing Only</p>
-      <button id="manual-confirm-btn" style="margin-top: 8px; padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-        ⚡ Manual Confirm Booking (Localhost Testing)
-      </button>
-    </div>
-    {% endif %}
-
     <div class="info">
       <p><strong>Status:</strong> <span id="booking-status">{{ booking.get_status_display }}</span></p>
       <p><strong>Tanggal Pemesanan:</strong> {{ booking.created_at|date:"d M Y, H:i" }}</p>
@@ -961,37 +952,6 @@
       initiatePayment(payload);
     }
   });
-
-  // Manual Confirm Button (Development Only)
-  const manualConfirmBtn = document.getElementById("manual-confirm-btn");
-  if (manualConfirmBtn) {
-    manualConfirmBtn.addEventListener("click", async () => {
-      if (!confirm("⚠️ Manual confirm booking? (Testing only)")) return;
-      
-      manualConfirmBtn.disabled = true;
-      manualConfirmBtn.textContent = "Processing...";
-      
-      try {
-        const response = await fetch(`/bookings/manual-confirm/{{ booking.booking_id }}/`);
-        const data = await response.json();
-        
-        if (response.ok) {
-          showToast(data.message, "success");
-          setTimeout(() => {
-            window.location.href = data.redirect;
-          }, 1000);
-        } else {
-          showToast(data.error || "Failed to confirm", "error");
-          manualConfirmBtn.disabled = false;
-          manualConfirmBtn.textContent = "⚡ Manual Confirm Booking";
-        }
-      } catch (error) {
-        showToast("Error: " + error.message, "error");
-        manualConfirmBtn.disabled = false;
-        manualConfirmBtn.textContent = "⚡ Manual Confirm Booking";
-      }
-    });
-  }
 
   document.addEventListener("click", e => {
 
