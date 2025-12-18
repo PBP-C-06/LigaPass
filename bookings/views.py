@@ -437,6 +437,47 @@ def payment_success(request, booking_id):
     })
 
 @login_required
+def manual_confirm_payment(request, booking_id):
+    """
+    Manual confirm untuk testing di localhost.
+    Hanya untuk development mode!
+    """
+    if not settings.DEBUG:
+        return JsonResponse({"status": False, "error": "Not available in production"}, status=403)
+    
+    try:
+        booking = Booking.objects.get(booking_id=booking_id, user=request.user)
+        
+        if booking.status == "PAID":
+            return JsonResponse({
+                "status": False, 
+                "error": "Booking sudah dibayar"
+            })
+        
+        # Update status booking menjadi PAID
+        booking.status = "PAID"
+        booking.save()
+        
+        # Create tickets for each booking item
+        for item in booking.items.all():
+            for i in range(item.quantity):
+                Ticket.objects.create(
+                    booking=booking,
+                    ticket_type=item.ticket_type
+                )
+        
+        return JsonResponse({
+            "status": True, 
+            "message": "Pembayaran berhasil dikonfirmasi (manual)",
+            "booking_status": "PAID"
+        })
+        
+    except Booking.DoesNotExist:
+        return JsonResponse({"status": False, "error": "Booking tidak ditemukan"}, status=404)
+    except Exception as e:
+        return JsonResponse({"status": False, "error": str(e)}, status=500)
+
+@login_required
 def check_booking_status(request, booking_id):
     try:
         booking = Booking.objects.get(booking_id=booking_id, user=request.user)
