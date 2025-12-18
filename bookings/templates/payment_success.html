@@ -255,7 +255,7 @@ async function loadBookingDetails() {
     const response = await fetch(`/bookings/check_status/${bookingId}/`);
     const data = await response.json();
     
-    if (data.status === 'completed') {
+    if (response.ok && data.home_team) {
       // Update UI with booking details
       document.getElementById('booking-id').textContent = `#${bookingId.substring(0, 8)}...`;
       document.getElementById('home-name').textContent = data.home_team || 'Home';
@@ -275,6 +275,8 @@ async function loadBookingDetails() {
       // Show booking details, hide loading
       document.getElementById('loading-state').classList.add('hidden');
       document.getElementById('booking-details').classList.remove('hidden');
+    } else {
+      throw new Error('Data tidak lengkap');
     }
   } catch (error) {
     console.error('Error loading booking details:', error);
