@@ -124,7 +124,7 @@
 
     <h1 class="text-2xl font-bold text-slate-800 mb-6 text-center">Daftar Akun Baru</h1>
 
-    <form id="registerForm" method="POST" class="space-y-4">
+    <form id="registerForm" method="POST" action="{% url 'authentication:register' %}" class="space-y-4">
       {% csrf_token %}
 
       {% if form.non_field_errors %}
@@ -228,9 +228,9 @@
 
     <div class="text-center mt-6 text-sm">
       <p class="text-slate-600">
-        Udah punya akun?
+        Sudah punya akun?
         <a href="{% url 'authentication:login' %}" class="text-blue-600 hover:text-blue-700 font-semibold underline hover:no-underline transition">
-          Masuk di sini
+          Login
         </a>
       </p>
     </div>
@@ -290,7 +290,11 @@
         Processing...`;
 
     // Hapus pesan error lama
-    registerForm.querySelectorAll('.text-red-600').forEach(el => el.textContent = '');
+    registerForm.querySelectorAll('.text-red-600').forEach(el => {
+      el.textContent = '';
+      el.classList.add('hidden');
+    });
+
     const nonFieldErrorDiv = registerForm.querySelector('.bg-red-100');
     if (nonFieldErrorDiv) nonFieldErrorDiv.classList.add('hidden');
 
@@ -308,7 +312,15 @@
         body: formData
       });
 
-      const data = await response.json()
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        showToast('Server mengembalikan response tidak valid', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
+        return;
+      }
 
       if (response.ok && data.status === 'success') {
         showToast(data.message || 'Registrasi berhasil!', 'success');
@@ -319,21 +331,51 @@
       } else {
   
         if (data.errors) {
+          let firstError = null;
+          
           for (const fieldName in data.errors) {
-            const errorDiv = registerForm.querySelector(`#id_${fieldName}`)?.closest('div')?.querySelector('.text-red-600');
-            if (errorDiv) {
-              errorDiv.textContent = data.errors[fieldName].join(' ');
+            const errorArray = data.errors[fieldName];
+            const firstErrorMsg = errorArray[0]; // Ambil error pertama saja
+            const fieldInput = registerForm.querySelector(`#id_${fieldName}`);
+            
+            // Tampilkan error pertama di bawah field
+            if (fieldInput) {
+              const errorDiv = fieldInput.closest('div')?.querySelector('.text-red-600');
+              if (errorDiv) {
+                errorDiv.textContent = firstErrorMsg;
+                errorDiv.classList.remove('hidden');
+              }
             }
-            if (fieldName === '__all__' && nonFieldErrorDiv) {
-              nonFieldErrorDiv.innerHTML = data.errors[fieldName].map(err => `<span>${err}</span>`).join('<br>');
-              nonFieldErrorDiv.classList.remove('hidden');
+            
+            // Simpan error pertama untuk toast
+            if (!firstError) {
+              if (fieldName === '__all__') {
+                firstError = firstErrorMsg;
+                if (nonFieldErrorDiv) {
+                  nonFieldErrorDiv.innerHTML = `<span>${firstErrorMsg}</span>`;
+                  nonFieldErrorDiv.classList.remove('hidden');
+                }
+              } else {
+                const fieldLabel = {
+                  'username': 'Username',
+                  'email': 'Email',
+                  'password1': 'Password',
+                  'password2': 'Konfirmasi Password',
+                  'first_name': 'Nama Depan',
+                  'last_name': 'Nama Belakang'
+                }[fieldName] || fieldName;
+                
+                firstError = `${fieldLabel}: ${firstErrorMsg}`;
+              }
             }
           }
-           if(data.errors.__all__){
-               showToast(data.errors.__all__.join(' '), 'error');
-           } else {
-               showToast('Periksa kembali isian form Anda.', 'warning');
-           }
+          
+          // Tampilkan hanya error pertama dalam toast
+          if (firstError) {
+            showToast(firstError, 'error');
+          } else {
+            showToast('Terjadi kesalahan pada form.', 'error');
+          }
         } else {
           showToast(data.message || 'Registrasi gagal.', 'error');
           if (nonFieldErrorDiv) {
@@ -346,7 +388,6 @@
       }
 
     } catch (error) {
-      console.error('Registration error:', error);
       showToast('Terjadi kesalahan. Coba lagi nanti.', 'error');
       submitButton.disabled = false;
       submitButton.innerHTML = originalButtonText;

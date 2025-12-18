@@ -33,9 +33,14 @@ def register_user(request):
             response.set_cookie('last_login', str(datetime.datetime.now()))
             return response
         
+        # Convert error dict to JSON-serializable format
+        errors_dict = {}
+        for field, errors in form.errors.items():
+            errors_dict[field] = [str(error) for error in errors]
+        
         return JsonResponse({
             "status": "error",
-            "errors": form.errors
+            "errors": errors_dict
         }, status=400)
     return render(request, "register.html", {"form": form})
 
@@ -64,9 +69,14 @@ def flutter_register(request):
             "hasProfile": user.profile_completed,
         })
 
+    # Convert error dict to JSON-serializable format (sama seperti register_user)
+    errors_dict = {}
+    for field, errors in form.errors.items():
+        errors_dict[field] = [str(error) for error in errors]
+    
     return JsonResponse({
         "status": "error",
-        "errors": form.errors
+        "errors": errors_dict
     }, status=400)
     
 # Non Google login

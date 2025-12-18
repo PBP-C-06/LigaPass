@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 from django.urls import reverse
 from django.middleware.csrf import get_token
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
@@ -36,6 +37,28 @@ def create_profile(request):
         profile_picture = request.FILES.get("profile_picture")
         date_of_birth = request.POST.get("date_of_birth")
         phone_number = request.POST.get("phone")
+
+        # Validasi nomor telepon
+        if phone_number:
+            # Hapus spasi, tanda strip, dan karakter non-digit kecuali +
+            cleaned_phone = re.sub(r'[\s\-()]', '', phone_number)
+            
+            # Cek apakah hanya berisi angka atau dimulai dengan + lalu angka
+            if not re.match(r'^\+?[0-9]{10,15}$', cleaned_phone):
+                return JsonResponse({
+                    "ok": False, 
+                    "message": "Nomor telepon tidak valid. Masukkan 10-15 digit angka."
+                }, status=400)
+            
+            # Pastikan ada + di depan jika belum ada
+            if not cleaned_phone.startswith('+'):
+                # Jika dimulai dengan 0, hapus 0 dan tambah + (asumsi kode negara akan ditambah user)
+                # Atau biarkan user input dengan format bebas
+                phone_number = cleaned_phone
+            else:
+                phone_number = cleaned_phone
+        else:
+            return JsonResponse({"ok": False, "message": "Nomor telepon wajib diisi."}, status=400)
 
         # Buat sesuai dengan input dari form user
         Profile.objects.create(

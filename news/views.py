@@ -313,6 +313,7 @@ def serialize_news(news, request):
         "is_featured": news.is_featured,
         "news_views": news.news_views,
         "created_at": DateFormat(news.created_at).format("Y-m-d H:i"),
+        "edited_at": DateFormat(news.edited_at).format("Y-m-d H:i") if news.edited_at else None,
     }
 
 # Endpoint API (berbasis JSON) untuk daftar berita (mirip news_list tapi tanpa HTML)
@@ -363,6 +364,7 @@ def api_news_detail(request, pk):
         "is_featured": news.is_featured,
         "news_views": news.news_views,
         "created_at": DateFormat(news.created_at).format("Y-m-d H:i"),
+        "edited_at": DateFormat(news.edited_at).format("Y-m-d H:i") if news.edited_at else None,
         "is_owner": news.author == request.user,
     }
 

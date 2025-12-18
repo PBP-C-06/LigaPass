@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pembayaran Berhasil{% endblock %}
+
+{% block content %}
+<style>
+  #confetti-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  @keyframes scaleIn {
+    0% {
+      transform: scale(0);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.6), 0 0 60px rgba(16, 185, 129, 0.3);
+    }
+  }
+
+  .success-icon {
+    animation: scaleIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .success-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.8s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div class="min-h-screen" style="background: linear-gradient(135deg, #f6f9ff 0%, #e8f0ff 50%, #dce6ff 100%);">
+  <div class="max-w-2xl mx-auto px-6 py-12">
+    
+    <!-- Success Icon -->
+    <div class="text-center mb-8">
+      <div class="inline-block relative success-icon">
+        <div class="absolute inset-0 rounded-full" style="background: radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0) 70%); transform: scale(1.3);"></div>
+        <div class="relative w-24 h-24 mx-auto rounded-full success-glow flex items-center justify-center" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+      </div>
+      
+      <h1 class="text-3xl font-bold text-gray-900 mt-6 mb-2 fade-in">Pembayaran Berhasil!</h1>
+      <div class="inline-block px-4 py-2 rounded-full fade-in" style="background: rgba(16, 185, 129, 0.1); animation-delay: 0.2s;">
+        <p class="text-green-600 font-medium flex items-center gap-2">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          Tiket Anda telah diterbitkan
+        </p>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="bg-white rounded-2xl shadow-lg p-8 mb-6 fade-in" style="animation-delay: 0.4s;">
+      <div class="flex flex-col items-center justify-center py-8">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p class="text-gray-600">Memuat detail booking...</p>
+      </div>
+    </div>
+
+    <!-- Booking Details Card -->
+    <div id="booking-details" class="hidden">
+      <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-6 fade-in" style="animation-delay: 0.4s;">
+        <!-- Match Header -->
+        <div class="p-6" style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);">
+          <div class="flex items-center justify-between gap-4">
+            <!-- Home Team -->
+            <div class="flex-1 flex flex-col items-center">
+              <div class="w-16 h-16 bg-white rounded-xl shadow-md flex items-center justify-center mb-2">
+                <img id="home-logo" src="" alt="Home" class="w-14 h-14 object-contain">
+              </div>
+              <p id="home-name" class="text-white font-bold text-sm text-center"></p>
+            </div>
+
+            <!-- VS Badge -->
+            <div class="px-4 py-2 rounded-full" style="background: rgba(255, 255, 255, 0.2);">
+              <span class="text-white font-bold text-lg">VS</span>
+            </div>
+
+            <!-- Away Team -->
+            <div class="flex-1 flex flex-col items-center">
+              <div class="w-16 h-16 bg-white rounded-xl shadow-md flex items-center justify-center mb-2">
+                <img id="away-logo" src="" alt="Away" class="w-14 h-14 object-contain">
+              </div>
+              <p id="away-name" class="text-white font-bold text-sm text-center"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="p-6 space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background: #EFF6FF;">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-xs text-gray-500">Booking ID</p>
+              <p id="booking-id" class="font-bold text-gray-900"></p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background: #EFF6FF;">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-xs text-gray-500">Tanggal Pertandingan</p>
+              <p id="match-date" class="font-bold text-gray-900"></p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background: #EFF6FF;">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-xs text-gray-500">Jumlah Tiket</p>
+              <p id="ticket-count" class="font-bold text-gray-900"></p>
+            </div>
+          </div>
+
+          <div class="border-t border-gray-200 pt-4 mt-4">
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-gray-600">Total Bayar</span>
+              <span id="total-amount" class="text-xl font-bold text-green-600"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="space-y-3 fade-in" style="animation-delay: 0.6s;">
+        <a href="{% url 'profiles:tickets' %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl text-center transition shadow-lg flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+          </svg>
+          Lihat Tiket Saya
+        </a>
+        <a href="{% url 'main:home' %}" class="block w-full bg-white hover:bg-gray-50 text-blue-600 font-semibold py-3 px-6 rounded-xl text-center transition border-2 border-blue-600 flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          Kembali ke Beranda
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Confetti Animation
+class ConfettiParticle {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height - canvas.height;
+    this.speed = Math.random() * 3 + 2;
+    this.size = Math.random() * 8 + 4;
+    this.rotation = Math.random() * 360;
+    this.rotationSpeed = Math.random() * 10 - 5;
+    this.colors = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+    this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
+  }
+
+  update() {
+    this.y += this.speed;
+    this.rotation += this.rotationSpeed;
+    this.x += Math.sin(this.rotation * 0.1) * 0.5;
+    return this.y < this.canvas.height;
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate((this.rotation * Math.PI) / 180);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(-this.size / 2, -this.size / 3, this.size, this.size * 0.6);
+    ctx.restore();
+  }
+}
+
+function startConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const particles = [];
+  for (let i = 0; i < 50; i++) {
+    particles.push(new ConfettiParticle(canvas));
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const particle = particles[i];
+      if (!particle.update()) {
+        particles.splice(i, 1);
+      }
+      particle.draw(ctx);
+    }
+
+    if (particles.length > 0) {
+      requestAnimationFrame(animate);
+    }
+  }
+
+  animate();
+}
+
+// Load booking details
+async function loadBookingDetails() {
+  const bookingId = "{{ booking_id }}";
+  
+  try {
+    const response = await fetch(`/bookings/check_status/${bookingId}/`);
+    const data = await response.json();
+    
+    if (data.status === 'completed') {
+      // Update UI with booking details
+      document.getElementById('booking-id').textContent = `#${bookingId.substring(0, 8)}...`;
+      document.getElementById('home-name').textContent = data.home_team || 'Home';
+      document.getElementById('away-name').textContent = data.away_team || 'Away';
+      document.getElementById('home-logo').src = data.home_team_logo || '/static/images/default-team.png';
+      document.getElementById('away-logo').src = data.away_team_logo || '/static/images/default-team.png';
+      
+      if (data.match_date) {
+        const date = new Date(data.match_date);
+        const options = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+        document.getElementById('match-date').textContent = date.toLocaleDateString('id-ID', options);
+      }
+      
+      document.getElementById('ticket-count').textContent = `${data.total_tickets || 0} tiket`;
+      document.getElementById('total-amount').textContent = `Rp ${formatPrice(data.total_amount || 0)}`;
+      
+      // Show booking details, hide loading
+      document.getElementById('loading-state').classList.add('hidden');
+      document.getElementById('booking-details').classList.remove('hidden');
+    }
+  } catch (error) {
+    console.error('Error loading booking details:', error);
+    document.getElementById('loading-state').innerHTML = '<p class="text-red-600 text-center">Gagal memuat detail booking</p>';
+  }
+}
+
+function formatPrice(price) {
+  return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+// Initialize
+window.addEventListener('DOMContentLoaded', () => {
+  startConfetti();
+  loadBookingDetails();
+});
+</script>
+
+{% endblock %}
