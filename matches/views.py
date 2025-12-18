@@ -357,7 +357,9 @@ def admin_team_detail_api(request, team_id):
         return resp
     payload = json.loads(request.body.decode() or '{}')
     action = payload.get('action')
-    team = get_object_or_404(Team, id=team_id)
+    team = Team.objects.filter(id=team_id).first()
+    if not team:
+        return JsonResponse({'errors': 'Tim tidak ditemukan'}, status=404)
 
     if action == 'delete':
         team.delete()
@@ -397,7 +399,9 @@ def admin_venue_detail_api(request, venue_id):
 
     payload = json.loads(request.body.decode() or '{}')
     action = payload.get('action')
-    venue = get_object_or_404(Venue, id=venue_id)
+    venue = Venue.objects.filter(id=venue_id).first()
+    if not venue:
+        return JsonResponse({'errors': 'Venue tidak ditemukan'}, status=404)
 
     if action == 'delete':
         venue.delete()
@@ -435,6 +439,8 @@ def admin_match_list_api(request):
     date_str = payload.get('date')
     try:
         date = datetime.fromisoformat(date_str)
+        if timezone.is_naive(date):
+            date = timezone.make_aware(date, timezone.get_default_timezone())
     except Exception:
         return JsonResponse({'errors': 'Format tanggal tidak valid'}, status=400)
 
@@ -459,7 +465,9 @@ def admin_match_detail_api(request, match_id):
 
     payload = json.loads(request.body.decode() or '{}')
     action = payload.get('action')
-    match = get_object_or_404(Match, id=match_id)
+    match = Match.objects.filter(id=match_id).first()
+    if not match:
+        return JsonResponse({'errors': 'Pertandingan tidak ditemukan'}, status=404)
 
     if action == 'delete':
         match.delete()
@@ -474,7 +482,10 @@ def admin_match_detail_api(request, match_id):
         match.venue = Venue.objects.filter(id=venue_id).first() if venue_id else None
     if 'date' in payload:
         try:
-            match.date = datetime.fromisoformat(payload['date'])
+            parsed_date = datetime.fromisoformat(payload['date'])
+            if timezone.is_naive(parsed_date):
+                parsed_date = timezone.make_aware(parsed_date, timezone.get_default_timezone())
+            match.date = parsed_date
         except Exception:
             return JsonResponse({'errors': 'Format tanggal tidak valid'}, status=400)
     if 'home_goals' in payload:

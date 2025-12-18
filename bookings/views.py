@@ -179,7 +179,8 @@ def payment(request, booking_id):
         return render(request, "payment.html", {
             "booking": booking,
             "MIDTRANS_CLIENT_KEY": settings.MIDTRANS_CLIENT_KEY,
-            "selected_method": selected_method
+            "selected_method": selected_method,
+            "debug": settings.DEBUG  # Pass DEBUG flag for manual confirm button
         })
 
     elif request.method == "POST":
@@ -310,8 +311,10 @@ def flutter_payment(request, booking_id):
             "gross_amount": int(booking.total_price),
         },
         "customer_details": {
-            "first_name": booking.user.username,
+            "first_name": booking.user.first_name or booking.user.username,
+            "last_name": booking.user.last_name or "",
             "email": booking.user.email,
+            "phone": getattr(getattr(booking.user, "profile", None), "phone_number", ""),
         },
         "item_details": [
             {
@@ -426,10 +429,40 @@ def flutter_cancel_booking(request, booking_id):
     return JsonResponse({"status": True, "message": "Booking cancelled"})
 
 @login_required
+def payment_success(request, booking_id):
+    """Halaman sukses pembayaran dengan confetti"""
+    booking = get_object_or_404(Booking, booking_id=booking_id, user=request.user)
+    return render(request, "payment_success.html", {
+        "booking_id": str(booking_id),
+    })
+
+@login_required
 def check_booking_status(request, booking_id):
     try:
         booking = Booking.objects.get(booking_id=booking_id, user=request.user)
-        return JsonResponse({"status": booking.status})
+        
+        # Get match details from first booking item
+        first_item = booking.items.first()
+        match_data = {}
+        if first_item and first_item.ticket_type:
+            match = first_item.ticket_type.match
+            match_data = {
+                "home_team": match.home_team.name,
+                "away_team": match.away_team.name,
+                "home_team_logo": match.home_team.display_logo_url,
+                "away_team_logo": match.away_team.display_logo_url,
+                "match_date": match.date.isoformat() if match.date else None,
+            }
+        
+        # Count total tickets
+        total_tickets = sum(item.quantity for item in booking.items.all())
+        
+        return JsonResponse({
+            "status": booking.status,
+            "total_amount": float(booking.total_price),
+            "total_tickets": total_tickets,
+            **match_data
+        })
     except Booking.DoesNotExist:
         return JsonResponse({"error": "Booking not found"}, status=404)
 
@@ -444,6 +477,33 @@ def flutter_check_status(request, booking_id):
         "payment_status": booking.status,
     })
 
+
+@login_required
+def manual_confirm_booking(request, booking_id):
+    """Manual confirm booking untuk testing di localhost (development only)"""
+    if not settings.DEBUG:
+        return JsonResponse({"error": "Only available in DEBUG mode"}, status=403)
+    
+    booking = get_object_or_404(Booking, booking_id=booking_id, user=request.user)
+    
+    if booking.status == "CONFIRMED":
+        return JsonResponse({"message": "Booking sudah confirmed sebelumnya", "status": booking.status})
+    
+    # Update status ke CONFIRMED
+    booking.status = "CONFIRMED"
+    booking.updated_at = timezone.now()
+    booking.save()
+    
+    # Generate tickets
+    for item in booking.items.all():
+        for _ in range(item.quantity):
+            Ticket.objects.create(booking=booking, ticket_type=item.ticket_type)
+    
+    return JsonResponse({
+        "message": "Booking berhasil di-confirm secara manual",
+        "status": booking.status,
+        "redirect": f"/bookings/payment/success/{booking_id}/"
+    })
 
 @csrf_exempt
 def midtrans_notification(request):
