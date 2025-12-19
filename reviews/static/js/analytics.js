@@ -46,9 +46,19 @@ function initAdminAnalytics() {
         },
         options: {
           responsive: true,
-          plugins: { legend: { display: false } },
+          plugins: { 
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#1f2937',
+              font: { weight: 'bold', size: 12 },
+              formatter: (value) => value
+            }
+          },
           scales: { y: { beginAtZero: true } },
         },
+        plugins: [ChartDataLabels]
       });
     } catch (err) {
       console.error("❌ Gagal load tiket analytics:", err);
@@ -83,6 +93,13 @@ function initAdminAnalytics() {
           responsive: true,
           plugins: {
             legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#1f2937',
+              font: { weight: 'bold', size: 11 },
+              formatter: (value) => 'Rp ' + value.toLocaleString('id-ID')
+            },
             tooltip: {
               callbacks: {
                 label: (ctx) => `Rp ${ctx.parsed.y.toLocaleString("id-ID")}`,
@@ -96,6 +113,7 @@ function initAdminAnalytics() {
             },
           },
         },
+        plugins: [ChartDataLabels]
       });
     } catch (err) {
       console.error("❌ Gagal load revenue analytics:", err);
@@ -174,6 +192,13 @@ function initUserAnalytics() {
           animation: false,
           plugins: {
             legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#1f2937',
+              font: { weight: 'bold', size: 11 },
+              formatter: (value) => value > 0 ? 'Rp ' + value.toLocaleString('id-ID') : ''
+            },
             tooltip: {
               callbacks: {
                 label: (ctx) => `Rp ${ctx.parsed.y.toLocaleString("id-ID")}`,
@@ -189,27 +214,71 @@ function initUserAnalytics() {
             },
           },
         },
+        plugins: [ChartDataLabels]
       });
 
       // === CHART 2: Kehadiran ===
       const ctx2 = newAttendanceCanvas.getContext("2d");
-      attendanceChart = new Chart(ctx2, {
-        type: "doughnut",
-        data: {
-          labels: ["Hadir", "Tidak Hadir"],
-          datasets: [
-            {
-              data: [attendance.hadir, attendance.tidak_hadir],
-              backgroundColor: ["#2563eb", "#d1d5db"],
+      const totalAttendance = attendance.hadir + attendance.tidak_hadir;
+      
+      // Jika tidak ada data, tampilkan placeholder
+      if (totalAttendance === 0) {
+        attendanceChart = new Chart(ctx2, {
+          type: "doughnut",
+          data: {
+            labels: ["Belum Ada Data"],
+            datasets: [
+              {
+                data: [1],
+                backgroundColor: ["#e5e7eb"],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            animation: false,
+            plugins: { 
+              legend: { display: false },
+              datalabels: {
+                color: '#6b7280',
+                font: { weight: 'bold', size: 13 },
+                formatter: () => 'Belum Ada\nData Kehadiran'
+              }
             },
-          ],
-        },
-        options: {
-          responsive: true,
-          animation: false,
-          plugins: { legend: { display: false } },
-        },
-      });
+          },
+          plugins: [ChartDataLabels]
+        });
+      } else {
+        // Tampilkan data normal
+        attendanceChart = new Chart(ctx2, {
+          type: "doughnut",
+          data: {
+            labels: ["Hadir", "Tidak Hadir"],
+            datasets: [
+              {
+                data: [attendance.hadir, attendance.tidak_hadir],
+                backgroundColor: ["#2563eb", "#d1d5db"],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            animation: false,
+            plugins: { 
+              legend: { display: false },
+              datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 14 },
+                formatter: (value, ctx) => {
+                  const percentage = ((value / totalAttendance) * 100).toFixed(1);
+                  return value > 0 ? `${value}\n(${percentage}%)` : '';
+                }
+              }
+            },
+          },
+          plugins: [ChartDataLabels]
+        });
+      }
     } catch (err) {
       console.error("❌ Gagal load data analytics:", err);
     } finally {
